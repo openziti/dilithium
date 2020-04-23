@@ -46,12 +46,40 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 func (self *listenerConn) queue(m *message) {
 }
 
-type conn struct {
+type dialerConn struct {
 	conn  *net.UDPConn
 	local *net.UDPAddr
 	peer  *net.UDPAddr
 }
 
-func (self *conn) send(m *message) error {
+func (self *dialerConn) Read(p []byte) (n int, err error) {
+	return
+}
+
+func (self *dialerConn) Write(p []byte) (n int, err error) {
+	return
+}
+
+func (self *dialerConn) Close() error {
+	return nil
+}
+
+func (self *dialerConn) RemoteAddr() net.Addr {
+	return self.peer
+}
+
+func (self *dialerConn) LocalAddr() net.Addr {
+	return self.local
+}
+
+func (self *dialerConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (self *dialerConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }

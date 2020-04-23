@@ -50,6 +50,8 @@ func (self *listener) run() {
 			} else {
 				lConn.queue(m)
 			}
+		} else {
+			logrus.Errorf("read error from [%s] (%v)", peer, err)
 		}
 	}
 }
