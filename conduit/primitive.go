@@ -1,4 +1,4 @@
-package fireball
+package conduit
 
 import (
 	"bytes"

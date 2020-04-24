@@ -1,4 +1,4 @@
-module github.com/michaelquigley/udp-link
+module github.com/michaelquigley/dilithium
 
 go 1.14
 
