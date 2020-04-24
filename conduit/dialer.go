@@ -43,5 +43,8 @@ func Dial(addr *net.UDPAddr) (net.Conn, error) {
 			peer:  addr,
 		}
 		return dConn, nil
+		
+	} else {
+		return nil, errors.New("invalid message received")
 	}
 }
