@@ -19,6 +19,7 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 		peers:       make(map[string]*listenerConn),
 		acceptQueue: make(chan net.Conn, 1024),
 	}
+	go l.run()
 	return l, nil
 }
 
@@ -72,7 +73,7 @@ func (self *listener) handleHello(peer *net.UDPAddr) {
 		logrus.Errorf("error creating hello message [%s] (%v)", peer, err)
 		return
 	}
-	n, err := self.conn.Write(hello)
+	n, err := self.conn.WriteTo(hello, peer)
 	if err != nil {
 		logrus.Errorf("error sending hello [%s] (%v)", peer, err)
 		return

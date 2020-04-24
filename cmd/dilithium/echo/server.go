@@ -29,6 +29,7 @@ func echoServer(_ *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("error listening (%v)", err)
 	}
+	logrus.Infof("listening at [%s]", listener.Addr())
 
 	for {
 		conn, err := listener.Accept()
@@ -36,6 +37,7 @@ func echoServer(_ *cobra.Command, args []string) {
 			logrus.Errorf("error accepting (%v)", err)
 			continue
 		}
+		logrus.Infof("accepted connection from [%s]", conn.RemoteAddr())
 		go echoServerHandler(conn)
 	}
 }
@@ -47,7 +49,7 @@ func echoServerHandler(conn net.Conn) {
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
-			logrus.Errorf("error reading (%v)")
+			logrus.Errorf("error reading (%v)", err)
 			return
 		}
 		n, err := conn.Write(line)

@@ -2,6 +2,7 @@ package conduit
 
 import (
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
@@ -23,11 +24,13 @@ func Dial(addr *net.UDPAddr) (net.Conn, error) {
 	if n != len(hello) {
 		return nil, errors.New("short write")
 	}
+	logrus.Infof("sent hello to [%s]", addr)
 
 	m, peer, err := readMessage(conn)
 	if err != nil {
 		return nil, errors.Wrap(err, "read")
 	}
+	logrus.Infof("received hello from [%s]", peer)
 	if peer.IP.String() != addr.IP.String() || peer.Port != addr.Port {
 		return nil, errors.New("peer mismatch")
 	}
