@@ -44,20 +44,51 @@ func tunnelClient(_ *cobra.Command, args []string) {
 	}
 }
 
-func runTunnelClient(clientConn net.Conn, serverAddress *net.UDPAddr) {
-	defer func() {
-		_ = clientConn.Close()
-	}()
+func runTunnelClient(iConn net.Conn, serverAddress *net.UDPAddr) {
+	defer func() { _ = iConn.Close() }()
 
-	logrus.Infof("tunneling for [%s]", clientConn.RemoteAddr())
-	defer logrus.Warnf("end tunnel for [%s]", clientConn.RemoteAddr())
+	logrus.Infof("tunneling for [%s]", iConn.RemoteAddr())
+	defer logrus.Warnf("end tunnel for [%s]", iConn.RemoteAddr())
 
-	conduitConn, err := conduit.Dial(serverAddress)
+	tConn, err := conduit.Dial(serverAddress)
 	if err != nil {
 		logrus.Errorf("error dialing server at [%s] (%v)", serverAddress, err)
+		return
 	}
-	defer func() {
-		_ = conduitConn.Close()
-	}()
+	go runTunnelClientReader(iConn, tConn)
+	defer func() { _ = tConn.Close() }()
 	logrus.Infof("conduit established to [%s]", serverAddress)
+
+	buffer := make([]byte, 10240)
+	for {
+		n, err := iConn.Read(buffer)
+		if err != nil {
+			logrus.Errorf("error reading from initiator (%v)", err)
+			return
+		}
+		logrus.Infof("<-(i) [%d]", n)
+		n, err = tConn.Write(buffer[:n])
+		if err != nil {
+			logrus.Errorf("error writing to tunnel (%v)", err)
+			return
+		}
+		logrus.Infof("->(t) [%d]", n)
+	}
+}
+
+func runTunnelClientReader(iConn net.Conn, tConn net.Conn) {
+	buffer := make([]byte, 10240)
+	for {
+		n, err := tConn.Read(buffer)
+		if err != nil {
+			logrus.Errorf("error reading from tunnel (%v)", err)
+		}
+		logrus.Infof("<-(t) [%d]", n)
+		n, err = iConn.Write(buffer[:n])
+		if err != nil {
+			logrus.Errorf("error writing to initiator (%v)", err)
+			return
+		}
+		logrus.Infof("->(i) [%d]", n)
+	}
 }

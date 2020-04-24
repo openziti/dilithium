@@ -5,7 +5,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
-	"time"
 )
 
 func init() {
@@ -45,13 +44,47 @@ func tunnelServer(_ *cobra.Command, args []string) {
 	}
 }
 
-func runTunnelTerminator(conn net.Conn, destinationAddress *net.TCPAddr) {
-	defer func() { _ = conn.Close() }()
+func runTunnelTerminator(iConn net.Conn, destinationAddress *net.TCPAddr) {
+	defer func() { _ = iConn.Close() }()
 
-	logrus.Infof("tunneling for [%s]", conn.RemoteAddr())
-	defer logrus.Warnf("end tunnel for [%s]", conn.RemoteAddr())
+	logrus.Infof("tunneling for [%s] to [%s]", iConn.RemoteAddr(), destinationAddress)
+	defer logrus.Warnf("end tunnel for [%s]", iConn.RemoteAddr())
 
+	tConn, err := net.DialTCP("tcp", nil, destinationAddress)
+	if err != nil {
+		logrus.Errorf("error connecting to destination [%s] (%v)", destinationAddress, err)
+		return
+	}
+	go runTunnelTerminatorReader(iConn, tConn)
+	defer func() { _ = tConn.Close() }()
+
+	buffer := make([]byte, 10240)
 	for {
-		time.Sleep(30 * time.Second)
+		n, err := iConn.Read(buffer)
+		if err != nil {
+			logrus.Errorf("error reading from tunnel (%v)", err)
+			return
+		}
+		n, err = tConn.Write(buffer[:n])
+		if err != nil {
+			logrus.Errorf("error writing to destination (%v)", err)
+			return
+		}
+	}
+}
+
+func runTunnelTerminatorReader(iConn net.Conn, tConn net.Conn) {
+	buffer := make([]byte, 10240)
+	for {
+		n, err := tConn.Read(buffer)
+		if err != nil {
+			logrus.Errorf("error reading from destination (%v)", err)
+			return
+		}
+		n, err = iConn.Write(buffer[:n])
+		if err != nil {
+			logrus.Errorf("error writing to tunnel (%v)", err)
+			return
+		}
 	}
 }

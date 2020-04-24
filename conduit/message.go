@@ -88,7 +88,7 @@ func unmarshal(data []byte) (*message, error) {
 	return m, nil
 }
 
-var magicV1 = []byte{0x09, 0x09}
+var magicV1 = []byte{0x44, 0x69} // Di
 
 type messageType uint8
 
