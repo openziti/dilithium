@@ -61,11 +61,7 @@ func (self *listener) handleHello(peer *net.UDPAddr) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	conn := &listenerConn{
-		conn:  self.conn,
-		local: self.addr,
-		peer:  peer,
-	}
+	conn := newListenerConn(self.conn, self.addr, peer)
 	self.peers[peer.String()] = conn
 
 	hello, err := newHelloMessage().marshal()

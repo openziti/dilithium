@@ -14,6 +14,14 @@ func newHelloMessage() *message {
 	}
 }
 
+func newPayloadMessage(sequence int32, data []byte) *message {
+	return &message{
+		sequence: sequence,
+		message:  Payload,
+		payload:  data,
+	}
+}
+
 type message struct {
 	sequence int32
 	message  messageType
@@ -89,4 +97,5 @@ const headerLength = 2 + 4 + 1 + 4
 
 const (
 	Hello messageType = iota
+	Payload
 )

@@ -1,26 +1,55 @@
 package conduit
 
 import (
+	"github.com/pkg/errors"
 	"net"
 	"time"
 )
 
 type listenerConn struct {
-	conn  *net.UDPConn
-	local *net.UDPAddr
-	peer  *net.UDPAddr
+	conn      *net.UDPConn
+	local     *net.UDPAddr
+	peer      *net.UDPAddr
+	readQueue chan *message
+	sequence  *sequence
+}
+
+func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *listenerConn {
+	return &listenerConn{
+		conn:      conn,
+		local:     local,
+		peer:      peer,
+		readQueue: make(chan *message, 1024),
+		sequence:  newSequence(),
+	}
 }
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
-	return
+	m, ok := <-self.readQueue
+	if ok {
+		n := copy(p, m.payload)
+		return n, nil
+	}
+	return 0, errors.New("closed")
 }
 
 func (self *listenerConn) Write(p []byte) (n int, err error) {
-	return
+	data, err := newPayloadMessage(self.sequence.next(), p).marshal()
+	if err != nil {
+		return 0, errors.Wrap(err, "marshal")
+	}
+	n, err = self.conn.WriteTo(data, self.peer)
+	if err != nil {
+		return
+	}
+	if n != len(data) {
+		return 0, errors.New("short write")
+	}
+	return len(p), nil
 }
 
 func (self *listenerConn) Close() error {
-	return nil
+	return self.conn.Close()
 }
 
 func (self *listenerConn) RemoteAddr() net.Addr {
@@ -28,7 +57,7 @@ func (self *listenerConn) RemoteAddr() net.Addr {
 }
 
 func (self *listenerConn) LocalAddr() net.Addr {
-	return self.local
+	return self.conn.LocalAddr()
 }
 
 func (self *listenerConn) SetDeadline(t time.Time) error {
@@ -44,24 +73,55 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 }
 
 func (self *listenerConn) queue(m *message) {
+	self.readQueue <- m
 }
 
 type dialerConn struct {
-	conn  *net.UDPConn
-	local *net.UDPAddr
-	peer  *net.UDPAddr
+	conn     *net.UDPConn
+	local    *net.UDPAddr
+	peer     *net.UDPAddr
+	sequence *sequence
+}
+
+func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *dialerConn {
+	return &dialerConn{
+		conn:     conn,
+		local:    local,
+		peer:     peer,
+		sequence: newSequence(),
+	}
 }
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
-	return
+	m, _, err := readMessage(self.conn)
+	if err != nil {
+		return 0, errors.Wrap(err, "read message")
+	}
+	if m.message == Payload {
+		n := copy(p, m.payload)
+		return n, nil
+	} else {
+		return 0, errors.New("invalid message")
+	}
 }
 
 func (self *dialerConn) Write(p []byte) (n int, err error) {
-	return
+	data, err := newPayloadMessage(self.sequence.next(), p).marshal()
+	if err != nil {
+		return 0, errors.Wrap(err, "marshal")
+	}
+	n, err = self.conn.WriteTo(data, self.peer)
+	if err != nil {
+		return
+	}
+	if n != len(data) {
+		return 0, errors.New("short write")
+	}
+	return len(p), nil
 }
 
 func (self *dialerConn) Close() error {
-	return nil
+	return self.conn.Close()
 }
 
 func (self *dialerConn) RemoteAddr() net.Addr {
@@ -69,7 +129,7 @@ func (self *dialerConn) RemoteAddr() net.Addr {
 }
 
 func (self *dialerConn) LocalAddr() net.Addr {
-	return self.local
+	return self.conn.LocalAddr()
 }
 
 func (self *dialerConn) SetDeadline(t time.Time) error {

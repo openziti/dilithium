@@ -40,12 +40,7 @@ func Dial(addr *net.UDPAddr) (net.Conn, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve address")
 		}
-		dConn := &dialerConn{
-			conn:  conn,
-			local: local,
-			peer:  addr,
-		}
-		return dConn, nil
+		return newDialerConn(conn, local, peer), nil
 
 	} else {
 		return nil, errors.New("invalid message received")
