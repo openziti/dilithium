@@ -1,4 +1,4 @@
-package proxy
+package tunnel
 
 import (
 	"github.com/michaelquigley/dilithium/conduit"
@@ -9,17 +9,17 @@ import (
 )
 
 func init() {
-	proxyCmd.AddCommand(proxyServerCmd)
+	tunnelCmd.AddCommand(tunnelServerCmd)
 }
 
-var proxyServerCmd = &cobra.Command{
+var tunnelServerCmd = &cobra.Command{
 	Use:   "server <listenAddress> <destinationTcpAddress>",
-	Short: "Start proxy server",
+	Short: "Start tunnel server",
 	Args:  cobra.ExactArgs(2),
-	Run:   proxyServer,
+	Run:   tunnelServer,
 }
 
-func proxyServer(_ *cobra.Command, args []string) {
+func tunnelServer(_ *cobra.Command, args []string) {
 	listenAddress, err := net.ResolveUDPAddr("udp", args[0])
 	if err != nil {
 		logrus.Fatalf("error resolving listen address [%s] (%v)", args[0], err)
@@ -41,13 +41,15 @@ func proxyServer(_ *cobra.Command, args []string) {
 			logrus.Errorf("error accepting (%v)", err)
 			continue
 		}
-		go runProxy(conn, destinationAddress)
+		go runTunnelTerminator(conn, destinationAddress)
 	}
 }
 
-func runProxy(conn net.Conn, destinationAddress *net.TCPAddr) {
-	logrus.Infof("proxying for [%s]", conn.RemoteAddr())
-	defer logrus.Warnf("end proxy for [%s]", conn.RemoteAddr())
+func runTunnelTerminator(conn net.Conn, destinationAddress *net.TCPAddr) {
+	defer func() { _ = conn.Close() }()
+
+	logrus.Infof("tunneling for [%s]", conn.RemoteAddr())
+	defer logrus.Warnf("end tunnel for [%s]", conn.RemoteAddr())
 
 	for {
 		time.Sleep(30 * time.Second)
