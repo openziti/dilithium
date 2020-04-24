@@ -28,46 +28,46 @@ func tunnelClient(_ *cobra.Command, args []string) {
 		logrus.Fatalf("error resolving listen address [%s] (%v)", args[1], err)
 	}
 
-	listener, err := net.ListenTCP("tcp", listenAddress)
+	initiatorListener, err := net.ListenTCP("tcp", listenAddress)
 	if err != nil {
-		logrus.Infof("error creating listener at [%s] (%v)", listenAddress, err)
+		logrus.Infof("error creating initiator listener at [%s] (%v)", listenAddress, err)
 	}
-	logrus.Infof("created listener at [%s]", listener.Addr())
+	logrus.Infof("created initiator listener at [%s]", initiatorListener.Addr())
 
 	for {
-		conn, err := listener.Accept()
+		initiator, err := initiatorListener.Accept()
 		if err != nil {
-			logrus.Errorf("error accepting (%v)", err)
+			logrus.Errorf("error accepting initiator (%v)", err)
 			continue
 		}
-		go runTunnelClient(conn, serverAddress)
+		go handleTunnelInitiator(initiator, serverAddress)
 	}
 }
 
-func runTunnelClient(iConn net.Conn, serverAddress *net.UDPAddr) {
-	defer func() { _ = iConn.Close() }()
+func handleTunnelInitiator(initiator net.Conn, serverAddress *net.UDPAddr) {
+	defer func() { _ = initiator.Close() }()
 
-	logrus.Infof("tunneling for [%s]", iConn.RemoteAddr())
-	defer logrus.Warnf("end tunnel for [%s]", iConn.RemoteAddr())
+	logrus.Infof("tunneling for initiator at [%s]", initiator.RemoteAddr())
+	defer logrus.Warnf("end tunnel for initiator at [%s]", initiator.RemoteAddr())
 
-	tConn, err := conduit.Dial(serverAddress)
+	tunnel, err := conduit.Dial(serverAddress)
 	if err != nil {
-		logrus.Errorf("error dialing server at [%s] (%v)", serverAddress, err)
+		logrus.Errorf("error dialing tunnel server at [%s] (%v)", serverAddress, err)
 		return
 	}
-	go runTunnelClientReader(iConn, tConn)
-	defer func() { _ = tConn.Close() }()
-	logrus.Infof("conduit established to [%s]", serverAddress)
+	go handleTunnelInitiatorReader(initiator, tunnel)
+	defer func() { _ = tunnel.Close() }()
+	logrus.Infof("tunnel established to [%s]", serverAddress)
 
 	buffer := make([]byte, 10240)
 	for {
-		n, err := iConn.Read(buffer)
+		n, err := initiator.Read(buffer)
 		if err != nil {
 			logrus.Errorf("error reading from initiator (%v)", err)
 			return
 		}
 		logrus.Infof("<-(i) [%d]", n)
-		n, err = tConn.Write(buffer[:n])
+		n, err = tunnel.Write(buffer[:n])
 		if err != nil {
 			logrus.Errorf("error writing to tunnel (%v)", err)
 			return
@@ -76,15 +76,15 @@ func runTunnelClient(iConn net.Conn, serverAddress *net.UDPAddr) {
 	}
 }
 
-func runTunnelClientReader(iConn net.Conn, tConn net.Conn) {
+func handleTunnelInitiatorReader(initiator net.Conn, tunnel net.Conn) {
 	buffer := make([]byte, 10240)
 	for {
-		n, err := tConn.Read(buffer)
+		n, err := tunnel.Read(buffer)
 		if err != nil {
 			logrus.Errorf("error reading from tunnel (%v)", err)
 		}
 		logrus.Infof("<-(t) [%d]", n)
-		n, err = iConn.Write(buffer[:n])
+		n, err = initiator.Write(buffer[:n])
 		if err != nil {
 			logrus.Errorf("error writing to initiator (%v)", err)
 			return

@@ -28,60 +28,60 @@ func tunnelServer(_ *cobra.Command, args []string) {
 		logrus.Fatalf("error resolving destination address [%s] (%v)", args[1], err)
 	}
 
-	listener, err := conduit.Listen(listenAddress)
+	tunnelListener, err := conduit.Listen(listenAddress)
 	if err != nil {
-		logrus.Fatalf("error creating listener (%v)", err)
+		logrus.Fatalf("error creating tunnel listener (%v)", err)
 	}
-	logrus.Infof("listening at [%s]", listener.Addr())
+	logrus.Infof("created tunnel listener at [%s]", tunnelListener.Addr())
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := tunnelListener.Accept()
 		if err != nil {
-			logrus.Errorf("error accepting (%v)", err)
+			logrus.Errorf("error accepting tunnel (%v)", err)
 			continue
 		}
-		go runTunnelTerminator(conn, destinationAddress)
+		go handleTunnelTerminator(conn, destinationAddress)
 	}
 }
 
-func runTunnelTerminator(iConn net.Conn, destinationAddress *net.TCPAddr) {
-	defer func() { _ = iConn.Close() }()
+func handleTunnelTerminator(tunnel net.Conn, destinationAddress *net.TCPAddr) {
+	defer func() { _ = tunnel.Close() }()
 
-	logrus.Infof("tunneling for [%s] to [%s]", iConn.RemoteAddr(), destinationAddress)
-	defer logrus.Warnf("end tunnel for [%s]", iConn.RemoteAddr())
+	logrus.Infof("tunneling for tunnel at [%s] to terminator at [%s]", tunnel.RemoteAddr(), destinationAddress)
+	defer logrus.Warnf("end tunnel for [%s]", tunnel.RemoteAddr())
 
-	tConn, err := net.DialTCP("tcp", nil, destinationAddress)
+	terminator, err := net.DialTCP("tcp", nil, destinationAddress)
 	if err != nil {
-		logrus.Errorf("error connecting to destination [%s] (%v)", destinationAddress, err)
+		logrus.Errorf("error connecting to terminator [%s] (%v)", destinationAddress, err)
 		return
 	}
-	go runTunnelTerminatorReader(iConn, tConn)
-	defer func() { _ = tConn.Close() }()
+	go handleTunnelTerminatorReader(tunnel, terminator)
+	defer func() { _ = terminator.Close() }()
 
 	buffer := make([]byte, 10240)
 	for {
-		n, err := iConn.Read(buffer)
+		n, err := tunnel.Read(buffer)
 		if err != nil {
 			logrus.Errorf("error reading from tunnel (%v)", err)
 			return
 		}
-		n, err = tConn.Write(buffer[:n])
+		n, err = terminator.Write(buffer[:n])
 		if err != nil {
-			logrus.Errorf("error writing to destination (%v)", err)
+			logrus.Errorf("error writing to terminator (%v)", err)
 			return
 		}
 	}
 }
 
-func runTunnelTerminatorReader(iConn net.Conn, tConn net.Conn) {
+func handleTunnelTerminatorReader(tunnel net.Conn, terminator net.Conn) {
 	buffer := make([]byte, 10240)
 	for {
-		n, err := tConn.Read(buffer)
+		n, err := terminator.Read(buffer)
 		if err != nil {
-			logrus.Errorf("error reading from destination (%v)", err)
+			logrus.Errorf("error reading from terminator (%v)", err)
 			return
 		}
-		n, err = iConn.Write(buffer[:n])
+		n, err = tunnel.Write(buffer[:n])
 		if err != nil {
 			logrus.Errorf("error writing to tunnel (%v)", err)
 			return
