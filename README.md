@@ -1,3 +1,3 @@
-# udp-link
+# Project Dilithium
 
-This is a collection of prototype/toy implementations of reliable data transmission protocols implemented on top of UDP.
+Controlled UDP explosions.
