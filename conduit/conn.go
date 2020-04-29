@@ -12,6 +12,8 @@ type listenerConn struct {
 	peer      *net.UDPAddr
 	readQueue chan *message
 	sequence  *sequence
+	rxWindow  *rxWindow
+	txWindow  *txWindow
 }
 
 func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *listenerConn {
@@ -21,6 +23,8 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 		peer:      peer,
 		readQueue: make(chan *message, 1024),
 		sequence:  newSequence(),
+		rxWindow:  newRxWindow(conn, peer),
+		txWindow:  newTxWindow(conn, peer),
 	}
 }
 
@@ -81,6 +85,8 @@ type dialerConn struct {
 	local    *net.UDPAddr
 	peer     *net.UDPAddr
 	sequence *sequence
+	rxWindow *rxWindow
+	txWindow *txWindow
 }
 
 func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *dialerConn {
@@ -89,6 +95,8 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 		local:    local,
 		peer:     peer,
 		sequence: newSequence(),
+		rxWindow: newRxWindow(conn, peer),
+		txWindow: newTxWindow(conn, peer),
 	}
 }
 

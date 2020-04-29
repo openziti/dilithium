@@ -5,8 +5,6 @@ import (
 	"net"
 )
 
-
-
 func readMessage(conn *net.UDPConn) (*message, *net.UDPAddr, error) {
 	data := make([]byte, 65507)
 	if n, peer, err := conn.ReadFromUDP(data); err == nil {

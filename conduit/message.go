@@ -22,6 +22,18 @@ func newPayloadMessage(sequence int32, data []byte) *message {
 	}
 }
 
+func newAckMessage(sequence int32) (*message, error) {
+	payload := new(bytes.Buffer)
+	if err := binary.Write(payload, binary.LittleEndian, sequence); err != nil {
+		return nil, errors.Wrap(err, "sequence write")
+	}
+	return &message{
+		sequence: oobSequence,
+		message: Ack,
+		payload: payload.Bytes(),
+	}, nil
+}
+
 type message struct {
 	sequence int32
 	message  messageType
@@ -98,4 +110,5 @@ const headerLength = 2 + 4 + 1 + 4
 const (
 	Hello messageType = iota
 	Payload
+	Ack
 )
