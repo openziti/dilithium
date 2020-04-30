@@ -2,6 +2,7 @@ package conduit
 
 import (
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -29,16 +30,45 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 }
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
-	m, ok := <-self.readQueue
-	if ok {
-		n := copy(p, m.payload)
-		return n, nil
+	n, err = self.rxWindow.read(p)
+	if n > 0 {
+		return
 	}
-	return 0, errors.New("closed")
+
+	for {
+		m, ok := <-self.readQueue
+		if ok {
+			if m.message == Payload {
+				logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
+				self.rxWindow.rx(m)
+				n, err = self.rxWindow.read(p)
+				if err == nil {
+					logrus.Infof("[](%d) <-", n)
+				}
+				return
+
+			} else if m.message == Ack {
+				if sequence, err := readInt32(m.payload); err == nil {
+					logrus.Infof("[@%d] <-", sequence)
+					self.txWindow.ack(sequence)
+				} else {
+					return 0, errors.New("invalid ack")
+				}
+
+			} else {
+				return 0, errors.New("invalid message")
+			}
+		}
+
+		return 0, errors.New("closed")
+	}
 }
 
 func (self *listenerConn) Write(p []byte) (n int, err error) {
-	data, err := newPayloadMessage(self.sequence.next(), p).marshal()
+	m := newPayloadMessage(self.sequence.next(), p)
+	self.txWindow.tx(m)
+
+	data, err := m.marshal()
 	if err != nil {
 		return 0, errors.Wrap(err, "marshal")
 	}
@@ -49,6 +79,7 @@ func (self *listenerConn) Write(p []byte) (n int, err error) {
 	if n != len(data) {
 		return 0, errors.New("short write")
 	}
+	logrus.Infof("[#%d](%d) ->", m.sequence, len(m.payload))
 	return len(p), nil
 }
 
@@ -101,20 +132,44 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 }
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
-	m, _, err := readMessage(self.conn)
-	if err != nil {
-		return 0, errors.Wrap(err, "read message")
+	n, err = self.rxWindow.read(p)
+	if n > 0 {
+		return
 	}
-	if m.message == Payload {
-		n := copy(p, m.payload)
-		return n, nil
-	} else {
-		return 0, errors.New("invalid message")
+
+	for {
+		m, _, err := readMessage(self.conn)
+		if err != nil {
+			return 0, errors.Wrap(err, "read message")
+		}
+
+		if m.message == Payload {
+			logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
+			self.rxWindow.rx(m)
+			n, err = self.rxWindow.read(p)
+			if err == nil {
+				logrus.Infof("[](%d) <-", n)
+			}
+			return n, err
+
+		} else if m.message == Ack {
+			if sequence, err := readInt32(m.payload); err == nil {
+				logrus.Infof("[@%d] <-", sequence)
+				self.txWindow.ack(sequence)
+			} else {
+				return 0, errors.New("invalid ack")
+			}
+		} else {
+			return 0, errors.New("invalid message")
+		}
 	}
 }
 
 func (self *dialerConn) Write(p []byte) (n int, err error) {
-	data, err := newPayloadMessage(self.sequence.next(), p).marshal()
+	m := newPayloadMessage(self.sequence.next(), p)
+	self.txWindow.tx(m)
+
+	data, err := m.marshal()
 	if err != nil {
 		return 0, errors.Wrap(err, "marshal")
 	}
@@ -125,6 +180,7 @@ func (self *dialerConn) Write(p []byte) (n int, err error) {
 	if n != len(data) {
 		return 0, errors.New("short write")
 	}
+	logrus.Infof("[#%d](%d) ->", m.sequence, len(m.payload))
 	return len(p), nil
 }
 
