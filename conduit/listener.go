@@ -40,6 +40,9 @@ func (self *listener) Addr() net.Addr {
 }
 
 func (self *listener) run() {
+	logrus.Infof("started")
+	defer logrus.Warnf("exited")
+
 	for {
 		if m, peer, err := readMessage(self.conn); err == nil {
 			if lConn, found := self.peers[peer.String()]; !found {
@@ -53,6 +56,7 @@ func (self *listener) run() {
 			}
 		} else {
 			logrus.Errorf("read error from [%s] (%v)", peer, err)
+			return
 		}
 	}
 }

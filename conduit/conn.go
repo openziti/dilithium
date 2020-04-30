@@ -32,6 +32,7 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 func (self *listenerConn) Read(p []byte) (n int, err error) {
 	n, err = self.rxWindow.read(p)
 	if n > 0 {
+		logrus.Infof("[](%d) <-", n)
 		return
 	}
 
@@ -52,15 +53,15 @@ func (self *listenerConn) Read(p []byte) (n int, err error) {
 					logrus.Infof("[@%d] <-", sequence)
 					self.txWindow.ack(sequence)
 				} else {
-					return 0, errors.New("invalid ack")
+					return 0, errors.Wrap(err, "invalid ack")
 				}
 
 			} else {
 				return 0, errors.New("invalid message")
 			}
+		} else {
+			return 0, errors.New("closed")
 		}
-
-		return 0, errors.New("closed")
 	}
 }
 
@@ -134,6 +135,7 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 func (self *dialerConn) Read(p []byte) (n int, err error) {
 	n, err = self.rxWindow.read(p)
 	if n > 0 {
+		logrus.Infof("[](%d) <-", n)
 		return
 	}
 
