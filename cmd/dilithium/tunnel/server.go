@@ -58,7 +58,7 @@ func handleTunnelTerminator(tunnel net.Conn, destinationAddress *net.TCPAddr) {
 	go handleTunnelTerminatorReader(tunnel, terminator)
 	defer func() { _ = terminator.Close() }()
 
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, bufferSize)
 	for {
 		n, err := tunnel.Read(buffer)
 		if err != nil {
@@ -74,7 +74,7 @@ func handleTunnelTerminator(tunnel net.Conn, destinationAddress *net.TCPAddr) {
 }
 
 func handleTunnelTerminatorReader(tunnel net.Conn, terminator net.Conn) {
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, bufferSize)
 	for {
 		n, err := terminator.Read(buffer)
 		if err != nil {

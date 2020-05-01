@@ -10,21 +10,22 @@ import (
 )
 
 type rxWindow struct {
-	buffer []byte
-	tree   *btree.Tree
-	lock   *sync.Mutex
-	high   int32
-	conn   *net.UDPConn
-	peer   *net.UDPAddr
+	buffer     []byte
+	tree       *btree.Tree
+	lock       *sync.Mutex
+	acceptHigh int32
+	bufferHigh int32
+	conn       *net.UDPConn
+	peer       *net.UDPAddr
 }
 
 func newRxWindow(conn *net.UDPConn, peer *net.UDPAddr) *rxWindow {
 	rxw := &rxWindow{
-		tree: btree.NewWith(10240, utils.Int32Comparator),
-		lock: new(sync.Mutex),
-		high: -1,
-		conn: conn,
-		peer: peer,
+		tree:       btree.NewWith(10240, utils.Int32Comparator),
+		lock:       new(sync.Mutex),
+		acceptHigh: -1,
+		conn:       conn,
+		peer:       peer,
 	}
 	return rxw
 }
@@ -33,7 +34,7 @@ func (self *rxWindow) rx(m *message) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if m.sequence > self.high {
+	if m.sequence > self.acceptHigh {
 		self.tree.Put(m.sequence, m)
 	} else {
 		logrus.Warnf("dropping already received [#%d]", m.sequence)
@@ -41,13 +42,12 @@ func (self *rxWindow) rx(m *message) {
 	self.ack(m)
 
 	if self.tree.Size() > 0 {
-		next := self.tree.LeftKey().(int32)
 		for _, key := range self.tree.Keys() {
-			if key.(int32) == next {
+			if key.(int32) == self.bufferHigh {
 				m, _ := self.tree.Get(key)
 				self.tree.Remove(key)
-				self.high = key.(int32)
-				next++
+				self.acceptHigh = key.(int32)
+				self.bufferHigh++
 
 				self.buffer = append(self.buffer, m.(*message).payload...)
 

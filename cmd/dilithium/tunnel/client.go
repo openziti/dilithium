@@ -59,7 +59,7 @@ func handleTunnelInitiator(initiator net.Conn, serverAddress *net.UDPAddr) {
 	defer func() { _ = tunnel.Close() }()
 	logrus.Infof("tunnel established to [%s]", serverAddress)
 
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, bufferSize)
 	for {
 		n, err := initiator.Read(buffer)
 		if err != nil {
@@ -77,7 +77,7 @@ func handleTunnelInitiator(initiator net.Conn, serverAddress *net.UDPAddr) {
 }
 
 func handleTunnelInitiatorReader(initiator net.Conn, tunnel net.Conn) {
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, bufferSize)
 	for {
 		n, err := tunnel.Read(buffer)
 		if err != nil {
