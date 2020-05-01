@@ -30,9 +30,8 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 }
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
-	n, err = self.rxWindow.read(p)
-	if n > 0 {
-		logrus.Infof("[](%d) <-", n)
+	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+		logrus.Infof("i[](%d) <-", n)
 		return
 	}
 
@@ -41,12 +40,15 @@ func (self *listenerConn) Read(p []byte) (n int, err error) {
 		if ok {
 			if m.message == Payload {
 				logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
-				self.rxWindow.rx(m)
-				n, err = self.rxWindow.read(p)
-				if err == nil {
-					logrus.Infof("[](%d) <-", n)
+
+				if err := self.rxWindow.rx(m); err != nil {
+					logrus.Errorf("rxWindow (%v)", err)
 				}
-				return
+
+				if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+					logrus.Infof("[](%d) <-", n)
+					return
+				}
 
 			} else if m.message == Ack {
 				if sequence, err := readInt32(m.payload); err == nil {
@@ -133,26 +135,27 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 }
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
-	n, err = self.rxWindow.read(p)
-	if n > 0 {
-		logrus.Infof("[](%d) <-", n)
+	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+		logrus.Infof("i[](%d) <-", n)
 		return
 	}
 
 	for {
-		m, _, err := readMessage(self.conn)
+		var m *message
+		m, _, err = readMessage(self.conn)
 		if err != nil {
 			return 0, errors.Wrap(err, "read message")
 		}
 
 		if m.message == Payload {
 			logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
-			self.rxWindow.rx(m)
-			n, err = self.rxWindow.read(p)
-			if err == nil {
-				logrus.Infof("[](%d) <-", n)
+			if err = self.rxWindow.rx(m); err != nil {
+				logrus.Errorf("rxWindow (%v)", err)
 			}
-			return n, err
+			if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+				logrus.Infof("[](%d) <-", n)
+				return
+			}
 
 		} else if m.message == Ack {
 			if sequence, err := readInt32(m.payload); err == nil {
