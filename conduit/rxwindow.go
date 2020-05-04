@@ -48,14 +48,14 @@ func (self *rxWindow) rx(m *message) error {
 			if key.(int32) == next {
 				m, _ := self.tree.Get(key)
 				self.tree.Remove(key)
-				self.accepted = key.(int32)
+				self.accepted = next
 				next++
 
 				if n, err := self.buffer.Write(m.(*message).payload); err == nil {
 					if n != len(m.(*message).payload) {
-						return errors.New("short buffer")
+						return errors.New("short buffer writes")
 					}
-					logrus.Infof("[+ %d](%d) <-", key, n)
+					logrus.Infof("(%d) <- [+ #%d](%d) <-", self.buffer.Len(), key, n)
 				}
 
 			} else {

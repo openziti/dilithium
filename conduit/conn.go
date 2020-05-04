@@ -68,7 +68,9 @@ func (self *listenerConn) Read(p []byte) (n int, err error) {
 }
 
 func (self *listenerConn) Write(p []byte) (n int, err error) {
-	m := newPayloadMessage(self.sequence.next(), p)
+	buffer := make([]byte, len(p))
+	copy(buffer, p)
+	m := newPayloadMessage(self.sequence.next(), buffer)
 	self.txWindow.tx(m)
 
 	data, err := m.marshal()
@@ -171,7 +173,9 @@ func (self *dialerConn) Read(p []byte) (n int, err error) {
 }
 
 func (self *dialerConn) Write(p []byte) (n int, err error) {
-	m := newPayloadMessage(self.sequence.next(), p)
+	buffer := make([]byte, len(p))
+	copy(buffer, p)
+	m := newPayloadMessage(self.sequence.next(), buffer)
 	self.txWindow.tx(m)
 
 	data, err := m.marshal()
