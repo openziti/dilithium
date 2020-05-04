@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-const startingWindowCapacity = 16
-const retransmissionDelay = 20
+const startingWindowCapacity = 6
+const retransmissionDelay = 10
 
 type txWindow struct {
 	tree             *btree.Tree
