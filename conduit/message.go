@@ -10,7 +10,6 @@ func newHelloMessage() *message {
 	return &message{
 		sequence: oobSequence,
 		message:  Hello,
-		payload:  nil,
 	}
 }
 
@@ -29,9 +28,16 @@ func newAckMessage(sequence int32) (*message, error) {
 	}
 	return &message{
 		sequence: oobSequence,
-		message: Ack,
-		payload: payload.Bytes(),
+		message:  Ack,
+		payload:  payload.Bytes(),
 	}, nil
+}
+
+func newCloseMessage(sequence int32) *message {
+	return &message{
+		sequence: sequence,
+		message:  Close,
+	}
 }
 
 type message struct {
@@ -111,4 +117,5 @@ const (
 	Hello messageType = iota
 	Payload
 	Ack
+	Close
 )

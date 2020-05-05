@@ -22,7 +22,7 @@ type txWindow struct {
 	monitoring       *txMonitor
 	monitorCancelled bool
 	monitorReady     *sync.Cond
-	monitorClosed    bool
+	closed           bool
 	conn             *net.UDPConn
 	peer             *net.UDPAddr
 }
@@ -74,17 +74,24 @@ func (self *txWindow) ack(sequence int32) {
 	}
 }
 
-func (self *txWindow) retransmitter() {
-	for {
-		if self.monitorClosed {
-			return
-		}
+func (self *txWindow) close() {
+	self.closed = true
+}
 
+func (self *txWindow) retransmitter() {
+	logrus.Infof("started")
+	defer logrus.Warnf("exited")
+
+	for {
 		var timeout time.Duration
 		{
 			self.lock.Lock()
 
 			for len(self.monitorWait) < 1 {
+				if self.closed {
+					self.lock.Unlock()
+					return
+				}
 				self.monitorReady.Wait()
 			}
 			self.monitoring = self.monitorWait[0]
@@ -95,10 +102,6 @@ func (self *txWindow) retransmitter() {
 		}
 
 		time.Sleep(timeout)
-
-		if self.monitorClosed {
-			return
-		}
 
 		{
 			self.lock.Lock()
