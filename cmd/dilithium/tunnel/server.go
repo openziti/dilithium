@@ -1,7 +1,7 @@
 package tunnel
 
 import (
-	"github.com/michaelquigley/dilithium/conduit"
+	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
@@ -19,16 +19,18 @@ var tunnelServerCmd = &cobra.Command{
 }
 
 func tunnelServer(_ *cobra.Command, args []string) {
-	listenAddress, err := net.ResolveUDPAddr("udp", args[0])
+	protocol, err := dilithium.ProtocolFor(dilithium.SelectedProtocol)
 	if err != nil {
-		logrus.Fatalf("error resolving listen address [%s] (%v)", args[0], err)
+		logrus.Fatalf("error selecting protocol (%v)", err)
 	}
+
+	listenAddress := args[0]
 	destinationAddress, err := net.ResolveTCPAddr("tcp", args[1])
 	if err != nil {
 		logrus.Fatalf("error resolving destination address [%s] (%v)", args[1], err)
 	}
 
-	tunnelListener, err := conduit.Listen(listenAddress)
+	tunnelListener, err := protocol.Listen(listenAddress)
 	if err != nil {
 		logrus.Fatalf("error creating tunnel listener (%v)", err)
 	}

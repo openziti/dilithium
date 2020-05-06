@@ -10,6 +10,7 @@ import (
 
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
+	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "conduit", "Select underlying protocol (conduit, tcp)")
 }
 
 var RootCmd = &cobra.Command{
@@ -22,3 +23,4 @@ var RootCmd = &cobra.Command{
 	},
 }
 var verbose bool
+var SelectedProtocol string

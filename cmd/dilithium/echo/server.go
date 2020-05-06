@@ -2,7 +2,7 @@ package echo
 
 import (
 	"bufio"
-	"github.com/michaelquigley/dilithium/conduit"
+	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
@@ -20,12 +20,13 @@ var echoServerCmd = &cobra.Command{
 }
 
 func echoServer(_ *cobra.Command, args []string) {
-	listenAddress, err := net.ResolveUDPAddr("udp", args[0])
+	protocol, err := dilithium.ProtocolFor(dilithium.SelectedProtocol)
 	if err != nil {
-		logrus.Fatalf("error resolving listen address [%s] (%v)", args[0], err)
+		logrus.Fatalf("error selecting protocol (%v)", err)
 	}
 
-	listener, err := conduit.Listen(listenAddress)
+	listenAddress := args[0]
+	listener, err := protocol.Listen(listenAddress)
 	if err != nil {
 		logrus.Fatalf("error listening (%v)", err)
 	}

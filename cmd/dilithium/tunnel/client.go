@@ -1,7 +1,7 @@
 package tunnel
 
 import (
-	"github.com/michaelquigley/dilithium/conduit"
+	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
@@ -19,10 +19,7 @@ var tunnelClientCmd = &cobra.Command{
 }
 
 func tunnelClient(_ *cobra.Command, args []string) {
-	serverAddress, err := net.ResolveUDPAddr("udp", args[0])
-	if err != nil {
-		logrus.Fatalf("error resolving server address [%s] (%v)", args[0], err)
-	}
+	serverAddress := args[0]
 	listenAddress, err := net.ResolveTCPAddr("tcp", args[1])
 	if err != nil {
 		logrus.Fatalf("error resolving listen address [%s] (%v)", args[1], err)
@@ -44,13 +41,18 @@ func tunnelClient(_ *cobra.Command, args []string) {
 	}
 }
 
-func handleTunnelInitiator(initiator net.Conn, serverAddress *net.UDPAddr) {
+func handleTunnelInitiator(initiator net.Conn, serverAddress string) {
 	defer func() { _ = initiator.Close() }()
 
 	logrus.Infof("tunneling for initiator at [%s]", initiator.RemoteAddr())
 	defer logrus.Warnf("end tunnel for initiator at [%s]", initiator.RemoteAddr())
 
-	tunnel, err := conduit.Dial(serverAddress)
+	protocol, err := dilithium.ProtocolFor(dilithium.SelectedProtocol)
+	if err != nil {
+		logrus.Fatalf("error selecting protocol (%v)", err)
+	}
+
+	tunnel, err := protocol.Dial(serverAddress)
 	if err != nil {
 		logrus.Errorf("error dialing tunnel server at [%s] (%v)", serverAddress, err)
 		return
