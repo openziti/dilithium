@@ -1,6 +1,7 @@
 package conduit
 
 import (
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -52,7 +53,7 @@ func (self *listenerConn) Read(p []byte) (n int, err error) {
 				}
 
 			} else if m.message == Ack {
-				if sequence, err := readInt32(m.payload); err == nil {
+				if sequence, err := util.ReadInt32(m.payload); err == nil {
 					logrus.Infof("[@%d] <-", sequence)
 					self.txWindow.ack(sequence)
 				} else {
@@ -185,7 +186,7 @@ func (self *dialerConn) Read(p []byte) (n int, err error) {
 			}
 
 		} else if m.message == Ack {
-			if sequence, err := readInt32(m.payload); err == nil {
+			if sequence, err := util.ReadInt32(m.payload); err == nil {
 				logrus.Infof("[@%d] <-", sequence)
 				self.txWindow.ack(sequence)
 			} else {

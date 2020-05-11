@@ -3,6 +3,7 @@ package conduit
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 )
 
@@ -88,13 +89,13 @@ func unmarshal(data []byte) (*message, error) {
 			return nil, errors.New("bad magic")
 		}
 	}
-	sequence, err := readInt32(data[2:6])
+	sequence, err := util.ReadInt32(data[2:6])
 	if err != nil {
 		return nil, errors.Wrap(err, "sequence read")
 	}
 	m.sequence = sequence
 	m.message = messageType(data[6])
-	payloadLength, err := readInt32(data[7:11])
+	payloadLength, err := util.ReadInt32(data[7:11])
 	if err != nil {
 		return nil, errors.Wrap(err, "payload length read")
 	}
