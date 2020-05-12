@@ -1,7 +1,10 @@
 package blaster
 
 import (
+	"bytes"
+	"encoding/gob"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
@@ -17,13 +20,18 @@ func Listen(caddr *net.TCPAddr, daddr *net.UDPAddr) (net.Listener, error) {
 	l := &listener{
 		clistener: clistener,
 		dconn:     dconn,
+		active:    make(map[string]*listenerConn),
 	}
+	go l.rxer()
 	return l, nil
 }
 
 type listener struct {
 	clistener *net.TCPListener
+	cenc      gob.Encoder
+	cdec      gob.Decoder
 	dconn     *net.UDPConn
+	active    map[string]*listenerConn
 }
 
 func (self *listener) Accept() (net.Conn, error) {
@@ -31,10 +39,7 @@ func (self *listener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "accept")
 	}
-	c := newConn(cconn)
-	if err := c.hello(); err != nil {
-		return nil, errors.Wrap(err, "connection setup")
-	}
+	c := newListenerConn(self, cconn, self.dconn)
 	return c, nil
 }
 
@@ -44,4 +49,32 @@ func (self *listener) Close() error {
 
 func (self *listener) Addr() net.Addr {
 	return self.clistener.Addr()
+}
+
+func (self *listener) rxer() {
+	logrus.Info("started")
+	defer logrus.Warnf("exited")
+
+	buffer := make([]byte, 64*1024)
+	for {
+		if n, peer, err := self.dconn.ReadFromUDP(buffer); err == nil {
+			if lc, found := self.active[peer.String()]; found {
+				data := bytes.NewBuffer(buffer[:n])
+				dec := gob.NewDecoder(data)
+				mh := cmsg{}
+				if err := dec.Decode(&mh); err == nil {
+					switch mh.mt {
+					case Hello:
+						lc.rxq <- &cmsgPair{h: mh}
+
+					default:
+						logrus.Errorf("unknown mt [%d]", mh.mt)
+					}
+				}
+
+			} else {
+				logrus.Warnf("received packet for inactive peer [%s]", peer)
+			}
+		}
+	}
 }

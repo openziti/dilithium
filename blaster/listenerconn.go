@@ -1,24 +1,30 @@
 package blaster
 
 import (
+	"encoding/gob"
 	"github.com/michaelquigley/dilithium/util"
 	"net"
 	"time"
 )
 
 type listenerConn struct {
-	cconn *net.TCPConn
+	listn *listener
+	cconn net.Conn
+	cenc  *gob.Encoder
+	cdec  *gob.Decoder
 	dconn *net.UDPConn
 	dpeer *net.UDPAddr
 	rxq   chan *cmsgPair
 	seq   *util.Sequence
 }
 
-func newListenerConn(cconn *net.TCPConn, dconn *net.UDPConn, dpeer *net.UDPAddr) *listenerConn {
+func newListenerConn(listn *listener, cconn net.Conn, dconn *net.UDPConn) *listenerConn {
 	return &listenerConn{
+		listn: listn,
 		cconn: cconn,
+		cenc:  gob.NewEncoder(cconn),
+		cdec:  gob.NewDecoder(cconn),
 		dconn: dconn,
-		dpeer: dpeer,
 		rxq:   make(chan *cmsgPair, 1024),
 		seq:   util.NewSequence(),
 	}
