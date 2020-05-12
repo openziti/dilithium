@@ -63,23 +63,32 @@ func (self *listener) rxer() {
 	buffer := make([]byte, 64*1024)
 	for {
 		if n, peer, err := self.dconn.ReadFromUDP(buffer); err == nil {
-			if lc, found := self.active[peer.String()]; found {
-				data := bytes.NewBuffer(buffer[:n])
-				dec := gob.NewDecoder(data)
-				mh := cmsg{}
-				if err := dec.Decode(&mh); err == nil {
-					switch mh.mt {
-					case Hello:
-						lc.rxq <- &cmsgPair{h: mh}
-
-					default:
-						logrus.Errorf("unknown mt [%d]", mh.mt)
+			data := bytes.NewBuffer(buffer[:n])
+			dec := gob.NewDecoder(data)
+			mh := cmsg{}
+			if err := dec.Decode(&mh); err == nil {
+				if cmp, err := decode(mh, dec); err == nil {
+					if lc, found := self.active[peer.String()]; found {
+						lc.rxq <- cmp
+					} else {
+						if mh.mt == Hello {
+							if lc, found := self.syncing[cmp.p.(chello).nonce]; found {
+								lc.rxq <- cmp
+							} else {
+								logrus.Errorf("no inactive peer found for [%s]", cmp.p.(chello).nonce)
+							}
+						} else {
+							logrus.Errorf("invalid mt [%d] for inactive peer [%s]", mh.mt, peer)
+						}
 					}
+				} else {
+					logrus.Errorf("pair error (%v)", err)
 				}
-
 			} else {
-				logrus.Warnf("received packet for inactive peer [%s]", peer)
+				logrus.Errorf("decode error (%v)", err)
 			}
+		} else {
+			logrus.Errorf("read error (%v)", err)
 		}
 	}
 }
