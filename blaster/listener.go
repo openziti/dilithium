@@ -5,17 +5,25 @@ import (
 	"net"
 )
 
-func Listen(addr *net.TCPAddr) (net.Listener, error) {
-	ltcp, err := net.ListenTCP("tcp", addr)
+func Listen(caddr *net.TCPAddr, daddr *net.UDPAddr) (net.Listener, error) {
+	clistener, err := net.ListenTCP("tcp", caddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "listen tcp")
 	}
-	l := &listener{clistener: ltcp}
+	dconn, err := net.ListenUDP("udp", daddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "bind udp")
+	}
+	l := &listener{
+		clistener: clistener,
+		dconn:     dconn,
+	}
 	return l, nil
 }
 
 type listener struct {
 	clistener *net.TCPListener
+	dconn     *net.UDPConn
 }
 
 func (self *listener) Accept() (net.Conn, error) {
