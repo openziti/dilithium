@@ -3,6 +3,7 @@ package blaster
 import (
 	"encoding/gob"
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -64,4 +65,22 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 
 func (self *listenerConn) queue(p *cmsgPair) {
 	self.rxq <- p
+}
+
+func (self *listenerConn) hello() {
+	req := cmsg{}
+	if err := self.cdec.Decode(&req); err == nil {
+		logrus.Infof("received hello request")
+	} else {
+		logrus.Errorf("error decoding hello request (%v)", err)
+		return
+	}
+	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
+		logrus.Infof("sent hello response")
+	} else {
+		logrus.Errorf("error encoding hello response (%v)", err)
+	}
+	// receive dconn hello
+	// transmit dconn hello
+	// wait for cconn ok
 }
