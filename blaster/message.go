@@ -1,5 +1,10 @@
 package blaster
 
+type cmsgPair struct {
+	h cmsg
+	p interface{}
+}
+
 type cmsg struct {
 	seq int32
 	mt  cmsgType

@@ -1,17 +1,17 @@
-package conduit
+package util
 
 import "sync"
 
-type sequence struct {
+type Sequence struct {
 	nextValue int32
 	lock      *sync.Mutex
 }
 
-func newSequence() *sequence {
-	return &sequence{lock: new(sync.Mutex)}
+func NewSequence() *Sequence {
+	return &Sequence{lock: new(sync.Mutex)}
 }
 
-func (self *sequence) next() int32 {
+func (self *Sequence) Next() int32 {
 	self.lock.Lock()
 	n := self.nextValue
 	self.nextValue++

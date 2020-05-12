@@ -13,7 +13,7 @@ type listenerConn struct {
 	local     *net.UDPAddr
 	peer      *net.UDPAddr
 	readQueue chan *message
-	sequence  *sequence
+	sequence  *util.Sequence
 	rxWindow  *rxWindow
 	txWindow  *txWindow
 	txClosed  bool
@@ -25,7 +25,7 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 		local:     local,
 		peer:      peer,
 		readQueue: make(chan *message, 1024),
-		sequence:  newSequence(),
+		sequence:  util.NewSequence(),
 		rxWindow:  newRxWindow(conn, peer),
 		txWindow:  newTxWindow(conn, peer),
 	}
@@ -73,7 +73,7 @@ func (self *listenerConn) Write(p []byte) (n int, err error) {
 	if !self.txClosed {
 		buffer := make([]byte, len(p))
 		copy(buffer, p)
-		m := newPayloadMessage(self.sequence.next(), buffer)
+		m := newPayloadMessage(self.sequence.Next(), buffer)
 		self.txWindow.tx(m)
 
 		var data []byte
@@ -97,7 +97,7 @@ func (self *listenerConn) Write(p []byte) (n int, err error) {
 }
 
 func (self *listenerConn) Close() error {
-	m := newCloseMessage(self.sequence.next())
+	m := newCloseMessage(self.sequence.Next())
 	self.txWindow.tx(m)
 
 	data, err := m.marshal()
@@ -145,7 +145,7 @@ type dialerConn struct {
 	conn     *net.UDPConn
 	local    *net.UDPAddr
 	peer     *net.UDPAddr
-	sequence *sequence
+	sequence *util.Sequence
 	rxWindow *rxWindow
 	txWindow *txWindow
 	txClosed bool
@@ -156,7 +156,7 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 		conn:     conn,
 		local:    local,
 		peer:     peer,
-		sequence: newSequence(),
+		sequence: util.NewSequence(),
 		rxWindow: newRxWindow(conn, peer),
 		txWindow: newTxWindow(conn, peer),
 	}
@@ -202,7 +202,7 @@ func (self *dialerConn) Write(p []byte) (n int, err error) {
 	if !self.txClosed {
 		buffer := make([]byte, len(p))
 		copy(buffer, p)
-		m := newPayloadMessage(self.sequence.next(), buffer)
+		m := newPayloadMessage(self.sequence.Next(), buffer)
 		self.txWindow.tx(m)
 
 		var data []byte
@@ -226,7 +226,7 @@ func (self *dialerConn) Write(p []byte) (n int, err error) {
 }
 
 func (self *dialerConn) Close() error {
-	m := newCloseMessage(self.sequence.next())
+	m := newCloseMessage(self.sequence.Next())
 	self.txWindow.tx(m)
 
 	data, err := m.marshal()
