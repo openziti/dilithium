@@ -16,3 +16,7 @@ const (
 	Hello cmsgType = iota
 	Close
 )
+
+type chello struct {
+	nonce string
+}

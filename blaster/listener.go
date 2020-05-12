@@ -3,6 +3,7 @@ package blaster
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -21,6 +22,7 @@ func Listen(caddr *net.TCPAddr, daddr *net.UDPAddr) (net.Listener, error) {
 		clistener: clistener,
 		dconn:     dconn,
 		active:    make(map[string]*listenerConn),
+		syncing:   make(map[string]*listenerConn),
 	}
 	go l.rxer()
 	return l, nil
@@ -32,6 +34,7 @@ type listener struct {
 	cdec      gob.Decoder
 	dconn     *net.UDPConn
 	active    map[string]*listenerConn
+	syncing   map[string]*listenerConn
 }
 
 func (self *listener) Accept() (net.Conn, error) {
@@ -39,7 +42,9 @@ func (self *listener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "accept")
 	}
-	c := newListenerConn(self, cconn, self.dconn)
+	sessn := util.GenerateSessionId()
+	c := newListenerConn(self, sessn, cconn, self.dconn)
+	self.syncing[sessn] = c
 	return c, nil
 }
 

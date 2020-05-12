@@ -10,6 +10,7 @@ import (
 
 type listenerConn struct {
 	listn *listener
+	sessn string
 	cconn net.Conn
 	cenc  *gob.Encoder
 	cdec  *gob.Decoder
@@ -19,9 +20,10 @@ type listenerConn struct {
 	seq   *util.Sequence
 }
 
-func newListenerConn(listn *listener, cconn net.Conn, dconn *net.UDPConn) *listenerConn {
+func newListenerConn(listn *listener, sessn string, cconn net.Conn, dconn *net.UDPConn) *listenerConn {
 	return &listenerConn{
 		listn: listn,
+		sessn: sessn,
 		cconn: cconn,
 		cenc:  gob.NewEncoder(cconn),
 		cdec:  gob.NewDecoder(cconn),
