@@ -1,0 +1,5 @@
+package pb
+
+func NewSync() {
+
+}

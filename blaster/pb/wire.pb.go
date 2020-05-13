@@ -80,16 +80,18 @@ func (MessageType) EnumDescriptor() ([]byte, []int) {
 	return file_wire_proto_rawDescGZIP(), []int{0}
 }
 
-type Hello struct {
+type Header struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Session string `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
+	Sequence     int32                `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	Type         MessageType          `protobuf:"varint,2,opt,name=type,proto3,enum=pb.MessageType" json:"type,omitempty"`
+	HelloPayload *Header_HelloPayload `protobuf:"bytes,3,opt,name=helloPayload,proto3" json:"helloPayload,omitempty"`
 }
 
-func (x *Hello) Reset() {
-	*x = Hello{}
+func (x *Header) Reset() {
+	*x = Header{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_wire_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -97,13 +99,13 @@ func (x *Hello) Reset() {
 	}
 }
 
-func (x *Hello) String() string {
+func (x *Header) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Hello) ProtoMessage() {}
+func (*Header) ProtoMessage() {}
 
-func (x *Hello) ProtoReflect() protoreflect.Message {
+func (x *Header) ProtoReflect() protoreflect.Message {
 	mi := &file_wire_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -115,12 +117,73 @@ func (x *Hello) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Hello.ProtoReflect.Descriptor instead.
-func (*Hello) Descriptor() ([]byte, []int) {
+// Deprecated: Use Header.ProtoReflect.Descriptor instead.
+func (*Header) Descriptor() ([]byte, []int) {
 	return file_wire_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Hello) GetSession() string {
+func (x *Header) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *Header) GetType() MessageType {
+	if x != nil {
+		return x.Type
+	}
+	return MessageType_SYNC
+}
+
+func (x *Header) GetHelloPayload() *Header_HelloPayload {
+	if x != nil {
+		return x.HelloPayload
+	}
+	return nil
+}
+
+type Header_HelloPayload struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Session string `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
+}
+
+func (x *Header_HelloPayload) Reset() {
+	*x = Header_HelloPayload{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_wire_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Header_HelloPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Header_HelloPayload) ProtoMessage() {}
+
+func (x *Header_HelloPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_wire_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Header_HelloPayload.ProtoReflect.Descriptor instead.
+func (*Header_HelloPayload) Descriptor() ([]byte, []int) {
+	return file_wire_proto_rawDescGZIP(), []int{0, 0}
+}
+
+func (x *Header_HelloPayload) GetSession() string {
 	if x != nil {
 		return x.Session
 	}
@@ -131,7 +194,16 @@ var File_wire_proto protoreflect.FileDescriptor
 
 var file_wire_proto_rawDesc = []byte{
 	0x0a, 0x0a, 0x77, 0x69, 0x72, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x02, 0x70, 0x62,
-	0x22, 0x21, 0x0a, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x65, 0x73,
+	0x22, 0xb0, 0x01, 0x0a, 0x06, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x73,
+	0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x73,
+	0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x65, 0x12, 0x23, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0f, 0x2e, 0x70, 0x62, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x3b, 0x0a, 0x0c,
+	0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x17, 0x2e, 0x70, 0x62, 0x2e, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x2e, 0x48,
+	0x65, 0x6c, 0x6c, 0x6f, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x52, 0x0c, 0x68, 0x65, 0x6c,
+	0x6c, 0x6f, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x1a, 0x28, 0x0a, 0x0c, 0x48, 0x65, 0x6c,
+	0x6c, 0x6f, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x65, 0x73,
 	0x73, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x73, 0x65, 0x73, 0x73,
 	0x69, 0x6f, 0x6e, 0x2a, 0x3f, 0x0a, 0x0b, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x54, 0x79,
 	0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x53, 0x59, 0x4e, 0x43, 0x10, 0x00, 0x12, 0x09, 0x0a, 0x05,
@@ -156,17 +228,20 @@ func file_wire_proto_rawDescGZIP() []byte {
 }
 
 var file_wire_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_wire_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_wire_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_wire_proto_goTypes = []interface{}{
-	(MessageType)(0), // 0: pb.MessageType
-	(*Hello)(nil),    // 1: pb.Hello
+	(MessageType)(0),            // 0: pb.MessageType
+	(*Header)(nil),              // 1: pb.Header
+	(*Header_HelloPayload)(nil), // 2: pb.Header.HelloPayload
 }
 var file_wire_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: pb.Header.type:type_name -> pb.MessageType
+	2, // 1: pb.Header.helloPayload:type_name -> pb.Header.HelloPayload
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_wire_proto_init() }
@@ -176,7 +251,19 @@ func file_wire_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_wire_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Hello); i {
+			switch v := v.(*Header); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_wire_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Header_HelloPayload); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -194,7 +281,7 @@ func file_wire_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_wire_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

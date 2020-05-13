@@ -11,6 +11,13 @@ enum MessageType {
   CLOSE = 4;
 }
 
-message Hello {
-  string session = 1;
+message Header {
+  int32 sequence = 1;
+  MessageType type = 2;
+
+  HelloPayload helloPayload = 3;
+
+  message HelloPayload {
+    string session = 1;
+  }
 }
