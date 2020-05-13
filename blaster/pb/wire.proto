@@ -11,7 +11,7 @@ enum MessageType {
   CLOSE = 4;
 }
 
-message Header {
+message WireMessage {
   int32 sequence = 1;
   MessageType type = 2;
 
