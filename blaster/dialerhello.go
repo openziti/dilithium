@@ -3,6 +3,7 @@ package blaster
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -12,45 +13,34 @@ func (self *dialerConn) hello() error {
 	/*
 	 * Transmit cconn Sync
 	 */
-	logrus.Infof("starting cconn sync")
-	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Sync}); err != nil {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Wrap(err, "encode sync")
+	logrus.Infof("started transmitting cconn sync")
+	err := pb.WriteMessage(pb.NewSync(self.seq.Next()), self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "sync write")
 	}
-	logrus.Infof("finished cconn sync")
+	logrus.Infof("finished transmitting cconn sync")
 	/* */
 
 	/*
 	 * Receive cconn Hello
 	 */
-	logrus.Infof("starting cconn hello")
-	rplMsg := cmsg{}
-	if err := self.cdec.Decode(&rplMsg); err != nil {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Wrap(err, "decode cmsg")
+	logrus.Infof("started receiving cconn hello")
+	wm, err := pb.ReadMessage(self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "hello read")
 	}
-	if rplMsg.Mt != Hello {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Errorf("expected hello, Mt [%d]", rplMsg.Mt)
+	if wm.Type != pb.MessageType_HELLO {
+		return errors.Errorf("expected hello mt [%d]", wm.Type)
 	}
-	rplHello := chello{}
-	if err := self.cdec.Decode(&rplHello); err != nil {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Wrap(err, "decode chello")
-	}
-	self.sessn = rplHello.Nonce
+	self.sessn = wm.HelloPayload.Session
 	logrus.Infof("hello session [%s]", self.sessn)
-	logrus.Infof("finished cconn hello")
+	logrus.Infof("finished receiving cconn hello")
 	/* */
 
 	/*
 	 * Transmit dconn Hello
 	 */
-	logrus.Infof("starting transmitting dconn hello")
+	logrus.Infof("started transmitting dconn hello")
 	closer := make(chan struct{}, 1)
 	defer func() { close(closer) }()
 	go self.helloTxDconn(closer)
@@ -58,12 +48,11 @@ func (self *dialerConn) hello() error {
 	if err := self.cconn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return errors.Wrap(err, "set cconn deadline")
 	}
-
-	okMsg := cmsg{}
-	if err := self.cdec.Decode(&okMsg); err != nil {
-		return errors.Wrap(err, "decode ok")
+	wm, err = pb.ReadMessage(self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "ok read")
 	}
-	if okMsg.Mt != Ok {
+	if wm.Type != pb.MessageType_OK {
 		return errors.New("not ok")
 	}
 	if err := self.cconn.SetReadDeadline(time.Time{}); err != nil {
@@ -79,18 +68,19 @@ func (self *dialerConn) hello() error {
 	if err := self.dconn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return errors.Wrap(err, "set dconn deadline")
 	}
-	cp, err := self.readCmsgPair()
+	wmp, err := self.readWireMessagePeer()
 	if err != nil {
-		return errors.Wrap(err, "read cmsgPair")
+		return errors.Wrap(err, "read wmp")
 	}
-	if cp.h.Mt != Hello {
-		return errors.Errorf("expected hello mt [%d]", cp.h.Mt)
+	if wmp.WireMessage.Type != pb.MessageType_HELLO {
+		return errors.Errorf("expected hello mt [%d]", wm.Type)
 	}
-	if cp.p.(chello).Nonce != self.sessn {
+	if wmp.WireMessage.HelloPayload.Session != self.sessn {
 		return errors.New("invalid session")
 	}
-	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Ok}); err != nil {
-		return errors.Wrap(err, "encode ok")
+	err = pb.WriteMessage(pb.NewOk(self.seq.Next()), self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "ok write")
 	}
 	if err := self.dconn.SetReadDeadline(time.Time{}); err != nil {
 		return errors.Wrap(err, "clear dconn deadline")

@@ -1,7 +1,7 @@
 package blaster
 
 import (
-	"encoding/gob"
+	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/michaelquigley/dilithium/util"
 	"net"
 	"time"
@@ -11,11 +11,9 @@ type listenerConn struct {
 	listn *listener
 	sessn string
 	cconn net.Conn
-	cenc  *gob.Encoder
-	cdec  *gob.Decoder
 	dconn *net.UDPConn
 	dpeer *net.UDPAddr
-	rxq   chan *cmsgPair
+	rxq   chan *pb.WireMessagePeer
 	seq   *util.Sequence
 }
 
@@ -24,10 +22,8 @@ func newListenerConn(listn *listener, sessn string, cconn net.Conn, dconn *net.U
 		listn: listn,
 		sessn: sessn,
 		cconn: cconn,
-		cenc:  gob.NewEncoder(cconn),
-		cdec:  gob.NewDecoder(cconn),
 		dconn: dconn,
-		rxq:   make(chan *cmsgPair, 1024),
+		rxq:   make(chan *pb.WireMessagePeer, 1024),
 		seq:   util.NewSequence(),
 	}
 }
@@ -64,6 +60,6 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *listenerConn) queue(p *cmsgPair) {
+func (self *listenerConn) queue(p *pb.WireMessagePeer) {
 	self.rxq <- p
 }

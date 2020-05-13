@@ -1,8 +1,8 @@
 package blaster
 
 import (
-	"bytes"
 	"encoding/gob"
+	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -66,30 +66,20 @@ func (self *listener) rxer() {
 	buffer := make([]byte, 64*1024)
 	for {
 		if n, peer, err := self.dconn.ReadFromUDP(buffer); err == nil {
-			data := bytes.NewBuffer(buffer[:n])
-			dec := gob.NewDecoder(data)
-			mh := cmsg{}
-			if err := dec.Decode(&mh); err == nil {
-				if cmp, err := decode(mh, dec); err == nil {
-					cmp.peer = peer
-					if lc, found := self.active[peer.String()]; found {
-						lc.rxq <- cmp
-					} else {
-						if mh.Mt == Hello {
-							if lc, found := self.syncing[cmp.p.(chello).Nonce]; found {
-								lc.rxq <- cmp
-							} else {
-								logrus.Errorf("no inactive peer found for [%s]", cmp.p.(chello).Nonce)
-							}
-						} else {
-							logrus.Errorf("invalid Mt [%d] for inactive peer [%s]", mh.Mt, peer)
-						}
-					}
+			if wireMessage, err := pb.FromData(buffer[:n]); err == nil {
+				if lc, found := self.active[peer.String()]; found {
+					lc.rxq <- &pb.WireMessagePeer{WireMessage: wireMessage, Peer: peer}
 				} else {
-					logrus.Errorf("pair error (%v)", err)
+					if wireMessage.Type == pb.MessageType_HELLO {
+						if lc, found := self.syncing[wireMessage.HelloPayload.Session]; found {
+							lc.rxq <- &pb.WireMessagePeer{WireMessage: wireMessage, Peer: peer}
+						}
+					} else {
+						logrus.Errorf("no recipient for message [%s] at [%s]", wireMessage, peer)
+					}
 				}
 			} else {
-				logrus.Errorf("decode error (%v)", err)
+				logrus.Errorf("error decoding message (%v)", err)
 			}
 		} else {
 			logrus.Errorf("read error (%v)", err)

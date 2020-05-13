@@ -1,8 +1,7 @@
 package blaster
 
 import (
-	"bytes"
-	"encoding/gob"
+	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"net"
@@ -12,8 +11,6 @@ import (
 type dialerConn struct {
 	sessn string
 	cconn *net.TCPConn
-	cenc  *gob.Encoder
-	cdec  *gob.Decoder
 	dconn *net.UDPConn
 	dpeer *net.UDPAddr
 	seq   *util.Sequence
@@ -22,8 +19,6 @@ type dialerConn struct {
 func newDialerConn(cconn *net.TCPConn, dconn *net.UDPConn, dpeer *net.UDPAddr) *dialerConn {
 	return &dialerConn{
 		cconn: cconn,
-		cenc:  gob.NewEncoder(cconn),
-		cdec:  gob.NewDecoder(cconn),
 		dconn: dconn,
 		dpeer: dpeer,
 		seq:   util.NewSequence(),
@@ -62,24 +57,17 @@ func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *dialerConn) readCmsgPair() (*cmsgPair, error) {
+func (self *dialerConn) readWireMessagePeer() (*pb.WireMessagePeer, error) {
 	buffer := make([]byte, 64*1024)
 	n, peer, err := self.dconn.ReadFromUDP(buffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "read error")
 	}
 
-	data := bytes.NewBuffer(buffer[:n])
-	dec := gob.NewDecoder(data)
-	mh := cmsg{}
-	if err := dec.Decode(&mh); err != nil {
-		return nil, errors.Wrap(err, "decode cmsg")
-	}
-	cp, err := decode(mh, dec)
+	wm, err := pb.FromData(buffer[:n])
 	if err != nil {
-		return nil, errors.Wrap(err, "decode error")
+		return nil, errors.Wrap(err, "unmarshal")
 	}
-	cp.peer = peer
 
-	return cp, nil
+	return &pb.WireMessagePeer{WireMessage: wm, Peer: peer}, nil
 }

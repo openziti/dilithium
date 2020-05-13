@@ -1,8 +1,7 @@
 package blaster
 
 import (
-	"bytes"
-	"encoding/gob"
+	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -13,14 +12,12 @@ func (self *listenerConn) hello() error {
 	 * Receive cconn Sync
 	 */
 	logrus.Infof("started receiving cconn sync")
-	reqMsg := cmsg{}
-	if err := self.cdec.Decode(&reqMsg); err != nil {
-		_ = self.cconn.Close()
-		return errors.Wrap(err, "decode cmsg")
+	wireMessage, err := pb.ReadMessage(self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "read sync")
 	}
-	if reqMsg.Mt != Sync {
-		_ = self.cconn.Close()
-		return errors.Errorf("expected sync got mt [%d]", reqMsg.Mt)
+	if wireMessage.Type != pb.MessageType_SYNC {
+		return errors.Errorf("expected sync got mt [%d]", wireMessage.Type)
 	}
 	logrus.Infof("finished receiving cconn sync")
 	/* */
@@ -29,13 +26,9 @@ func (self *listenerConn) hello() error {
 	 * Transmit cconn Hello
 	 */
 	logrus.Infof("started transmitting cconn hello")
-	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
-		_ = self.cconn.Close()
-		return errors.Wrap(err, "encode cmsg")
-	}
-	if err := self.cenc.Encode(&chello{self.sessn}); err != nil {
-		_ = self.cconn.Close()
-		return errors.Wrap(err, "encode chello")
+	err = pb.WriteMessage(pb.NewHello(self.seq.Next(), self.sessn), self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "write hello")
 	}
 	logrus.Infof("finished transmitting cconn hello")
 	/* */
@@ -52,10 +45,10 @@ func (self *listenerConn) hello() error {
 		}
 
 		select {
-		case cp := <-self.rxq:
-			if cp.h.Mt == Hello {
-				if cp.p.(chello).Nonce == self.sessn {
-					self.dpeer = cp.peer
+		case wmp := <-self.rxq:
+			if wmp.WireMessage.Type == pb.MessageType_HELLO {
+				if wmp.WireMessage.HelloPayload.Session == self.sessn {
+					self.dpeer = wmp.Peer
 					self.listn.active[self.dpeer.String()] = self
 					delete(self.listn.syncing, self.sessn)
 					success = true
@@ -68,8 +61,9 @@ func (self *listenerConn) hello() error {
 		}
 	}
 	if success {
-		if err := self.cenc.Encode(&cmsg{self.seq.Next(), Ok}); err != nil {
-			return errors.Wrap(err, "encode ok")
+		err = pb.WriteMessage(pb.NewOk(self.seq.Next()), self.cconn)
+		if err != nil {
+			return errors.Wrap(err, "ok write")
 		}
 	} else {
 		return errors.New("dconn hello timeout")
@@ -89,11 +83,11 @@ func (self *listenerConn) hello() error {
 		return errors.Wrap(err, "set cconn deadline")
 	}
 
-	okMsg := cmsg{}
-	if err := self.cdec.Decode(&okMsg); err != nil {
-		return errors.Wrap(err, "decode ok")
+	wmp, err := pb.ReadMessage(self.cconn)
+	if err != nil {
+		return errors.Wrap(err, "ok decode")
 	}
-	if okMsg.Mt != Ok {
+	if wmp.Type != pb.MessageType_OK {
 		return errors.New("not ok")
 	}
 	if err := self.cconn.SetReadDeadline(time.Time{}); err != nil {
@@ -111,19 +105,18 @@ func (self *listenerConn) helloTxDconn(closer chan struct{}) {
 	logrus.Infof("started")
 	defer logrus.Warnf("exited")
 
-	buffer := new(bytes.Buffer)
-	enc := gob.NewEncoder(buffer)
-	if err := enc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
-		logrus.Errorf("error encoding cmsg (%v)", err)
+	data, err := pb.ToData(pb.NewHello(self.seq.Next(), self.sessn))
+	if err != nil {
+		logrus.Errorf("error encoding hello (%v)", err)
 		return
 	}
-	if err := enc.Encode(&chello{self.sessn}); err != nil {
-		logrus.Errorf("error encoding chello (%v)", err)
-		return
-	}
-	_, err := self.dconn.WriteToUDP(buffer.Bytes(), self.dpeer)
+	n, err := self.dconn.WriteToUDP(data, self.dpeer)
 	if err != nil {
 		logrus.Errorf("error writing (%v)", err)
+		return
+	}
+	if n != len(data) {
+		logrus.Errorf("short write")
 		return
 	}
 	logrus.Infof("transmitted dconn hello attempt")
@@ -131,18 +124,18 @@ func (self *listenerConn) helloTxDconn(closer chan struct{}) {
 	for {
 		select {
 		case <-time.After(1 * time.Second):
-			buffer.Reset()
-			if err := enc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
-				logrus.Errorf("error encoding cmsg (%v)", err)
+			data, err := pb.ToData(pb.NewHello(self.seq.Next(), self.sessn))
+			if err != nil {
+				logrus.Errorf("error encoding hello (%v)", err)
 				return
 			}
-			if err := enc.Encode(&chello{self.sessn}); err != nil {
-				logrus.Errorf("error encoding chello (%v)", err)
-				return
-			}
-			_, err := self.dconn.WriteToUDP(buffer.Bytes(), self.dpeer)
+			n, err := self.dconn.WriteToUDP(data, self.dpeer)
 			if err != nil {
 				logrus.Errorf("error writing (%v)", err)
+				return
+			}
+			if n != len(data) {
+				logrus.Errorf("short write")
 				return
 			}
 			logrus.Infof("transmitted dconn hello attempt")
