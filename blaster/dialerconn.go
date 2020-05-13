@@ -2,6 +2,7 @@ package blaster
 
 import (
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/pkg/errors"
 	"net"
 	"time"
 )
@@ -52,4 +53,8 @@ func (self *dialerConn) SetReadDeadline(t time.Time) error {
 
 func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
+}
+
+func (self *dialerConn) hello() error {
+	return errors.New("not implemented")
 }

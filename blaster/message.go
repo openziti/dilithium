@@ -13,7 +13,8 @@ type cmsg struct {
 type cmsgType uint8
 
 const (
-	Hello cmsgType = iota
+	Sync cmsgType = iota
+	Hello
 	Close
 )
 
