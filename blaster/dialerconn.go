@@ -1,15 +1,16 @@
 package blaster
 
 import (
+	"bytes"
 	"encoding/gob"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
 
 type dialerConn struct {
+	sessn string
 	cconn *net.TCPConn
 	cenc  *gob.Encoder
 	cdec  *gob.Decoder
@@ -61,33 +62,24 @@ func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *dialerConn) hello() error {
-	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Sync}); err != nil {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Wrap(err, "encode sync")
+func (self *dialerConn) readCmsgPair() (*cmsgPair, error) {
+	buffer := make([]byte, 64*1024)
+	n, peer, err := self.dconn.ReadFromUDP(buffer)
+	if err != nil {
+		return nil, errors.Wrap(err, "read error")
 	}
 
-	rplMsg := cmsg{}
-	if err := self.cdec.Decode(&rplMsg); err != nil {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Wrap(err, "decode cmsg")
+	data := bytes.NewBuffer(buffer[:n])
+	dec := gob.NewDecoder(data)
+	mh := cmsg{}
+	if err := dec.Decode(&mh); err != nil {
+		return nil, errors.Wrap(err, "decode cmsg")
 	}
-	if rplMsg.Mt != Hello {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Errorf("expected hello, Mt [%d]", rplMsg.Mt)
+	cp, err := decode(mh, dec)
+	if err != nil {
+		return nil, errors.Wrap(err, "decode error")
 	}
-	rplHello := chello{}
-	if err := self.cdec.Decode(&rplHello); err != nil {
-		_ = self.cconn.Close()
-		_ = self.dconn.Close()
-		return errors.Wrap(err, "decode chello")
-	}
-	logrus.Infof("session nonce [%s]", rplHello.Nonce)
+	cp.peer = peer
 
-	_ = self.cconn.Close()
-	_ = self.dconn.Close()
-	return errors.New("not implemented")
+	return cp, nil
 }

@@ -8,79 +8,49 @@ import (
 	"time"
 )
 
-func (self *listenerConn) hello() error {
+func (self *dialerConn) hello() error {
 	/*
-	 * Receive cconn Sync
+	 * Transmit cconn Sync
 	 */
-	logrus.Infof("receive cconn sync")
-	reqMsg := cmsg{}
-	if err := self.cdec.Decode(&reqMsg); err != nil {
+	logrus.Infof("transmit cconn sync")
+	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Sync}); err != nil {
 		_ = self.cconn.Close()
+		_ = self.dconn.Close()
+		return errors.Wrap(err, "encode sync")
+	}
+	logrus.Infof("transmitted cconn sync")
+	/* */
+
+	/*
+	 * Receive cconn Hello
+	 */
+	logrus.Infof("receive cconn hello")
+	rplMsg := cmsg{}
+	if err := self.cdec.Decode(&rplMsg); err != nil {
+		_ = self.cconn.Close()
+		_ = self.dconn.Close()
 		return errors.Wrap(err, "decode cmsg")
 	}
-	if reqMsg.Mt != Sync {
+	if rplMsg.Mt != Hello {
 		_ = self.cconn.Close()
-		return errors.Errorf("expected sync got mt [%d]", reqMsg.Mt)
+		_ = self.dconn.Close()
+		return errors.Errorf("expected hello, Mt [%d]", rplMsg.Mt)
 	}
-	logrus.Infof("received cconn sync")
-	/* */
-
-	/*
-	 * Transmit cconn Hello
-	 */
-	logrus.Infof("transmit cconn hello")
-	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
+	rplHello := chello{}
+	if err := self.cdec.Decode(&rplHello); err != nil {
 		_ = self.cconn.Close()
-		return errors.Wrap(err, "encode cmsg")
+		_ = self.dconn.Close()
+		return errors.Wrap(err, "decode chello")
 	}
-	if err := self.cenc.Encode(&chello{self.sessn}); err != nil {
-		_ = self.cconn.Close()
-		return errors.Wrap(err, "encode chello")
-	}
-	logrus.Infof("transmitted cconn hello")
-	/* */
-
-	/*
-	 * Receive dconn Hello
-	 */
-	logrus.Infof("receive dconn hello")
-	start := time.Now()
-	success := false
-	for {
-		if time.Now().Sub(start).Seconds() >= 5 {
-			break // hello timeout
-		}
-
-		select {
-		case cp := <-self.rxq:
-			if cp.h.Mt == Hello {
-				if cp.p.(chello).Nonce == self.sessn {
-					self.dpeer = cp.peer
-					self.listn.active[self.dpeer.String()] = self
-					delete(self.listn.syncing, self.sessn)
-					success = true
-					break
-				}
-			}
-
-		case <-time.After(5 * time.Second):
-			break // packet timeout
-		}
-	}
-	if success {
-		if err := self.cenc.Encode(&cmsg{self.seq.Next(), Ok}); err != nil {
-			return errors.Wrap(err, "encode ok")
-		}
-	} else {
-		return errors.New("dconn hello timeout")
-	}
-	logrus.Infof("received dconn hello")
+	self.sessn = rplHello.Nonce
+	logrus.Infof("hello session [%s]", self.sessn)
+	logrus.Infof("received cconn hello")
 	/* */
 
 	/*
 	 * Transmit dconn Hello
 	 */
-	logrus.Infof("transmitting dconn hello")
+	logrus.Infof("transmit dconn hello")
 	closer := make(chan struct{}, 1)
 	defer func() { close(closer) }()
 	go self.helloTxDconn(closer)
@@ -102,12 +72,38 @@ func (self *listenerConn) hello() error {
 	logrus.Infof("transmitted dconn hello")
 	/* */
 
+	/*
+	 * Receive dconn Hello
+	 */
+	logrus.Infof("receive dconn hello")
+	if err := self.dconn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return errors.Wrap(err, "set dconn deadline")
+	}
+	cp, err := self.readCmsgPair()
+	if err != nil {
+		return errors.Wrap(err, "read cmsgPair")
+	}
+	if cp.h.Mt != Hello {
+		return errors.Errorf("expected hello mt [%d]", cp.h.Mt)
+	}
+	if cp.p.(chello).Nonce != self.sessn {
+		return errors.New("invalid session")
+	}
+	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Ok}); err != nil {
+		return errors.Wrap(err, "encode ok")
+	}
+	if err := self.dconn.SetReadDeadline(time.Time{}); err != nil {
+		return errors.Wrap(err, "clear dconn deadline")
+	}
+	logrus.Infof("received dconn hello")
+	/* */
+
 	logrus.Infof("connection established")
 
 	return nil
 }
 
-func (self *listenerConn) helloTxDconn(closer chan struct{}) {
+func (self *dialerConn) helloTxDconn(closer chan struct{}) {
 	logrus.Infof("started")
 	defer logrus.Warnf("exited")
 
