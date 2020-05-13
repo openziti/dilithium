@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb;
+option go_package = "github.com/michaelquigley/dilithium/blaster/pb";
+
+enum MessageType {
+  SYNC = 0;
+  HELLO = 1;
+  OK = 2;
+  DATA = 3;
+  CLOSE = 4;
+}
+
+message Hello {
+  string session = 1;
+}
