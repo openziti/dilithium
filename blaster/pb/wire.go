@@ -46,8 +46,7 @@ func ToData(wireMessage *WireMessage) ([]byte, error) {
 		return nil, errors.Wrap(err, "marshal")
 	}
 
-	data := make([]byte, len(pbData)+4)
-	buffer := bytes.NewBuffer(data)
+	buffer := new(bytes.Buffer)
 	if err := binary.Write(buffer, binary.LittleEndian, int32(len(pbData))); err != nil {
 		return nil, errors.Wrap(err, "write length")
 	}
@@ -58,19 +57,16 @@ func ToData(wireMessage *WireMessage) ([]byte, error) {
 	if n != len(pbData) {
 		return nil, errors.New("short pb data")
 	}
+	logrus.Infof("buffer [%d]", buffer.Len())
 
-	return data, nil
+	return buffer.Bytes(), nil
 }
 
 func FromData(p []byte) (*WireMessage, error) {
-	pbLen, err := util.ReadInt32(p[:4])
+	_, err := util.ReadInt32(p[:4])
 	if err != nil {
 		return nil, errors.Wrap(err, "read length")
 	}
-	if len(p) != int(pbLen+4) {
-		return nil, errors.New("buffer length")
-	}
-
 	wireMessage := &WireMessage{}
 	if err := proto.Unmarshal(p[4:], wireMessage); err != nil {
 		return nil, errors.Wrap(err, "unmarshal")
@@ -92,7 +88,7 @@ func ReadMessage(conn io.Reader) (*WireMessage, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "length unmarshal")
 	}
-	logrus.Infof("read length [%d]", length)
+	logrus.Infof("read length [%d/%d]", n, length)
 
 	messageData := make([]byte, length)
 	n, err = io.ReadFull(conn, messageData)
@@ -114,31 +110,31 @@ func ReadMessage(conn io.Reader) (*WireMessage, error) {
 }
 
 func WriteMessage(wireMessage *WireMessage, conn io.Writer) error {
-	data, err := ToData(wireMessage)
+	pbData, err := proto.Marshal(wireMessage)
 	if err != nil {
 		return errors.Wrap(err, "encode")
 	}
 
-	lengthData := make([]byte, 4)
-	buffer := bytes.NewBuffer(lengthData)
-	if err := binary.Write(buffer, binary.LittleEndian, int32(len(data))); err != nil {
+	buffer := new(bytes.Buffer)
+	if err := binary.Write(buffer, binary.LittleEndian, int32(len(pbData))); err != nil {
 		return errors.Wrap(err, "length encode")
 	}
+	tn := buffer.Len()
 
-	n, err := conn.Write(lengthData)
+	n, err := conn.Write(buffer.Bytes())
 	if err != nil {
 		return errors.Wrap(err, "length write")
 	}
-	if n != len(lengthData) {
-		return errors.New("length short write")
+	if n != tn {
+		return errors.Errorf("length short write [%d]", n)
 	}
 	logrus.Infof("wrote [%d] length bytes", n)
 
-	n, err = conn.Write(data)
+	n, err = conn.Write(pbData)
 	if err != nil {
 		return errors.Wrap(err, "write")
 	}
-	if n != len(data) {
+	if n != len(pbData) {
 		return errors.New("short write")
 	}
 	logrus.Infof("wrote [%d] data bytes", n)

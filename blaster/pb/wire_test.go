@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func ReadWriteTest(t *testing.T) {
+func TestReadWrite(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	err := WriteMessage(NewHello(9, "OH, WOW"), buffer)
 	if err != nil {
@@ -16,5 +16,5 @@ func ReadWriteTest(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf(wm.String())
+	fmt.Println(wm.String())
 }
