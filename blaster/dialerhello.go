@@ -1,8 +1,6 @@
 package blaster
 
 import (
-	"bytes"
-	"encoding/gob"
 	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -97,19 +95,18 @@ func (self *dialerConn) helloTxDconn(closer chan struct{}) {
 	logrus.Infof("started")
 	defer logrus.Warnf("exited")
 
-	buffer := new(bytes.Buffer)
-	enc := gob.NewEncoder(buffer)
-	if err := enc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
-		logrus.Errorf("error encoding cmsg (%v)", err)
+	data, err := pb.ToData(pb.NewHello(self.seq.Next(), self.sessn))
+	if err != nil {
+		logrus.Errorf("error encoding hello (%v)", err)
 		return
 	}
-	if err := enc.Encode(&chello{self.sessn}); err != nil {
-		logrus.Errorf("error encoding chello (%v)", err)
-		return
-	}
-	_, err := self.dconn.WriteToUDP(buffer.Bytes(), self.dpeer)
+	n, err := self.dconn.WriteToUDP(data, self.dpeer)
 	if err != nil {
 		logrus.Errorf("error writing (%v)", err)
+		return
+	}
+	if n != len(data) {
+		logrus.Errorf("short write")
 		return
 	}
 	logrus.Infof("transmitted dconn hello attempt")
@@ -117,18 +114,18 @@ func (self *dialerConn) helloTxDconn(closer chan struct{}) {
 	for {
 		select {
 		case <-time.After(1 * time.Second):
-			buffer.Reset()
-			if err := enc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
-				logrus.Errorf("error encoding cmsg (%v)", err)
+			data, err := pb.ToData(pb.NewHello(self.seq.Next(), self.sessn))
+			if err != nil {
+				logrus.Errorf("error encoding hello (%v)", err)
 				return
 			}
-			if err := enc.Encode(&chello{self.sessn}); err != nil {
-				logrus.Errorf("error encoding chello (%v)", err)
-				return
-			}
-			_, err := self.dconn.WriteToUDP(buffer.Bytes(), self.dpeer)
+			n, err := self.dconn.WriteToUDP(data, self.dpeer)
 			if err != nil {
 				logrus.Errorf("error writing (%v)", err)
+				return
+			}
+			if n != len(data) {
+				logrus.Errorf("short write")
 				return
 			}
 			logrus.Infof("transmitted dconn hello attempt")
