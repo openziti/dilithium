@@ -1,6 +1,7 @@
 package dilithium
 
 import (
+	"github.com/michaelquigley/dilithium/blaster"
 	"github.com/michaelquigley/dilithium/conduit"
 	"github.com/pkg/errors"
 	"net"
@@ -78,6 +79,34 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			}
 
 			return conn, nil
+		}
+		return impl, nil
+
+	case "blaster":
+		impl := struct { ProtoProtocol }{}
+		impl.listen = func(address string) (net.Listener, error) {
+			caddr, err := net.ResolveTCPAddr("tcp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve tcp address")
+			}
+			daddr, err := net.ResolveUDPAddr("udp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve udp address")
+			}
+
+			listener, err := blaster.Listen(caddr, daddr)
+			if err != nil {
+				return nil, errors.Wrap(err, "listen")
+			}
+
+			return listener, nil
+		}
+		impl.dial = func(address string) (net.Conn, error) {
+			caddr, err := net.ResolveTCPAddr("tcp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve tcp address")
+			}
+			return nil, errors.Errorf("not implemented [%s]", caddr)
 		}
 		return impl, nil
 
