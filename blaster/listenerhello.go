@@ -12,7 +12,7 @@ func (self *listenerConn) hello() error {
 	/*
 	 * Receive cconn Sync
 	 */
-	logrus.Infof("receive cconn sync")
+	logrus.Infof("started receiving cconn sync")
 	reqMsg := cmsg{}
 	if err := self.cdec.Decode(&reqMsg); err != nil {
 		_ = self.cconn.Close()
@@ -22,13 +22,13 @@ func (self *listenerConn) hello() error {
 		_ = self.cconn.Close()
 		return errors.Errorf("expected sync got mt [%d]", reqMsg.Mt)
 	}
-	logrus.Infof("received cconn sync")
+	logrus.Infof("finished receiving cconn sync")
 	/* */
 
 	/*
 	 * Transmit cconn Hello
 	 */
-	logrus.Infof("transmit cconn hello")
+	logrus.Infof("started transmitting cconn hello")
 	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
 		_ = self.cconn.Close()
 		return errors.Wrap(err, "encode cmsg")
@@ -37,13 +37,13 @@ func (self *listenerConn) hello() error {
 		_ = self.cconn.Close()
 		return errors.Wrap(err, "encode chello")
 	}
-	logrus.Infof("transmitted cconn hello")
+	logrus.Infof("finished transmitting cconn hello")
 	/* */
 
 	/*
 	 * Receive dconn Hello
 	 */
-	logrus.Infof("receive dconn hello")
+	logrus.Infof("started receiving dconn hello")
 	start := time.Now()
 	success := false
 	for {
@@ -74,13 +74,13 @@ func (self *listenerConn) hello() error {
 	} else {
 		return errors.New("dconn hello timeout")
 	}
-	logrus.Infof("received dconn hello")
+	logrus.Infof("finished receiving dconn hello")
 	/* */
 
 	/*
 	 * Transmit dconn Hello
 	 */
-	logrus.Infof("transmitting dconn hello")
+	logrus.Infof("started transmitting dconn hello")
 	closer := make(chan struct{}, 1)
 	defer func() { close(closer) }()
 	go self.helloTxDconn(closer)
@@ -99,7 +99,7 @@ func (self *listenerConn) hello() error {
 	if err := self.cconn.SetReadDeadline(time.Time{}); err != nil {
 		return errors.Wrap(err, "clear cconn deadline")
 	}
-	logrus.Infof("transmitted dconn hello")
+	logrus.Infof("finished transmitting dconn hello")
 	/* */
 
 	logrus.Infof("connection established")
