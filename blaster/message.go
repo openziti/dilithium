@@ -1,13 +1,20 @@
 package blaster
 
+import "encoding/gob"
+
+func init() {
+	gob.Register(cmsg{})
+	gob.Register(chello{})
+}
+
 type cmsgPair struct {
 	h cmsg
 	p interface{}
 }
 
 type cmsg struct {
-	seq int32
-	mt  cmsgType
+	Seq int32
+	Mt  cmsgType
 }
 
 type cmsgType uint8
@@ -19,5 +26,5 @@ const (
 )
 
 type chello struct {
-	nonce string
+	Nonce string
 }

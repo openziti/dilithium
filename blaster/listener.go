@@ -45,6 +45,9 @@ func (self *listener) Accept() (net.Conn, error) {
 	sessn := util.GenerateSessionId()
 	c := newListenerConn(self, sessn, cconn, self.dconn)
 	self.syncing[sessn] = c
+	if err := c.hello(); err != nil {
+		return nil, errors.Wrap(err, "accept")
+	}
 	return c, nil
 }
 
@@ -71,14 +74,14 @@ func (self *listener) rxer() {
 					if lc, found := self.active[peer.String()]; found {
 						lc.rxq <- cmp
 					} else {
-						if mh.mt == Hello {
-							if lc, found := self.syncing[cmp.p.(chello).nonce]; found {
+						if mh.Mt == Hello {
+							if lc, found := self.syncing[cmp.p.(chello).Nonce]; found {
 								lc.rxq <- cmp
 							} else {
-								logrus.Errorf("no inactive peer found for [%s]", cmp.p.(chello).nonce)
+								logrus.Errorf("no inactive peer found for [%s]", cmp.p.(chello).Nonce)
 							}
 						} else {
-							logrus.Errorf("invalid mt [%d] for inactive peer [%s]", mh.mt, peer)
+							logrus.Errorf("invalid Mt [%d] for inactive peer [%s]", mh.Mt, peer)
 						}
 					}
 				} else {

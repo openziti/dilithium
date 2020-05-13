@@ -3,6 +3,7 @@ package blaster
 import (
 	"encoding/gob"
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
 	"time"
@@ -69,31 +70,32 @@ func (self *listenerConn) queue(p *cmsgPair) {
 	self.rxq <- p
 }
 
-func (self *listenerConn) hello() {
+func (self *listenerConn) hello() error {
+	logrus.Infof("reading sync")
 	reqMsg := cmsg{}
 	if err := self.cdec.Decode(&reqMsg); err != nil {
 		_ = self.cconn.Close()
-		logrus.Errorf("cannot decode cmsg (%v)", err)
-		return
+		return errors.Wrap(err, "decode cmsg")
 	}
-	if reqMsg.mt != Sync {
+	if reqMsg.Mt != Sync {
 		_ = self.cconn.Close()
-		logrus.Errorf("expecting hello got mt [%d]", reqMsg.mt)
-		return
+		return errors.Errorf("expected sync got mt [%d]", reqMsg.Mt)
 	}
+	logrus.Infof("got sync")
 
+	logrus.Infof("sending hello")
 	if err := self.cenc.Encode(&cmsg{self.seq.Next(), Hello}); err != nil {
 		_ = self.cconn.Close()
-		logrus.Errorf("cannot encode cmsg (%v)", err)
-		return
+		return errors.Wrap(err, "encode cmsg")
 	}
 	if err := self.cenc.Encode(&chello{self.sessn}); err != nil {
 		_ = self.cconn.Close()
-		logrus.Errorf("cannot encode chello (%v)", err)
-		return
+		return errors.Wrap(err, "encode chello")
 	}
+	logrus.Infof("sent hello")
 
 	// receive dconn hello
 	// transmit dconn hello
 	// wait for cconn ok
+	return nil
 }

@@ -102,11 +102,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			return listener, nil
 		}
 		impl.dial = func(address string) (net.Conn, error) {
-			caddr, err := net.ResolveTCPAddr("tcp", address)
-			if err != nil {
-				return nil, errors.Wrap(err, "resolve tcp address")
-			}
-			return nil, errors.Errorf("not implemented [%s]", caddr)
+			return blaster.Dial(address)
 		}
 		return impl, nil
 
