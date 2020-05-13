@@ -79,7 +79,7 @@ func FromData(p []byte) (*WireMessage, error) {
 	return wireMessage, nil
 }
 
-func ReadMessage(conn net.Conn) (*WireMessage, error) {
+func ReadMessage(conn io.Reader) (*WireMessage, error) {
 	lengthData := make([]byte, 4)
 	n, err := io.ReadFull(conn, lengthData)
 	if err != nil {
@@ -92,6 +92,7 @@ func ReadMessage(conn net.Conn) (*WireMessage, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "length unmarshal")
 	}
+	logrus.Infof("read length [%d]", length)
 
 	messageData := make([]byte, length)
 	n, err = io.ReadFull(conn, messageData)
@@ -112,17 +113,35 @@ func ReadMessage(conn net.Conn) (*WireMessage, error) {
 	return wireMessage, nil
 }
 
-func WriteMessage(wireMessage *WireMessage, conn net.Conn) error {
+func WriteMessage(wireMessage *WireMessage, conn io.Writer) error {
 	data, err := ToData(wireMessage)
 	if err != nil {
 		return errors.Wrap(err, "encode")
 	}
-	n, err := conn.Write(data)
+
+	lengthData := make([]byte, 4)
+	buffer := bytes.NewBuffer(lengthData)
+	if err := binary.Write(buffer, binary.LittleEndian, int32(len(data))); err != nil {
+		return errors.Wrap(err, "length encode")
+	}
+
+	n, err := conn.Write(lengthData)
+	if err != nil {
+		return errors.Wrap(err, "length write")
+	}
+	if n != len(lengthData) {
+		return errors.New("length short write")
+	}
+	logrus.Infof("wrote [%d] length bytes", n)
+
+	n, err = conn.Write(data)
 	if err != nil {
 		return errors.Wrap(err, "write")
 	}
 	if n != len(data) {
 		return errors.New("short write")
 	}
+	logrus.Infof("wrote [%d] data bytes", n)
+
 	return nil
 }
