@@ -3,6 +3,7 @@ package pb
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
@@ -51,4 +52,19 @@ func ToData(wireMessage *WireMessage) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func FromData(p []byte) (*WireMessage, error) {
+	pbLen, err := util.ReadInt32(p[:4])
+	if err != nil {
+		return nil, errors.Wrap(err, "read length")
+	}
+	if len(p) != int(pbLen+4) {
+		return nil, errors.New("buffer length")
+	}
+	wireMessage := &WireMessage{}
+	if err := proto.Unmarshal(p[4:], wireMessage); err != nil {
+		return nil, errors.Wrap(err, "unmarshal")
+	}
+	return wireMessage, nil
 }
