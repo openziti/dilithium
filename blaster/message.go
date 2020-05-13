@@ -1,6 +1,9 @@
 package blaster
 
-import "encoding/gob"
+import (
+	"encoding/gob"
+	"net"
+)
 
 func init() {
 	gob.Register(cmsg{})
@@ -8,8 +11,9 @@ func init() {
 }
 
 type cmsgPair struct {
-	h cmsg
-	p interface{}
+	h    cmsg
+	p    interface{}
+	peer *net.UDPAddr
 }
 
 type cmsg struct {
@@ -22,6 +26,7 @@ type cmsgType uint8
 const (
 	Sync cmsgType = iota
 	Hello
+	Ok
 	Close
 )
 

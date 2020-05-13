@@ -71,6 +71,7 @@ func (self *listener) rxer() {
 			mh := cmsg{}
 			if err := dec.Decode(&mh); err == nil {
 				if cmp, err := decode(mh, dec); err == nil {
+					cmp.peer = peer
 					if lc, found := self.active[peer.String()]; found {
 						lc.rxq <- cmp
 					} else {
