@@ -1,9 +1,10 @@
 package blaster
 
 import (
-	"github.com/michaelquigley/dilithium/blaster/pb"
+	"github.com/michaelquigley/dilithium/protocol/blaster/pb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -28,15 +29,36 @@ func newDialerConn(cConn *net.TCPConn, dConn *net.UDPConn, dPeer *net.UDPAddr) *
 }
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
-	return
+	awm, err := self.readWireMessage()
+	if err != nil {
+		return 0, errors.Wrap(err, "read wire message")
+	}
+
+	if awm.WireMessage.Type == pb.MessageType_DATA {
+		logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
+		n = copy(p, awm.WireMessage.DataPayload.Data)
+		return
+
+	} else {
+		return 0, errors.Errorf("invalid message type [%s]", awm.WireMessage.Type)
+	}
 }
 
 func (self *dialerConn) Write(p []byte) (n int, err error) {
-	return
+	data, err := pb.ToData(pb.NewData(self.dSeq.Next(), p))
+	if err != nil {
+		return 0, errors.Wrap(err, "encode data")
+	}
+	_, err = self.dConn.WriteToUDP(data, self.dPeer)
+	if err != nil {
+		return 0, errors.Wrap(err, "write data")
+	}
+	return len(p), nil
 }
 
 func (self *dialerConn) Close() error {
-	return nil
+	_ = self.dConn.Close()
+	return self.cConn.Close()
 }
 
 func (self *dialerConn) RemoteAddr() net.Addr {

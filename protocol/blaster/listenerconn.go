@@ -1,8 +1,10 @@
 package blaster
 
 import (
-	"github.com/michaelquigley/dilithium/blaster/pb"
+	"github.com/michaelquigley/dilithium/protocol/blaster/pb"
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -31,15 +33,33 @@ func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn 
 }
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
-	return
+	if awm, ok := <-self.dRxQueue; ok {
+		if awm.WireMessage.Type == pb.MessageType_DATA {
+			logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
+			n = copy(p, awm.WireMessage.DataPayload.Data)
+			return n, nil
+		} else {
+			return 0, errors.Errorf("unexpected message [%s]", awm.WireMessage.Type.String())
+		}
+	} else {
+		return 0, errors.New("closed")
+	}
 }
 
 func (self *listenerConn) Write(p []byte) (n int, err error) {
-	return
+	data, err := pb.ToData(pb.NewData(self.dSeq.Next(), p))
+	if err != nil {
+		return 0, errors.Wrap(err, "encode data")
+	}
+	_, err = self.dConn.WriteToUDP(data, self.dPeer)
+	if err != nil {
+		return 0, errors.Wrap(err, "write data")
+	}
+	return len(p), nil
 }
 
 func (self *listenerConn) Close() error {
-	return nil
+	return self.cConn.Close()
 }
 
 func (self *listenerConn) RemoteAddr() net.Addr {

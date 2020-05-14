@@ -16,8 +16,13 @@ message WireMessage {
   MessageType type = 2;
 
   HelloPayload helloPayload = 3;
+  DataPayload dataPayload = 4;
 
   message HelloPayload {
     string session = 1;
+  }
+
+  message DataPayload {
+    bytes data = 1;
   }
 }

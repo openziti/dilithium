@@ -1,8 +1,8 @@
 package dilithium
 
 import (
-	"github.com/michaelquigley/dilithium/blaster"
-	"github.com/michaelquigley/dilithium/conduit"
+	"github.com/michaelquigley/dilithium/protocol/blaster"
+	"github.com/michaelquigley/dilithium/protocol/conduit"
 	"github.com/pkg/errors"
 	"net"
 )

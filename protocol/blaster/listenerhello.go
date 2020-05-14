@@ -1,7 +1,7 @@
 package blaster
 
 import (
-	"github.com/michaelquigley/dilithium/blaster/pb"
+	"github.com/michaelquigley/dilithium/protocol/blaster/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"time"

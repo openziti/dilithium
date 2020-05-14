@@ -39,6 +39,18 @@ func NewOk(sequence int32) *WireMessage {
 	}
 }
 
+func NewData(sequence int32, p []byte) *WireMessage {
+	buffer := make([]byte, len(p))
+	copy(buffer, p)
+	return &WireMessage{
+		Sequence: sequence,
+		Type: MessageType_DATA,
+		DataPayload: &WireMessage_DataPayload{
+			Data: buffer,
+		},
+	}
+}
+
 func ToData(wireMessage *WireMessage) ([]byte, error) {
 	pbData, err := proto.Marshal(wireMessage)
 	if err != nil {
