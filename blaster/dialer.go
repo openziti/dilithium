@@ -6,28 +6,28 @@ import (
 )
 
 func Dial(address string) (net.Conn, error) {
-	dconn, err := net.ListenUDP("udp", nil)
+	dConn, err := net.ListenUDP("udp", nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "listen dconn")
+		return nil, errors.Wrap(err, "listen dConn")
 	}
-	dpeer, err := net.ResolveUDPAddr("udp", address)
+	dPeer, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		return nil, errors.Wrap(err, "resolve dpeer")
-	}
-
-	caddr, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		return nil, errors.Wrap(err, "resolve caddr")
-	}
-	cconn, err := net.DialTCP("tcp", nil, caddr)
-	if err != nil {
-		return nil, errors.Wrap(err, "dial caddr")
+		return nil, errors.Wrap(err, "resolve dPeer")
 	}
 
-	dc := newDialerConn(cconn, dconn, dpeer)
-	if err := dc.hello(); err != nil {
+	cAddr, err := net.ResolveTCPAddr("tcp", address)
+	if err != nil {
+		return nil, errors.Wrap(err, "resolve cAddr")
+	}
+	cConn, err := net.DialTCP("tcp", nil, cAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "dial cConn")
+	}
+
+	conn := newDialerConn(cConn, dConn, dPeer)
+	if err := conn.hello(); err != nil {
 		return nil, errors.Wrap(err, "hello")
 	}
 
-	return dc, nil
+	return conn, nil
 }

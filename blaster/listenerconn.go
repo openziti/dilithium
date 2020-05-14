@@ -8,23 +8,25 @@ import (
 )
 
 type listenerConn struct {
-	listn *listener
-	sessn string
-	cconn net.Conn
-	dconn *net.UDPConn
-	dpeer *net.UDPAddr
-	rxq   chan *pb.WireMessagePeer
-	seq   *util.Sequence
+	cListener *listener
+	session   string
+	cConn     net.Conn
+	cSeq      *util.Sequence
+	dConn     *net.UDPConn
+	dPeer     *net.UDPAddr
+	dSeq      *util.Sequence
+	dRxQueue  chan *pb.AddressedWireMessage
 }
 
-func newListenerConn(listn *listener, sessn string, cconn net.Conn, dconn *net.UDPConn) *listenerConn {
+func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn *net.UDPConn) *listenerConn {
 	return &listenerConn{
-		listn: listn,
-		sessn: sessn,
-		cconn: cconn,
-		dconn: dconn,
-		rxq:   make(chan *pb.WireMessagePeer, 1024),
-		seq:   util.NewSequence(),
+		cListener: cListener,
+		session:   session,
+		cConn:     cConn,
+		cSeq:      util.NewSequence(),
+		dConn:     dConn,
+		dSeq:      util.NewSequence(),
+		dRxQueue:  make(chan *pb.AddressedWireMessage, 1024),
 	}
 }
 
@@ -41,11 +43,11 @@ func (self *listenerConn) Close() error {
 }
 
 func (self *listenerConn) RemoteAddr() net.Addr {
-	return self.cconn.RemoteAddr()
+	return self.cConn.RemoteAddr()
 }
 
 func (self *listenerConn) LocalAddr() net.Addr {
-	return self.cconn.LocalAddr()
+	return self.cConn.LocalAddr()
 }
 
 func (self *listenerConn) SetDeadline(t time.Time) error {
@@ -60,6 +62,6 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *listenerConn) queue(p *pb.WireMessagePeer) {
-	self.rxq <- p
+func (self *listenerConn) queue(awm *pb.AddressedWireMessage) {
+	self.dRxQueue <- awm
 }

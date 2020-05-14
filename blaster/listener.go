@@ -1,7 +1,6 @@
 package blaster
 
 import (
-	"encoding/gob"
 	"github.com/michaelquigley/dilithium/blaster/pb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
@@ -9,19 +8,19 @@ import (
 	"net"
 )
 
-func Listen(caddr *net.TCPAddr, daddr *net.UDPAddr) (net.Listener, error) {
-	clistener, err := net.ListenTCP("tcp", caddr)
+func Listen(cAddr *net.TCPAddr, dAddr *net.UDPAddr) (net.Listener, error) {
+	cListener, err := net.ListenTCP("tcp", cAddr)
 	if err != nil {
-		return nil, errors.Wrap(err, "listen tcp")
+		return nil, errors.Wrap(err, "cListener listen")
 	}
-	dconn, err := net.ListenUDP("udp", daddr)
+	dConn, err := net.ListenUDP("udp", dAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "bind udp")
 	}
 	l := &listener{
-		clistener: clistener,
-		dconn:     dconn,
-		active:    make(map[string]*listenerConn),
+		cListener: cListener,
+		dConn:     dConn,
+		connected: make(map[string]*listenerConn),
 		syncing:   make(map[string]*listenerConn),
 	}
 	go l.rxer()
@@ -29,34 +28,34 @@ func Listen(caddr *net.TCPAddr, daddr *net.UDPAddr) (net.Listener, error) {
 }
 
 type listener struct {
-	clistener *net.TCPListener
-	cenc      gob.Encoder
-	cdec      gob.Decoder
-	dconn     *net.UDPConn
-	active    map[string]*listenerConn
+	cListener *net.TCPListener
+	dConn     *net.UDPConn
+	connected map[string]*listenerConn
 	syncing   map[string]*listenerConn
 }
 
 func (self *listener) Accept() (net.Conn, error) {
-	cconn, err := self.clistener.Accept()
+	cConn, err := self.cListener.Accept()
 	if err != nil {
-		return nil, errors.Wrap(err, "accept")
+		return nil, errors.Wrap(err, "accept cConn")
 	}
-	sessn := util.GenerateSessionId()
-	c := newListenerConn(self, sessn, cconn, self.dconn)
-	self.syncing[sessn] = c
-	if err := c.hello(); err != nil {
-		return nil, errors.Wrap(err, "accept")
+	session := util.GenerateSessionId()
+	conn := newListenerConn(self, session, cConn, self.dConn)
+	self.syncing[session] = conn
+
+	if err := conn.hello(); err != nil {
+		return nil, errors.Wrap(err, "hello")
 	}
-	return c, nil
+
+	return conn, nil
 }
 
 func (self *listener) Close() error {
-	return self.clistener.Close()
+	return self.cListener.Close()
 }
 
 func (self *listener) Addr() net.Addr {
-	return self.clistener.Addr()
+	return self.cListener.Addr()
 }
 
 func (self *listener) rxer() {
@@ -65,14 +64,14 @@ func (self *listener) rxer() {
 
 	buffer := make([]byte, 64*1024)
 	for {
-		if n, peer, err := self.dconn.ReadFromUDP(buffer); err == nil {
+		if n, peer, err := self.dConn.ReadFromUDP(buffer); err == nil {
 			if wireMessage, err := pb.FromData(buffer[:n]); err == nil {
-				if lc, found := self.active[peer.String()]; found {
-					lc.rxq <- &pb.WireMessagePeer{WireMessage: wireMessage, Peer: peer}
+				if lc, found := self.connected[peer.String()]; found {
+					lc.dRxQueue <- &pb.AddressedWireMessage{WireMessage: wireMessage, FromPeer: peer}
 				} else {
 					if wireMessage.Type == pb.MessageType_HELLO {
 						if lc, found := self.syncing[wireMessage.HelloPayload.Session]; found {
-							lc.rxq <- &pb.WireMessagePeer{WireMessage: wireMessage, Peer: peer}
+							lc.dRxQueue <- &pb.AddressedWireMessage{WireMessage: wireMessage, FromPeer: peer}
 						}
 					} else {
 						logrus.Errorf("no recipient for message [%s] at [%s]", wireMessage, peer)

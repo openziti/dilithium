@@ -9,81 +9,77 @@ import (
 
 func (self *dialerConn) hello() error {
 	/*
-	 * Transmit cconn Sync
+	 * Tx cConn Sync
 	 */
-	logrus.Infof("started transmitting cconn sync")
-	err := pb.WriteMessage(pb.NewSync(self.seq.Next()), self.cconn)
+	logrus.Infof("start tx cConn sync")
+	err := pb.WriteMessage(pb.NewSync(self.cSeq.Next()), self.cConn)
 	if err != nil {
 		return errors.Wrap(err, "sync write")
 	}
-	logrus.Infof("finished transmitting cconn sync")
 	/* */
 
 	/*
-	 * Receive cconn Hello
+	 * Rx cConn Hello
 	 */
-	logrus.Infof("started receiving cconn hello")
-	wm, err := pb.ReadMessage(self.cconn)
+	logrus.Infof("start rx cConn hello")
+	wm, err := pb.ReadMessage(self.cConn)
 	if err != nil {
 		return errors.Wrap(err, "hello read")
 	}
 	if wm.Type != pb.MessageType_HELLO {
 		return errors.Errorf("expected hello mt [%d]", wm.Type)
 	}
-	self.sessn = wm.HelloPayload.Session
-	logrus.Infof("hello session [%s]", self.sessn)
-	logrus.Infof("finished receiving cconn hello")
+	self.session = wm.HelloPayload.Session
+	logrus.Infof("hello [%s]", self.session)
 	/* */
 
 	/*
-	 * Transmit dconn Hello
+	 * Tx dConn Hello
 	 */
-	logrus.Infof("started transmitting dconn hello")
+	logrus.Infof("start tx dConn hello")
 	closer := make(chan struct{}, 1)
 	defer func() { close(closer) }()
-	go self.helloTxDconn(closer)
+	go self.helloTxDConn(closer)
 
-	if err := self.cconn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-		return errors.Wrap(err, "set cconn deadline")
+	if err := self.cConn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return errors.Wrap(err, "set cConn deadline")
 	}
-	wm, err = pb.ReadMessage(self.cconn)
+	wm, err = pb.ReadMessage(self.cConn)
 	if err != nil {
 		return errors.Wrap(err, "ok read")
 	}
 	if wm.Type != pb.MessageType_OK {
 		return errors.New("not ok")
 	}
-	if err := self.cconn.SetReadDeadline(time.Time{}); err != nil {
-		return errors.Wrap(err, "clear cconn deadline")
+	if err := self.cConn.SetReadDeadline(time.Time{}); err != nil {
+		return errors.Wrap(err, "clear cConn deadline")
 	}
-	logrus.Infof("finished transmitting dconn hello")
 	/* */
 
 	/*
-	 * Receive dconn Hello
+	 * Rx dConn Hello
 	 */
-	logrus.Infof("started receiving dconn hello")
-	if err := self.dconn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-		return errors.Wrap(err, "set dconn deadline")
+	logrus.Infof("start rx dConn hello")
+	if err := self.dConn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return errors.Wrap(err, "set dConn hello deadline")
 	}
-	wmp, err := self.readWireMessagePeer()
+	awp, err := self.readWireMessage()
 	if err != nil {
-		return errors.Wrap(err, "read wmp")
+		return errors.Wrap(err, "read awp")
 	}
-	if wmp.WireMessage.Type != pb.MessageType_HELLO {
-		return errors.Errorf("expected hello mt [%d]", wm.Type)
+	if awp.WireMessage.Type != pb.MessageType_HELLO {
+		return errors.Errorf("expected hello not [%s]", wm.Type.String())
 	}
-	if wmp.WireMessage.HelloPayload.Session != self.sessn {
+	if awp.WireMessage.HelloPayload.Session != self.session {
 		return errors.New("invalid session")
 	}
-	err = pb.WriteMessage(pb.NewOk(self.seq.Next()), self.cconn)
+	err = pb.WriteMessage(pb.NewOk(self.cSeq.Next()), self.cConn)
 	if err != nil {
 		return errors.Wrap(err, "ok write")
 	}
-	if err := self.dconn.SetReadDeadline(time.Time{}); err != nil {
-		return errors.Wrap(err, "clear dconn deadline")
+	if err := self.dConn.SetReadDeadline(time.Time{}); err != nil {
+		return errors.Wrap(err, "clear dConn deadline")
 	}
-	logrus.Infof("finished receiving dconn hello")
 	/* */
 
 	logrus.Infof("connection established")
@@ -91,16 +87,16 @@ func (self *dialerConn) hello() error {
 	return nil
 }
 
-func (self *dialerConn) helloTxDconn(closer chan struct{}) {
+func (self *dialerConn) helloTxDConn(closer chan struct{}) {
 	logrus.Infof("started")
 	defer logrus.Warnf("exited")
 
-	data, err := pb.ToData(pb.NewHello(self.seq.Next(), self.sessn))
+	data, err := pb.ToData(pb.NewHello(self.dSeq.Next(), self.session))
 	if err != nil {
 		logrus.Errorf("error encoding hello (%v)", err)
 		return
 	}
-	n, err := self.dconn.WriteToUDP(data, self.dpeer)
+	n, err := self.dConn.WriteToUDP(data, self.dPeer)
 	if err != nil {
 		logrus.Errorf("error writing (%v)", err)
 		return
@@ -109,17 +105,17 @@ func (self *dialerConn) helloTxDconn(closer chan struct{}) {
 		logrus.Errorf("short write")
 		return
 	}
-	logrus.Infof("transmitted dconn hello attempt")
+	logrus.Infof("transmitted dConn hello attempt [%s]", self.dPeer)
 
 	for {
 		select {
 		case <-time.After(1 * time.Second):
-			data, err := pb.ToData(pb.NewHello(self.seq.Next(), self.sessn))
+			data, err := pb.ToData(pb.NewHello(self.dSeq.Next(), self.session))
 			if err != nil {
 				logrus.Errorf("error encoding hello (%v)", err)
 				return
 			}
-			n, err := self.dconn.WriteToUDP(data, self.dpeer)
+			n, err := self.dConn.WriteToUDP(data, self.dPeer)
 			if err != nil {
 				logrus.Errorf("error writing (%v)", err)
 				return
@@ -128,7 +124,7 @@ func (self *dialerConn) helloTxDconn(closer chan struct{}) {
 				logrus.Errorf("short write")
 				return
 			}
-			logrus.Infof("transmitted dconn hello attempt")
+			logrus.Infof("transmitted dConn hello attempt [%s]", self.dPeer)
 
 		case <-closer:
 			return

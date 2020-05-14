@@ -5,15 +5,14 @@ import (
 	"encoding/binary"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 	"io"
 	"net"
 )
 
-type WireMessagePeer struct {
+type AddressedWireMessage struct {
+	FromPeer    *net.UDPAddr
 	WireMessage *WireMessage
-	Peer        *net.UDPAddr
 }
 
 func NewSync(sequence int32) *WireMessage {
@@ -57,7 +56,6 @@ func ToData(wireMessage *WireMessage) ([]byte, error) {
 	if n != len(pbData) {
 		return nil, errors.New("short pb data")
 	}
-	logrus.Infof("buffer [%d]", buffer.Len())
 
 	return buffer.Bytes(), nil
 }
@@ -75,41 +73,7 @@ func FromData(p []byte) (*WireMessage, error) {
 	return wireMessage, nil
 }
 
-func ReadMessage(conn io.Reader) (*WireMessage, error) {
-	lengthData := make([]byte, 4)
-	n, err := io.ReadFull(conn, lengthData)
-	if err != nil {
-		return nil, errors.Wrap(err, "length read")
-	}
-	if n != 4 {
-		return nil, errors.New("short length read")
-	}
-	length, err := util.ReadInt32(lengthData)
-	if err != nil {
-		return nil, errors.Wrap(err, "length unmarshal")
-	}
-	logrus.Infof("read length [%d/%d]", n, length)
-
-	messageData := make([]byte, length)
-	n, err = io.ReadFull(conn, messageData)
-	if err != nil {
-		return nil, errors.Wrap(err, "message read")
-	}
-	if n != int(length) {
-		return nil, errors.New("short message read")
-	}
-
-	logrus.Infof("read [%d] message bytes", length)
-
-	wireMessage := &WireMessage{}
-	if err := proto.Unmarshal(messageData, wireMessage); err != nil {
-		return nil, errors.Wrap(err, "message unmarshal")
-	}
-
-	return wireMessage, nil
-}
-
-func WriteMessage(wireMessage *WireMessage, conn io.Writer) error {
+func WriteMessage(wireMessage *WireMessage, wr io.Writer) error {
 	pbData, err := proto.Marshal(wireMessage)
 	if err != nil {
 		return errors.Wrap(err, "encode")
@@ -121,23 +85,52 @@ func WriteMessage(wireMessage *WireMessage, conn io.Writer) error {
 	}
 	tn := buffer.Len()
 
-	n, err := conn.Write(buffer.Bytes())
+	n, err := wr.Write(buffer.Bytes())
 	if err != nil {
 		return errors.Wrap(err, "length write")
 	}
 	if n != tn {
 		return errors.Errorf("length short write [%d]", n)
 	}
-	logrus.Infof("wrote [%d] length bytes", n)
 
-	n, err = conn.Write(pbData)
+	n, err = wr.Write(pbData)
 	if err != nil {
 		return errors.Wrap(err, "write")
 	}
 	if n != len(pbData) {
 		return errors.New("short write")
 	}
-	logrus.Infof("wrote [%d] data bytes", n)
 
 	return nil
+}
+
+func ReadMessage(rd io.Reader) (*WireMessage, error) {
+	lengthData := make([]byte, 4)
+	n, err := io.ReadFull(rd, lengthData)
+	if err != nil {
+		return nil, errors.Wrap(err, "length read")
+	}
+	if n != 4 {
+		return nil, errors.New("short length read")
+	}
+	length, err := util.ReadInt32(lengthData)
+	if err != nil {
+		return nil, errors.Wrap(err, "length unmarshal")
+	}
+
+	messageData := make([]byte, length)
+	n, err = io.ReadFull(rd, messageData)
+	if err != nil {
+		return nil, errors.Wrap(err, "message read")
+	}
+	if n != int(length) {
+		return nil, errors.New("short message read")
+	}
+
+	wireMessage := &WireMessage{}
+	if err := proto.Unmarshal(messageData, wireMessage); err != nil {
+		return nil, errors.Wrap(err, "message unmarshal")
+	}
+
+	return wireMessage, nil
 }

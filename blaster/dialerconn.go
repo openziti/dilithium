@@ -9,19 +9,21 @@ import (
 )
 
 type dialerConn struct {
-	sessn string
-	cconn *net.TCPConn
-	dconn *net.UDPConn
-	dpeer *net.UDPAddr
-	seq   *util.Sequence
+	session string
+	cConn   *net.TCPConn
+	cSeq    *util.Sequence
+	dConn   *net.UDPConn
+	dPeer   *net.UDPAddr
+	dSeq    *util.Sequence
 }
 
-func newDialerConn(cconn *net.TCPConn, dconn *net.UDPConn, dpeer *net.UDPAddr) *dialerConn {
+func newDialerConn(cConn *net.TCPConn, dConn *net.UDPConn, dPeer *net.UDPAddr) *dialerConn {
 	return &dialerConn{
-		cconn: cconn,
-		dconn: dconn,
-		dpeer: dpeer,
-		seq:   util.NewSequence(),
+		cConn: cConn,
+		cSeq:  util.NewSequence(),
+		dConn: dConn,
+		dPeer: dPeer,
+		dSeq:  util.NewSequence(),
 	}
 }
 
@@ -38,11 +40,11 @@ func (self *dialerConn) Close() error {
 }
 
 func (self *dialerConn) RemoteAddr() net.Addr {
-	return self.cconn.RemoteAddr()
+	return self.cConn.RemoteAddr()
 }
 
 func (self *dialerConn) LocalAddr() net.Addr {
-	return self.cconn.LocalAddr()
+	return self.cConn.LocalAddr()
 }
 
 func (self *dialerConn) SetDeadline(t time.Time) error {
@@ -57,9 +59,9 @@ func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *dialerConn) readWireMessagePeer() (*pb.WireMessagePeer, error) {
+func (self *dialerConn) readWireMessage() (*pb.AddressedWireMessage, error) {
 	buffer := make([]byte, 64*1024)
-	n, peer, err := self.dconn.ReadFromUDP(buffer)
+	n, peer, err := self.dConn.ReadFromUDP(buffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "read error")
 	}
@@ -69,5 +71,5 @@ func (self *dialerConn) readWireMessagePeer() (*pb.WireMessagePeer, error) {
 		return nil, errors.Wrap(err, "unmarshal")
 	}
 
-	return &pb.WireMessagePeer{WireMessage: wm, Peer: peer}, nil
+	return &pb.AddressedWireMessage{WireMessage: wm, FromPeer: peer}, nil
 }
