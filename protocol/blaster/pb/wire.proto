@@ -8,7 +8,9 @@ enum MessageType {
   HELLO = 1;
   OK = 2;
   DATA = 3;
-  CLOSE = 4;
+  EOW = 4;
+  ACK = 5;
+  CLOSE = 6;
 }
 
 message WireMessage {
@@ -17,6 +19,8 @@ message WireMessage {
 
   HelloPayload helloPayload = 3;
   DataPayload dataPayload = 4;
+  EowPayload eowPayload = 5;
+  AckPayload ackPayload = 6;
 
   message HelloPayload {
     string session = 1;
@@ -24,5 +28,14 @@ message WireMessage {
 
   message DataPayload {
     bytes data = 1;
+  }
+
+  message EowPayload {
+    int32 highWater = 1;
+  }
+
+  message AckPayload {
+    int32 highWater = 1;
+    repeated int32 missing = 2;
   }
 }

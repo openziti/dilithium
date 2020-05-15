@@ -44,9 +44,19 @@ func NewData(sequence int32, p []byte) *WireMessage {
 	copy(buffer, p)
 	return &WireMessage{
 		Sequence: sequence,
-		Type: MessageType_DATA,
+		Type:     MessageType_DATA,
 		DataPayload: &WireMessage_DataPayload{
 			Data: buffer,
+		},
+	}
+}
+
+func NewEow(sequence int32, highWater int32) *WireMessage {
+	return &WireMessage{
+		Sequence: sequence,
+		Type:     MessageType_EOW,
+		EowPayload: &WireMessage_EowPayload{
+			HighWater: highWater,
 		},
 	}
 }
