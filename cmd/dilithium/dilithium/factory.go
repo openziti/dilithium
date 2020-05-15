@@ -14,11 +14,11 @@ type Protocol interface {
 
 type ProtoProtocol struct {
 	listen func(address string) (net.Listener, error)
-	dial func(address string) (net.Conn, error)
+	dial   func(address string) (net.Conn, error)
 }
 
 func (self ProtoProtocol) Listen(address string) (net.Listener, error) { return self.listen(address) }
-func (self ProtoProtocol) Dial(address string) (net.Conn, error) { return self.dial(address) }
+func (self ProtoProtocol) Dial(address string) (net.Conn, error)       { return self.dial(address) }
 
 func ProtocolFor(protocol string) (Protocol, error) {
 	switch protocol {
@@ -83,7 +83,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 		return impl, nil
 
 	case "blaster":
-		impl := struct { ProtoProtocol }{}
+		impl := struct{ ProtoProtocol }{}
 		impl.listen = func(address string) (net.Listener, error) {
 			caddr, err := net.ResolveTCPAddr("tcp", address)
 			if err != nil {
