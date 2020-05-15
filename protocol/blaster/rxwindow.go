@@ -67,5 +67,37 @@ func (self *rxWindow) rx(wm *pb.WireMessage) error {
 	return nil
 }
 
-func (self *rxWindow) eow() {
+func (self *rxWindow) eow(highWater int32) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	if self.accepted == highWater {
+		self.txAck(highWater, nil)
+	} else {
+		var missing []int32
+		for i := self.accepted + 1; i <= highWater; i++ {
+			if _, found := self.tree.Get(i); !found {
+				missing = append(missing, i)
+			}
+		}
+		self.txAck(self.accepted, missing)
+	}
+}
+
+func (self *rxWindow) txAck(highWater int32, missing []int32) {
+	data, err := pb.ToData(pb.NewAck(self.cSeq.Next(), highWater, missing))
+	if err != nil {
+		logrus.Errorf("[@ %d %v] marshal (%v)", highWater, missing, err)
+		return
+	}
+	n, err := self.cConn.Write(data)
+	if err != nil {
+		logrus.Errorf("[@ %d %v] write (%v)", highWater, missing, err)
+		return
+	}
+	if n != len(data) {
+		logrus.Errorf("[@ %d %v] short write", highWater, missing)
+		return
+	}
+	logrus.Infof("[@ %d %v] ->", highWater, missing)
 }

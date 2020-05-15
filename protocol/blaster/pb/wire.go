@@ -61,6 +61,17 @@ func NewEow(sequence int32, highWater int32) *WireMessage {
 	}
 }
 
+func NewAck(sequence int32, highWater int32, missing []int32) *WireMessage {
+	return &WireMessage{
+		Sequence: sequence,
+		Type:     MessageType_ACK,
+		AckPayload: &WireMessage_AckPayload{
+			HighWater: highWater,
+			Missing:   missing,
+		},
+	}
+}
+
 func ToData(wireMessage *WireMessage) ([]byte, error) {
 	pbData, err := proto.Marshal(wireMessage)
 	if err != nil {

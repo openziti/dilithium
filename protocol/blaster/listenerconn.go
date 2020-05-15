@@ -97,7 +97,7 @@ func (self *listenerConn) cRxer() {
 			if wm.Type == pb.MessageType_ACK {
 				self.txWindow.ack(wm)
 			} else if wm.Type == pb.MessageType_EOW {
-				self.rxWindow.eow()
+				self.rxWindow.eow(wm.EowPayload.HighWater)
 			} else {
 				logrus.Warnf("no handler for cConn msg [%s]", wm.Type.String())
 			}
