@@ -34,26 +34,44 @@ func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn 
 	}
 	lc.rxWindow = newRxWindow(lc.cConn, lc.cSeq)
 	lc.txWindow = newTxWindow(lc.cConn, lc.cSeq, lc.dConn, lc.dPeer)
-	go lc.cRxer()
 	return lc
 }
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
-	if awm, ok := <-self.dRxQueue; ok {
-		if awm.WireMessage.Type == pb.MessageType_DATA {
-			logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
-			n = copy(p, awm.WireMessage.DataPayload.Data)
-			return n, nil
+	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+		logrus.Infof("i[](%d) <-", n)
+		return
+	}
+
+	for {
+		if awm, ok := <-self.dRxQueue; ok {
+			if awm.WireMessage.Type == pb.MessageType_DATA {
+				logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
+
+				if err := self.rxWindow.rx(awm.WireMessage); err != nil {
+					logrus.Errorf("rxWindow (%v)", err)
+				}
+
+				if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+					logrus.Infof("[](%d) <-", n)
+					return
+				}
+
+			} else {
+				return 0, errors.Errorf("unexpected message [%s]", awm.WireMessage.Type.String())
+			}
 		} else {
-			return 0, errors.Errorf("unexpected message [%s]", awm.WireMessage.Type.String())
+			return 0, errors.New("closed")
 		}
-	} else {
-		return 0, errors.New("closed")
+
 	}
 }
 
 func (self *listenerConn) Write(p []byte) (n int, err error) {
-	data, err := pb.ToData(pb.NewData(self.dSeq.Next(), p))
+	wm := pb.NewData(self.dSeq.Next(), p)
+	self.txWindow.tx(wm)
+
+	data, err := pb.ToData(wm)
 	if err != nil {
 		return 0, errors.Wrap(err, "encode data")
 	}

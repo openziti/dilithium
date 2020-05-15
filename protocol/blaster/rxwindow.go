@@ -67,6 +67,12 @@ func (self *rxWindow) rx(wm *pb.WireMessage) error {
 	return nil
 }
 
+func (self *rxWindow) read(p []byte) (n int, err error) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	return self.buffer.Read(p)
+}
+
 func (self *rxWindow) eow(highWater int32) {
 	self.lock.Lock()
 	defer self.lock.Unlock()

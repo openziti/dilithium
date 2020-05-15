@@ -29,5 +29,7 @@ func Dial(address string) (net.Conn, error) {
 		return nil, errors.Wrap(err, "hello")
 	}
 
+	go conn.cRxer()
+
 	return conn, nil
 }

@@ -46,6 +46,7 @@ func (self *listener) Accept() (net.Conn, error) {
 	if err := conn.hello(); err != nil {
 		return nil, errors.Wrap(err, "hello")
 	}
+	go conn.cRxer()
 
 	return conn, nil
 }

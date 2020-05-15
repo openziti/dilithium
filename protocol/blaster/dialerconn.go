@@ -10,42 +10,65 @@ import (
 )
 
 type dialerConn struct {
-	session string
-	cConn   *net.TCPConn
-	cSeq    *util.Sequence
-	dConn   *net.UDPConn
-	dPeer   *net.UDPAddr
-	dSeq    *util.Sequence
+	session  string
+	cConn    *net.TCPConn
+	cSeq     *util.Sequence
+	dConn    *net.UDPConn
+	dPeer    *net.UDPAddr
+	dSeq     *util.Sequence
+	rxWindow *rxWindow
+	txWindow *txWindow
 }
 
 func newDialerConn(cConn *net.TCPConn, dConn *net.UDPConn, dPeer *net.UDPAddr) *dialerConn {
-	return &dialerConn{
+	dc := &dialerConn{
 		cConn: cConn,
 		cSeq:  util.NewSequence(),
 		dConn: dConn,
 		dPeer: dPeer,
 		dSeq:  util.NewSequence(),
 	}
+	dc.rxWindow = newRxWindow(dc.cConn, dc.cSeq)
+	dc.txWindow = newTxWindow(dc.cConn, dc.cSeq, dc.dConn, dc.dPeer)
+	return dc
 }
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
-	awm, err := self.readWireMessage()
-	if err != nil {
-		return 0, errors.Wrap(err, "read wire message")
+	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+		logrus.Infof("i[](%d) <-", n)
+		return
 	}
 
-	if awm.WireMessage.Type == pb.MessageType_DATA {
-		logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
-		n = copy(p, awm.WireMessage.DataPayload.Data)
-		return
+	for {
+		var awm *pb.AddressedWireMessage
+		awm, err = self.readWireMessage()
+		if err != nil {
+			return 0, errors.Wrap(err, "read wire message")
+		}
 
-	} else {
-		return 0, errors.Errorf("invalid message type [%s]", awm.WireMessage.Type)
+		if awm.WireMessage.Type == pb.MessageType_DATA {
+			logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
+
+			if err = self.rxWindow.rx(awm.WireMessage); err != nil {
+				logrus.Errorf("rxWindow (%v)", err)
+			}
+
+			if n, err = self.rxWindow.read(p); err == nil && n > 0 {
+				logrus.Infof("[](%d) <-", n)
+				return
+			}
+
+		} else {
+			return 0, errors.Errorf("invalid message type [%s]", awm.WireMessage.Type)
+		}
 	}
 }
 
 func (self *dialerConn) Write(p []byte) (n int, err error) {
-	data, err := pb.ToData(pb.NewData(self.dSeq.Next(), p))
+	wm := pb.NewData(self.dSeq.Next(), p)
+	self.txWindow.tx(wm)
+
+	data, err := pb.ToData(wm)
 	if err != nil {
 		return 0, errors.Wrap(err, "encode data")
 	}
@@ -53,6 +76,7 @@ func (self *dialerConn) Write(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "write data")
 	}
+	logrus.Infof("[#%d](%d) ->", wm.Sequence, len(wm.DataPayload.Data))
 	return len(p), nil
 }
 
@@ -79,6 +103,23 @@ func (self *dialerConn) SetReadDeadline(t time.Time) error {
 
 func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
+}
+
+func (self *dialerConn) cRxer() {
+	logrus.Infof("started")
+	defer logrus.Warnf("exited")
+
+	for {
+		if wm, err := pb.ReadMessage(self.cConn); err == nil {
+			if wm.Type == pb.MessageType_ACK {
+				self.txWindow.ack(wm)
+			} else if wm.Type == pb.MessageType_EOW {
+				self.rxWindow.eow(wm.EowPayload.HighWater)
+			} else {
+				logrus.Warnf("no handler for cConn msg [%s]", wm.Type.String())
+			}
+		}
+	}
 }
 
 func (self *dialerConn) readWireMessage() (*pb.AddressedWireMessage, error) {
