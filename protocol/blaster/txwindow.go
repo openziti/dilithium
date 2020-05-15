@@ -41,6 +41,7 @@ func newTxWindow(cConn net.Conn, cSeq *util.Sequence, dConn *net.UDPConn, dPeer 
 		dPeer:    dPeer,
 	}
 	txw.ready = sync.NewCond(txw.lock)
+	go txw.monitor()
 	return txw
 }
 
@@ -77,6 +78,7 @@ func (self *txWindow) ack(ackWm *pb.WireMessage) {
 				wm, found := self.tree.Get(missing)
 				if !found {
 					logrus.Errorf("cannot retransmit missing [#%d]", missing)
+					return
 				}
 				if data, err := pb.ToData(wm.(*pb.WireMessage)); err == nil {
 					if n, err := self.dConn.WriteToUDP(data, self.dPeer); err == nil {
