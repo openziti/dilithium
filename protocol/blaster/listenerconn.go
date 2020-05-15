@@ -18,10 +18,11 @@ type listenerConn struct {
 	dPeer     *net.UDPAddr
 	dSeq      *util.Sequence
 	dRxQueue  chan *pb.AddressedWireMessage
+	txWindow  *txWindow
 }
 
 func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn *net.UDPConn) *listenerConn {
-	return &listenerConn{
+	lc := &listenerConn{
 		cListener: cListener,
 		session:   session,
 		cConn:     cConn,
@@ -30,6 +31,9 @@ func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn 
 		dSeq:      util.NewSequence(),
 		dRxQueue:  make(chan *pb.AddressedWireMessage, 1024),
 	}
+	lc.txWindow = newTxWindow(lc.cConn, lc.cSeq, lc.dConn, lc.dPeer)
+	go lc.cRxer()
+	return lc
 }
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
@@ -82,6 +86,21 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *listenerConn) queue(awm *pb.AddressedWireMessage) {
+func (self *listenerConn) cRxer() {
+	logrus.Infof("started")
+	defer logrus.Warnf("exited")
+
+	for {
+		if wm, err := pb.ReadMessage(self.cConn); err == nil {
+			if wm.Type == pb.MessageType_ACK {
+				self.txWindow.ack(wm)
+			} else if wm.Type == pb.MessageType_EOW {
+				// self.rxWindow.eow(wm)
+			}
+		}
+	}
+}
+
+func (self *listenerConn) dQueue(awm *pb.AddressedWireMessage) {
 	self.dRxQueue <- awm
 }
