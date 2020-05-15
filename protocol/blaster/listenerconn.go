@@ -18,6 +18,7 @@ type listenerConn struct {
 	dPeer     *net.UDPAddr
 	dSeq      *util.Sequence
 	dRxQueue  chan *pb.AddressedWireMessage
+	rxWindow  *rxWindow
 	txWindow  *txWindow
 }
 
@@ -31,6 +32,7 @@ func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn 
 		dSeq:      util.NewSequence(),
 		dRxQueue:  make(chan *pb.AddressedWireMessage, 1024),
 	}
+	lc.rxWindow = newRxWindow(lc.cConn, lc.cSeq)
 	lc.txWindow = newTxWindow(lc.cConn, lc.cSeq, lc.dConn, lc.dPeer)
 	go lc.cRxer()
 	return lc
@@ -95,7 +97,9 @@ func (self *listenerConn) cRxer() {
 			if wm.Type == pb.MessageType_ACK {
 				self.txWindow.ack(wm)
 			} else if wm.Type == pb.MessageType_EOW {
-				// self.rxWindow.eow(wm)
+				self.rxWindow.eow()
+			} else {
+				logrus.Warnf("no handler for cConn msg [%s]", wm.Type.String())
 			}
 		}
 	}
