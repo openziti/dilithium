@@ -106,7 +106,7 @@ func (self *listenerConn) helloTxDConn(closer chan struct{}) {
 	logrus.Infof("started")
 	defer logrus.Warnf("exited")
 
-	data, err := pb.ToData(pb.NewHello(self.dSeq.Next(), self.session))
+	data, err := pb.ToData(pb.NewHello(-1, self.session))
 	if err != nil {
 		logrus.Errorf("error encoding hello (%v)", err)
 		return
@@ -125,7 +125,7 @@ func (self *listenerConn) helloTxDConn(closer chan struct{}) {
 	for {
 		select {
 		case <-time.After(1 * time.Second):
-			data, err := pb.ToData(pb.NewHello(self.dSeq.Next(), self.session))
+			data, err := pb.ToData(pb.NewHello(-1, self.session))
 			if err != nil {
 				logrus.Errorf("error encoding hello (%v)", err)
 				return

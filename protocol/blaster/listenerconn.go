@@ -79,6 +79,7 @@ func (self *listenerConn) Write(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "write data")
 	}
+	logrus.Infof("[#%d](%d) ->", wm.Sequence, len(wm.DataPayload.Data))
 	return len(p), nil
 }
 
