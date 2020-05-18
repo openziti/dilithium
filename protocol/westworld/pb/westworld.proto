@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package pb;
+package westworld_pb;
 option go_package = "github.com/michaelquigley/dilithium/protocol/westworld/pb";
 
 enum MessageType {

@@ -4,6 +4,7 @@ import (
 	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -61,16 +62,22 @@ func (self *listenerConn) queue(wm *pb.WireMessage) {
 }
 
 func (self *listenerConn) hello(hello *pb.WireMessage) error {
+	logrus.Infof("{hello} <- [%s]", self.peer)
+
 	helloAckSeq := self.seq.Next()
 	if err := pb.WriteWireMessage(pb.NewHelloAck(helloAckSeq, hello.Sequence), self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write hello ack")
 	}
+	logrus.Infof("{helloack} -> [%s]", self.peer)
+
 	select {
 	case ack, ok := <-self.rxQueue:
 		if !ok {
 			return errors.New("rx queue closed")
 		}
 		if ack.Type == pb.MessageType_ACK && ack.Ack == helloAckSeq {
+			logrus.Infof("{ack} <- [%s]", self.peer)
+			logrus.Infof("connection established with [%s]", self.peer)
 			return nil
 		}
 		return errors.New("invalid hello ack")

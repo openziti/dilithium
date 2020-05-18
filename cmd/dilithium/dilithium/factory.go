@@ -3,6 +3,7 @@ package dilithium
 import (
 	"github.com/michaelquigley/dilithium/protocol/blaster"
 	"github.com/michaelquigley/dilithium/protocol/conduit"
+	"github.com/michaelquigley/dilithium/protocol/westworld"
 	"github.com/pkg/errors"
 	"net"
 )
@@ -104,6 +105,37 @@ func ProtocolFor(protocol string) (Protocol, error) {
 		impl.dial = func(address string) (net.Conn, error) {
 			return blaster.Dial(address)
 		}
+		return impl, nil
+
+	case "westworld":
+		impl := struct{ ProtoProtocol }{}
+		impl.listen = func(address string) (net.Listener, error) {
+			listenAddress, err := net.ResolveUDPAddr("udp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve address")
+			}
+
+			listener, err := westworld.Listen(listenAddress)
+			if err != nil {
+				return nil, errors.Wrap(err, "listen")
+			}
+
+			return listener, nil
+		}
+		impl.dial = func(address string) (net.Conn, error) {
+			dialAddress, err := net.ResolveUDPAddr("udp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve address")
+			}
+
+			conn, err := westworld.Dial(dialAddress)
+			if err != nil {
+				return nil, errors.Wrap(err, "dial")
+			}
+
+			return conn, nil
+		}
+
 		return impl, nil
 
 	default:

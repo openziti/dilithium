@@ -12,6 +12,7 @@ import (
 func NewHello(seq int32) *WireMessage {
 	return &WireMessage{
 		Sequence: seq,
+		Type:     MessageType_HELLO,
 		Ack:      -1,
 	}
 }
@@ -19,7 +20,16 @@ func NewHello(seq int32) *WireMessage {
 func NewHelloAck(seq int32, ack int32) *WireMessage {
 	return &WireMessage{
 		Sequence: seq,
+		Type:     MessageType_HELLO,
 		Ack:      ack,
+	}
+}
+
+func NewAck(forSequence int32) *WireMessage {
+	return &WireMessage{
+		Sequence: -1,
+		Type:     MessageType_ACK,
+		Ack:      forSequence,
 	}
 }
 
