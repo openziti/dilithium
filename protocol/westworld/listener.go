@@ -1,6 +1,8 @@
 package westworld
 
 import (
+	"github.com/emirpasic/gods/trees/btree"
+	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -11,7 +13,7 @@ type listener struct {
 	lock        *sync.Mutex
 	conn        *net.UDPConn
 	addr        *net.UDPAddr
-	peers       map[string]*listenerConn
+	peers       *btree.Tree
 	acceptQueue chan net.Conn
 	closed      bool
 }
@@ -25,7 +27,7 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 		lock:        new(sync.Mutex),
 		conn:        conn,
 		addr:        addr,
-		peers:       make(map[string]*listenerConn),
+		peers:       btree.NewWith(16*1024, addrComparator),
 		acceptQueue: make(chan net.Conn, 1024),
 	}
 	go l.run()
@@ -54,5 +56,46 @@ func (self *listener) run() {
 	defer logrus.Warnf("exited")
 
 	for {
+		if wm, peer, err := pb.ReadWireMessage(self.conn); err == nil {
+			conn, found := self.peers.Get(peer)
+			if found {
+				conn.(*listenerConn).queue(wm)
+
+			} else {
+				if wm.Type == pb.MessageType_HELLO {
+					go self.hello(peer)
+
+				} else {
+					logrus.Errorf("unknown peer [%s]", peer)
+				}
+			}
+		} else {
+			logrus.Errorf("read error from peer [%s] (%v)", peer, err)
+		}
 	}
+}
+
+func (self *listener) hello(peer *net.UDPAddr) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+}
+
+func addrComparator(i, j interface{}) int {
+	ai := i.(*net.UDPAddr)
+	aj := j.(*net.UDPAddr)
+	for l := 0; l < 4; l++ {
+		if ai.IP[l] < aj.IP[l] {
+			return -1
+		}
+		if ai.IP[l] > aj.IP[l] {
+			return 1
+		}
+	}
+	if ai.Port < aj.Port {
+		return -1
+	}
+	if ai.Port > aj.Port {
+		return 1
+	}
+	return 0
 }
