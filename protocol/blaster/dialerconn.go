@@ -23,10 +23,10 @@ type dialerConn struct {
 func newDialerConn(cConn *net.TCPConn, dConn *net.UDPConn, dPeer *net.UDPAddr) *dialerConn {
 	dc := &dialerConn{
 		cConn: cConn,
-		cSeq:  util.NewSequence(),
+		cSeq:  util.NewSequence(0),
 		dConn: dConn,
 		dPeer: dPeer,
-		dSeq:  util.NewSequence(),
+		dSeq:  util.NewSequence(0),
 	}
 	dc.rxWindow = newRxWindow(dc.cConn, dc.cSeq)
 	dc.txWindow = newTxWindow(dc.cConn, dc.cSeq, dc.dConn, dc.dPeer)

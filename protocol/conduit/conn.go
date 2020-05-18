@@ -25,7 +25,7 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 		local:     local,
 		peer:      peer,
 		readQueue: make(chan *message, 1024),
-		sequence:  util.NewSequence(),
+		sequence:  util.NewSequence(0),
 		rxWindow:  newRxWindow(conn, peer),
 		txWindow:  newTxWindow(conn, peer),
 	}
@@ -156,7 +156,7 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 		conn:     conn,
 		local:    local,
 		peer:     peer,
-		sequence: util.NewSequence(),
+		sequence: util.NewSequence(0),
 		rxWindow: newRxWindow(conn, peer),
 		txWindow: newTxWindow(conn, peer),
 	}

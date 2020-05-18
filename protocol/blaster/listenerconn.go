@@ -27,9 +27,9 @@ func newListenerConn(cListener *listener, session string, cConn net.Conn, dConn 
 		cListener: cListener,
 		session:   session,
 		cConn:     cConn,
-		cSeq:      util.NewSequence(),
+		cSeq:      util.NewSequence(0),
 		dConn:     dConn,
-		dSeq:      util.NewSequence(),
+		dSeq:      util.NewSequence(0),
 		dRxQueue:  make(chan *pb.AddressedWireMessage, 1024),
 	}
 	lc.rxWindow = newRxWindow(lc.cConn, lc.cSeq)

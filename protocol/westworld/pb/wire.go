@@ -9,8 +9,22 @@ import (
 	"net"
 )
 
+func NewHello(seq int32) *WireMessage {
+	return &WireMessage{
+		Sequence: seq,
+		Ack:      -1,
+	}
+}
+
+func NewHelloAck(seq int32, ack int32) *WireMessage {
+	return &WireMessage{
+		Sequence: seq,
+		Ack:      ack,
+	}
+}
+
 func ReadWireMessage(conn *net.UDPConn) (wm *WireMessage, peer *net.UDPAddr, err error) {
-	buffer := make([]byte, 64 * 1024)
+	buffer := make([]byte, 64*1024)
 
 	var n int
 	n, peer, err = conn.ReadFromUDP(buffer)

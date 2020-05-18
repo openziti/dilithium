@@ -7,8 +7,14 @@ type Sequence struct {
 	lock      *sync.Mutex
 }
 
-func NewSequence() *Sequence {
-	return &Sequence{lock: new(sync.Mutex)}
+func NewSequence(nextValue int32) *Sequence {
+	return &Sequence{nextValue: nextValue, lock: new(sync.Mutex)}
+}
+
+func (self *Sequence) ResetTo(nextValue int32) {
+	self.lock.Lock()
+	self.nextValue = nextValue
+	self.lock.Unlock()
 }
 
 func (self *Sequence) Next() int32 {

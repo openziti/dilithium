@@ -63,7 +63,7 @@ func (self *listener) run() {
 
 			} else {
 				if wm.Type == pb.MessageType_HELLO {
-					go self.hello(peer)
+					go self.hello(wm, peer)
 
 				} else {
 					logrus.Errorf("unknown peer [%s]", peer)
@@ -75,9 +75,19 @@ func (self *listener) run() {
 	}
 }
 
-func (self *listener) hello(peer *net.UDPAddr) {
+func (self *listener) hello(hello *pb.WireMessage, peer *net.UDPAddr) {
+	conn := newListenerConn(self.conn, peer)
+
 	self.lock.Lock()
-	defer self.lock.Unlock()
+	self.peers.Put(peer, conn)
+	self.lock.Unlock()
+
+	if err := conn.hello(hello); err != nil {
+		logrus.Errorf("hello sequence failed for peer [%s] (%v)", peer, err)
+		return
+	}
+
+	logrus.Infof("accepted connection from [%s]", peer)
 }
 
 func addrComparator(i, j interface{}) int {
