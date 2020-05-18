@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package pb;
-option go_package = "github.com/michaelquigley/dilithium/blaster/pb";
+option go_package = "github.com/michaelquigley/dilithium/protocol/blaster/pb";
 
 enum MessageType {
   SYNC = 0;
