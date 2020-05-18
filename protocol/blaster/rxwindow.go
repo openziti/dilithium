@@ -17,6 +17,7 @@ type rxWindow struct {
 	buffer   *bytes.Buffer
 	tree     *btree.Tree
 	accepted int32
+	lastAck  int32
 	cConn    net.Conn
 	cSeq     *util.Sequence
 }
@@ -27,6 +28,7 @@ func newRxWindow(cConn net.Conn, cSeq *util.Sequence) *rxWindow {
 		buffer:   new(bytes.Buffer),
 		tree:     btree.NewWith(treeCapacity, utils.Int32Comparator),
 		accepted: -1,
+		lastAck:  -1,
 		cConn:    cConn,
 		cSeq:     cSeq,
 	}
@@ -50,6 +52,9 @@ func (self *rxWindow) rx(wm *pb.WireMessage) error {
 				m, _ := self.tree.Get(key)
 				self.tree.Remove(key)
 				self.accepted = next
+				if self.accepted - self.lastAck > 2 {
+					self.txAck(self.accepted, nil)
+				}
 				next++
 
 				if n, err := self.buffer.Write(m.(*pb.WireMessage).DataPayload.Data); err == nil {
@@ -79,6 +84,8 @@ func (self *rxWindow) eow(highWater int32) {
 
 	if self.accepted == highWater {
 		self.txAck(highWater, nil)
+		self.lastAck = highWater
+
 	} else {
 		var missing []int32
 		for i := self.accepted + 1; i <= highWater; i++ {
@@ -87,6 +94,7 @@ func (self *rxWindow) eow(highWater int32) {
 			}
 		}
 		self.txAck(self.accepted, missing)
+		self.lastAck = self.accepted
 	}
 }
 

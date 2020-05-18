@@ -63,13 +63,15 @@ func (self *txWindow) ack(highWater int32, missing []int32) {
 
 	if len(missing) == 0 {
 		logrus.Infof("complete window, pre-ack capacity [%d]", self.capacity)
-		for _, seq := range self.tree.Keys() {
-			if seq.(int32) <= highWater {
-				self.tree.Remove(seq)
-				self.capacity++
+		if self.tree.Size() > 0 {
+			for _, seq := range self.tree.Keys() {
+				if seq.(int32) <= highWater {
+					self.tree.Remove(seq)
+					self.capacity++
+				}
 			}
+			self.ready.Signal()
 		}
-		self.ready.Signal()
 		logrus.Infof("post-ack capacity [%d]", self.capacity)
 
 	} else {
