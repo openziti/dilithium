@@ -58,46 +58,41 @@ func (self *txWindow) tx(wm *pb.WireMessage) {
 	self.capacity--
 }
 
-func (self *txWindow) ack(ackWm *pb.WireMessage) {
-	if ackWm.Type == pb.MessageType_ACK {
-		logrus.Infof("[^%d %v] <-", ackWm.AckPayload.HighWater, ackWm.AckPayload.Missing)
+func (self *txWindow) ack(highWater int32, missing []int32) {
+	logrus.Infof("{@ ^%d %v} <-", highWater, missing)
 
-		ack := ackWm.AckPayload
-		if len(ack.Missing) == 0 {
-			logrus.Infof("complete window, pre-ack capacity [%d]", self.capacity)
-			for _, seq := range self.tree.Keys() {
-				if seq.(int32) <= ack.HighWater {
-					self.tree.Remove(seq)
-					self.capacity++
-				}
-			}
-			logrus.Infof("post-ack capacity [%d]", self.capacity)
-
-		} else {
-			for _, missing := range ack.Missing {
-				wm, found := self.tree.Get(missing)
-				if !found {
-					logrus.Errorf("cannot retransmit missing [#%d]", missing)
-					return
-				}
-				if data, err := pb.ToData(wm.(*pb.WireMessage)); err == nil {
-					if n, err := self.dConn.WriteToUDP(data, self.dPeer); err == nil {
-						if n == len(data) {
-							logrus.Infof("[!%d] ->", missing)
-						} else {
-							logrus.Errorf("[!%d] (short write)")
-						}
-					} else {
-						logrus.Errorf("[!%d] (%v)", missing, err)
-					}
-				} else {
-					logrus.Errorf("[!%d] (%v)", missing, err)
-				}
+	if len(missing) == 0 {
+		logrus.Infof("complete window, pre-ack capacity [%d]", self.capacity)
+		for _, seq := range self.tree.Keys() {
+			if seq.(int32) <= highWater {
+				self.tree.Remove(seq)
+				self.capacity++
 			}
 		}
+		self.ready.Signal()
+		logrus.Infof("post-ack capacity [%d]", self.capacity)
 
 	} else {
-		logrus.Errorf("cannot ack message [%s]", ackWm.Type.String())
+		for _, m := range missing {
+			wm, found := self.tree.Get(m)
+			if !found {
+				logrus.Errorf("{!#%d} (missing)", m)
+				return
+			}
+			if data, err := pb.ToData(wm.(*pb.WireMessage)); err == nil {
+				if n, err := self.dConn.WriteToUDP(data, self.dPeer); err == nil {
+					if n == len(data) {
+						logrus.Infof("{!#%d} ->", m)
+					} else {
+						logrus.Errorf("{!#%d} (short write)")
+					}
+				} else {
+					logrus.Errorf("{!#%d} (%v)", m, err)
+				}
+			} else {
+				logrus.Errorf("{!#%d} (%v)", m, err)
+			}
+		}
 	}
 }
 

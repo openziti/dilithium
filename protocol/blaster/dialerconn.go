@@ -35,7 +35,7 @@ func newDialerConn(cConn *net.TCPConn, dConn *net.UDPConn, dPeer *net.UDPAddr) *
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
 	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
-		logrus.Infof("i[](%d) <-", n)
+		logrus.Infof("<- +[%d]", n)
 		return
 	}
 
@@ -47,14 +47,14 @@ func (self *dialerConn) Read(p []byte) (n int, err error) {
 		}
 
 		if awm.WireMessage.Type == pb.MessageType_DATA {
-			logrus.Infof("[#%d](%d) <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
+			logrus.Infof("<- {#%d}[%d] <-", awm.WireMessage.Sequence, len(awm.WireMessage.DataPayload.Data))
 
 			if err = self.rxWindow.rx(awm.WireMessage); err != nil {
-				logrus.Errorf("rxWindow (%v)", err)
+				logrus.Errorf("rxWindow.rx (%v)", err)
 			}
 
 			if n, err = self.rxWindow.read(p); err == nil && n > 0 {
-				logrus.Infof("[](%d) <-", n)
+				logrus.Infof("<- [%d]", n)
 				return
 			}
 
@@ -65,6 +65,8 @@ func (self *dialerConn) Read(p []byte) (n int, err error) {
 }
 
 func (self *dialerConn) Write(p []byte) (n int, err error) {
+	logrus.Infof("[%d] ->", len(p))
+
 	wm := pb.NewData(self.dSeq.Next(), p)
 	self.txWindow.tx(wm)
 
@@ -76,8 +78,8 @@ func (self *dialerConn) Write(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "write data")
 	}
-	logrus.Infof("[#%d](%d) ->", wm.Sequence, len(wm.DataPayload.Data))
-	return len(p), nil
+	logrus.Infof("{#%d}[%d] ->", wm.Sequence, len(wm.DataPayload.Data))
+	return len(wm.DataPayload.Data), nil
 }
 
 func (self *dialerConn) Close() error {
@@ -112,9 +114,11 @@ func (self *dialerConn) cRxer() {
 	for {
 		if wm, err := pb.ReadMessage(self.cConn); err == nil {
 			if wm.Type == pb.MessageType_ACK {
-				self.txWindow.ack(wm)
+				self.txWindow.ack(wm.AckPayload.HighWater, wm.AckPayload.Missing)
+
 			} else if wm.Type == pb.MessageType_EOW {
 				self.rxWindow.eow(wm.EowPayload.HighWater)
+
 			} else {
 				logrus.Warnf("no handler for cConn msg [%s]", wm.Type.String())
 			}

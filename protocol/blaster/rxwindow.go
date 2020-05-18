@@ -56,7 +56,7 @@ func (self *rxWindow) rx(wm *pb.WireMessage) error {
 					if n != len(m.(*pb.WireMessage).DataPayload.Data) {
 						return errors.New("short buffer write")
 					}
-					logrus.Infof("(%d) <- [+ #%d](%d) <-", self.buffer.Len(), key, n)
+					logrus.Infof("[%d] <- {#%d}[%d] <-", self.buffer.Len(), key, n)
 				}
 			} else {
 				break
@@ -105,5 +105,5 @@ func (self *rxWindow) txAck(highWater int32, missing []int32) {
 		logrus.Errorf("[@ %d %v] short write", highWater, missing)
 		return
 	}
-	logrus.Infof("[@ %d %v] ->", highWater, missing)
+	logrus.Infof("{@ >%d !%v} ->", highWater, missing)
 }

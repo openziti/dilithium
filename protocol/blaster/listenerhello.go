@@ -48,6 +48,7 @@ func (self *listenerConn) hello() error {
 			if wmp.WireMessage.Type == pb.MessageType_HELLO {
 				if wmp.WireMessage.HelloPayload.Session == self.session {
 					self.dPeer = wmp.FromPeer
+					self.txWindow.dPeer = self.dPeer
 					self.cListener.connected[self.dPeer.String()] = self
 					delete(self.cListener.syncing, self.session)
 					success = true
