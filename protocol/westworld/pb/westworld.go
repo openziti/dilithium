@@ -25,6 +25,17 @@ func NewHelloAck(seq int32, ack int32) *WireMessage {
 	}
 }
 
+func NewData(seq int32, p []byte) *WireMessage {
+	wm := &WireMessage{
+		Sequence: seq,
+		Type:     MessageType_DATA,
+		Ack:      -1,
+		Data:     make([]byte, len(p)),
+	}
+	copy(wm.Data, p)
+	return wm
+}
+
 func NewAck(forSequence int32) *WireMessage {
 	return &WireMessage{
 		Sequence: -1,

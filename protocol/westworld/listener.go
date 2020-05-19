@@ -87,6 +87,7 @@ func (self *listener) hello(hello *pb.WireMessage, peer *net.UDPAddr) {
 		return
 	}
 
+	self.acceptQueue <- conn
 	logrus.Infof("accepted connection from [%s]", peer)
 }
 

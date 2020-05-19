@@ -10,25 +10,39 @@ import (
 )
 
 type dialerConn struct {
-	conn *net.UDPConn
-	peer *net.UDPAddr
-	seq  *util.Sequence
+	conn   *net.UDPConn
+	peer   *net.UDPAddr
+	seq    *util.Sequence
 }
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
 	return &dialerConn{
-		conn: conn,
-		peer: peer,
-		seq:  util.NewSequence(util.RandomSequence()),
+		conn:   conn,
+		peer:   peer,
+		seq:    util.NewSequence(util.RandomSequence()),
 	}
 }
 
-func (self *dialerConn) Read(p []byte) (n int, err error) {
-	return
+func (self *dialerConn) Read(p []byte) (int, error) {
+	wm, _, err := pb.ReadWireMessage(self.conn)
+	if err != nil {
+		return 0, errors.Wrap(err, "read")
+	}
+	if wm.Type == pb.MessageType_DATA {
+		n := copy(p, wm.Data)
+		logrus.Infof("[%d] <- {#%d}[%d] <-", n, wm.Sequence, len(wm.Data))
+		return n, nil
+	}
+	return 0, errors.New("invalid message")
 }
 
-func (self *dialerConn) Write(p []byte) (n int, err error) {
-	return
+func (self *dialerConn) Write(p []byte) (int, error) {
+	wm := pb.NewData(self.seq.Next(), p)
+	if err := pb.WriteWireMessage(wm, self.conn, self.peer); err != nil {
+		return 0, errors.Wrap(err, "write")
+	}
+	logrus.Infof("[%d] -> {#%d}[%d] ->", len(p), wm.Sequence, len(wm.Data))
+	return len(wm.Data), nil
 }
 
 func (self *dialerConn) Close() error {

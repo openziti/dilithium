@@ -25,12 +25,27 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 	}
 }
 
-func (self *listenerConn) Read(p []byte) (n int, err error) {
-	return 0, nil
+func (self *listenerConn) Read(p []byte) (int, error) {
+	wm, ok := <-self.rxQueue
+	if !ok {
+		return 0, errors.New("closed")
+	}
+	if wm.Type == pb.MessageType_DATA {
+		n := copy(p, wm.Data)
+		logrus.Infof("[%d] <- {#%d}[%d] <-", n, wm.Sequence, len(wm.Data))
+		return n, nil
+	} else {
+		return 0, errors.New("invalid message")
+	}
 }
 
-func (self *listenerConn) Write(p []byte) (n int, err error) {
-	return 0, nil
+func (self *listenerConn) Write(p []byte) (int, error) {
+	wm := pb.NewData(self.seq.Next(), p)
+	if err := pb.WriteWireMessage(wm, self.conn, self.peer); err != nil {
+		return 0, errors.Wrap(err, "write")
+	}
+	logrus.Infof("[%d] -> {#%d}[%d] ->", len(p), wm.Sequence, len(wm.Data))
+	return len(wm.Data), nil
 }
 
 func (self *listenerConn) Close() error {
