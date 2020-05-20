@@ -10,38 +10,75 @@ import (
 )
 
 type dialerConn struct {
-	conn   *net.UDPConn
-	peer   *net.UDPAddr
-	seq    *util.Sequence
+	conn     *net.UDPConn
+	peer     *net.UDPAddr
+	seq      *util.Sequence
+	txWindow *txWindow
+	rxWindow *rxWindow
 }
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
-	return &dialerConn{
-		conn:   conn,
-		peer:   peer,
-		seq:    util.NewSequence(util.RandomSequence()),
+	dc := &dialerConn{
+		conn: conn,
+		peer: peer,
+		seq:  util.NewSequence(util.RandomSequence()),
 	}
+	ackQueue := make(chan int32, ackQueueLength)
+	ackSnoozer := make(chan int32, ackQueueLength)
+	dc.txWindow = newTxWindow(ackQueue, ackSnoozer, conn, peer)
+	dc.rxWindow = newRxWindow(ackQueue, ackSnoozer, conn, peer, dc.txWindow)
+	return dc
 }
 
 func (self *dialerConn) Read(p []byte) (int, error) {
-	wm, _, err := pb.ReadWireMessage(self.conn)
-	if err != nil {
-		return 0, errors.Wrap(err, "read")
-	}
-	if wm.Type == pb.MessageType_DATA {
-		n := copy(p, wm.Data)
-		logrus.Infof("[%d] <- {#%d}[%d] <-", n, wm.Sequence, len(wm.Data))
+	if n, err := self.rxWindow.read(p); err == nil && n > 0 {
+		logrus.Infof("+[%d] <-", n)
 		return n, nil
 	}
-	return 0, errors.New("invalid message")
+
+	for {
+		wm, _, err := pb.ReadWireMessage(self.conn)
+		if err != nil {
+			return 0, errors.Wrap(err, "read")
+		}
+
+		if wm.Type == pb.MessageType_DATA {
+			logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
+
+			if wm.Ack != -1 {
+				self.txWindow.ack(wm.Ack)
+			}
+
+			if err := self.rxWindow.rx(wm); err != nil {
+				logrus.Errorf("rxWindow.rx (%v)", err)
+				return 0, errors.Wrap(err, "rxWindow.rx")
+			}
+
+			if n, err := self.rxWindow.read(p); err == nil && n > 0 {
+				logrus.Infof("[%d] <-", n)
+				return n, nil
+			}
+
+		} else if wm.Type == pb.MessageType_ACK {
+			logrus.Infof("< - {@%d} <-", wm.Ack)
+
+			if wm.Ack != -1 {
+				self.txWindow.ack(wm.Ack)
+			}
+
+		} else {
+			return 0, errors.Errorf("invalid message [%s]", wm.Type.String())
+		}
+	}
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
 	wm := pb.NewData(self.seq.Next(), p)
+	self.txWindow.tx(wm)
 	if err := pb.WriteWireMessage(wm, self.conn, self.peer); err != nil {
 		return 0, errors.Wrap(err, "write")
 	}
-	logrus.Infof("[%d] -> {#%d}[%d] ->", len(p), wm.Sequence, len(wm.Data))
+	logrus.Infof("[%d] -> {#%d,@%d}[%d] ->", len(p), wm.Sequence, wm.Ack, len(wm.Data))
 	return len(wm.Data), nil
 }
 

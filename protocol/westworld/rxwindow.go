@@ -7,25 +7,36 @@ import (
 	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"net"
 	"sync"
+	"time"
 )
 
 type rxWindow struct {
-	lock     *sync.Mutex
-	buffer   *bytes.Buffer
-	tree     *btree.Tree
-	accepted int32
-	txWindow *txWindow
+	lock       *sync.Mutex
+	buffer     *bytes.Buffer
+	tree       *btree.Tree
+	accepted   int32
+	ackQueue   chan int32
+	ackSnoozer chan int32
+	conn       *net.UDPConn
+	peer       *net.UDPAddr
+	txWindow   *txWindow
 }
 
-func newRxWindow(txWindow *txWindow) *rxWindow {
+func newRxWindow(ackQueue, ackSnoozer chan int32, conn *net.UDPConn, peer *net.UDPAddr, txWindow *txWindow) *rxWindow {
 	rxw := &rxWindow{
-		lock:     new(sync.Mutex),
-		buffer:   new(bytes.Buffer),
-		tree:     btree.NewWith(startingTreeSize, utils.Int32Comparator),
-		accepted: -1,
-		txWindow: txWindow,
+		lock:       new(sync.Mutex),
+		buffer:     new(bytes.Buffer),
+		tree:       btree.NewWith(startingTreeSize, utils.Int32Comparator),
+		accepted:   -1,
+		ackQueue:   ackQueue,
+		ackSnoozer: ackSnoozer,
+		conn:       conn,
+		peer:       peer,
+		txWindow:   txWindow,
 	}
+	go rxw.acker()
 	return rxw
 }
 
@@ -69,4 +80,25 @@ func (self *rxWindow) read(p []byte) (n int, err error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	return self.buffer.Read(p)
+}
+
+func (self *rxWindow) acker() {
+	logrus.Infof("started")
+	defer logrus.Warnf("exited")
+
+	for {
+		select {
+		case <-self.ackSnoozer:
+		case <-time.After(ackTimeoutMs * time.Millisecond):
+			select {
+			case sequence := <-self.ackQueue:
+				if err := pb.WriteWireMessage(pb.NewAck(sequence), self.conn, self.peer); err == nil {
+					logrus.Infof("{@%d} ->", sequence)
+				} else {
+					logrus.Errorf("!{@%d} (%v)", sequence, err)
+				}
+			default:
+			}
+		}
+	}
 }

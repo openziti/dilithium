@@ -15,18 +15,20 @@ type txWindow struct {
 	capacity          int
 	capacityAvailable *sync.Cond
 	ackQueue          chan int32
+	ackSnoozer        chan int32
 	conn              *net.UDPConn
 	peer              *net.UDPAddr
 }
 
-func newTxWindow(conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
+func newTxWindow(ackQueue, ackSnoozer chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
 	txw := &txWindow{
-		lock:     new(sync.Mutex),
-		tree:     btree.NewWith(startingTreeSize, utils.Int32Comparator),
-		capacity: startingWindowCapacity,
-		ackQueue: make(chan int32, ackQueueLength),
-		conn:     conn,
-		peer:     peer,
+		lock:       new(sync.Mutex),
+		tree:       btree.NewWith(startingTreeSize, utils.Int32Comparator),
+		capacity:   startingWindowCapacity,
+		ackQueue:   ackQueue,
+		ackSnoozer: ackSnoozer,
+		conn:       conn,
+		peer:       peer,
 	}
 	txw.capacityAvailable = sync.NewCond(txw.lock)
 	return txw
@@ -44,6 +46,7 @@ func (self *txWindow) tx(wm *pb.WireMessage) {
 	case sequence := <-self.ackQueue:
 		// stamp the pending ack
 		wm.Ack = sequence
+		self.ackSnoozer <- sequence
 	default:
 	}
 
