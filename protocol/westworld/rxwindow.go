@@ -36,7 +36,7 @@ func newRxWindow(ackQueue, ackSnoozer chan int32, conn *net.UDPConn, peer *net.U
 		peer:       peer,
 		txWindow:   txWindow,
 	}
-	go rxw.acker()
+	go rxw.greedyAcker()
 	return rxw
 }
 
@@ -80,6 +80,26 @@ func (self *rxWindow) read(p []byte) (n int, err error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	return self.buffer.Read(p)
+}
+
+func (self *rxWindow) greedyAcker() {
+	logrus.Infof("started")
+	defer logrus.Warnf("exited")
+
+	for {
+		select {
+		case sequence := <-self.ackQueue:
+			if err := pb.WriteWireMessage(pb.NewAck(sequence), self.conn, self.peer); err == nil {
+				logrus.Infof("{@%d} ->", sequence)
+			} else {
+				logrus.Errorf("!{@%d} (%v)", sequence, err)
+			}
+		}
+		select {
+		case <-self.ackSnoozer:
+		default:
+		}
+	}
 }
 
 func (self *rxWindow) acker() {
