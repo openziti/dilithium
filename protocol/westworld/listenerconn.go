@@ -66,7 +66,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			}
 
 		} else if wm.Type == pb.MessageType_ACK {
-			logrus.Infof("< - {@%d} <-", wm.Ack)
+			logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
