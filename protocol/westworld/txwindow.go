@@ -14,13 +14,9 @@ type txWindow struct {
 	tree              *btree.Tree
 	capacity          int
 	capacityAvailable *sync.Cond
+	ackQueue          chan int32
 	conn              *net.UDPConn
 	peer              *net.UDPAddr
-}
-
-type txWindowMarshalled struct {
-	wm   *pb.WireMessage
-	data []byte
 }
 
 func newTxWindow(conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
@@ -28,6 +24,7 @@ func newTxWindow(conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
 		lock:     new(sync.Mutex),
 		tree:     btree.NewWith(startingTreeSize, utils.Int32Comparator),
 		capacity: startingWindowCapacity,
+		ackQueue: make(chan int32, ackQueueLength),
 		conn:     conn,
 		peer:     peer,
 	}
@@ -35,7 +32,7 @@ func newTxWindow(conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
 	return txw
 }
 
-func (self *txWindow) tx(txm *txWindowMarshalled) {
+func (self *txWindow) tx(wm *pb.WireMessage) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
@@ -43,8 +40,14 @@ func (self *txWindow) tx(txm *txWindowMarshalled) {
 		self.capacityAvailable.Wait()
 	}
 
-	// opportunity to ack-stamp our outgoing
-	self.tree.Put(txm.wm.Sequence, txm)
+	select {
+	case sequence := <-self.ackQueue:
+		// stamp the pending ack
+		wm.Ack = sequence
+	default:
+	}
+
+	self.tree.Put(wm.Sequence, wm)
 	self.capacity--
 }
 
@@ -52,7 +55,7 @@ func (self *txWindow) ack(sequence int32) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if txm, found := self.tree.Get(sequence); found {
+	if _, found := self.tree.Get(sequence); found {
 		self.tree.Remove(sequence)
 		self.capacity++
 		self.capacityAvailable.Signal()
