@@ -60,7 +60,7 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 			}
 
 		} else if wm.Type == pb.MessageType_ACK {
-			logrus.Infof("< - {@%d} <-", wm.Ack)
+			logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
@@ -130,6 +130,8 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "clear read deadline")
 	}
 	logrus.Infof("{helloack} <- [%s]", self.peer)
+
+	self.rxWindow.accepted = wm.Sequence
 
 	if err := pb.WriteWireMessage(pb.NewAck(wm.Sequence), self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write ack")

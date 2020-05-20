@@ -59,6 +59,10 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			if n, err := self.rxWindow.read(p); err == nil && n > 0 {
 				logrus.Infof("[%d] <-", n)
 				return n, nil
+			} else {
+				if err != nil {
+					logrus.Errorf("read (%v)", err)
+				}
 			}
 
 		} else if wm.Type == pb.MessageType_ACK {
@@ -114,6 +118,8 @@ func (self *listenerConn) queue(wm *pb.WireMessage) {
 
 func (self *listenerConn) hello(hello *pb.WireMessage) error {
 	logrus.Infof("{hello} <- [%s]", self.peer)
+
+	self.rxWindow.accepted = hello.Sequence
 
 	helloAckSeq := self.seq.Next()
 	if err := pb.WriteWireMessage(pb.NewHelloAck(helloAckSeq, hello.Sequence), self.conn, self.peer); err != nil {
