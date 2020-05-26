@@ -21,7 +21,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
 	dc := &dialerConn{
 		conn: conn,
 		peer: peer,
-		seq:  util.NewSequence(util.RandomSequence()),
+		seq:  util.NewSequence(0),
 	}
 	ackQueue := make(chan int32, queueLength)
 	dc.txWindow = newTxWindow(ackQueue, conn, peer)

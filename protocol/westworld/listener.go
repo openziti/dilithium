@@ -23,6 +23,12 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "listen")
 	}
+	if err := conn.SetReadBuffer(rxtxBufferSize); err != nil {
+		return nil, errors.Wrap(err, "rx buffer")
+	}
+	if err := conn.SetWriteBuffer(rxtxBufferSize); err != nil {
+		return nil, errors.Wrap(err, "tx buffer")
+	}
 	l := &listener{
 		lock:        new(sync.Mutex),
 		conn:        conn,

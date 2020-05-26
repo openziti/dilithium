@@ -23,7 +23,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 		conn:    conn,
 		peer:    peer,
 		rxQueue: make(chan *pb.WireMessage, 1024),
-		seq:     util.NewSequence(util.RandomSequence()),
+		seq:     util.NewSequence(0),
 	}
 	ackQueue := make(chan int32, queueLength)
 	lc.txWindow = newTxWindow(ackQueue, conn, peer)
@@ -58,10 +58,6 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			if n, err := self.rxWindow.read(p); err == nil && n > 0 {
 				//logrus.Infof("[%d] <-", n)
 				return n, nil
-			} else {
-				if err != nil {
-					return 0, errors.Wrap(err, "read")
-				}
 			}
 
 		} else if wm.Type == pb.MessageType_ACK {
