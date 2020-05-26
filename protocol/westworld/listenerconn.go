@@ -26,9 +26,8 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 		seq:     util.NewSequence(util.RandomSequence()),
 	}
 	ackQueue := make(chan int32, ackQueueLength)
-	ackSnoozer := make(chan int32, ackQueueLength)
-	lc.txWindow = newTxWindow(ackQueue, ackSnoozer, conn, peer)
-	lc.rxWindow = newRxWindow(ackQueue, ackSnoozer, conn, peer, lc.txWindow)
+	lc.txWindow = newTxWindow(ackQueue, conn, peer)
+	lc.rxWindow = newRxWindow(ackQueue, conn, peer, lc.txWindow)
 	return lc
 }
 
@@ -81,11 +80,14 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 func (self *listenerConn) Write(p []byte) (int, error) {
 	wm := pb.NewData(self.seq.Next(), p)
 	self.txWindow.tx(wm)
-	if err := pb.WriteWireMessage(wm, self.conn, self.peer); err != nil {
-		return 0, errors.Wrap(err, "write")
+
+	select {
+	case err := <-self.txWindow.txErrors:
+		return 0, err
+	default:
 	}
-	logrus.Infof("[%d] -> {#%d,@%d}[%d] ->", len(p), wm.Sequence, wm.Ack, len(wm.Data))
-	return len(wm.Data), nil
+
+	return len(p), nil
 }
 
 func (self *listenerConn) Close() error {
