@@ -1,0 +1,17 @@
+namespace fb;
+
+enum Type:byte {
+	HELLO = 0,
+	DATA = 1,
+	ACK = 2,
+	CLOSE = 3
+}
+
+table WireMessage {
+	sequence:int32;
+	type:Type;
+	ack:int32;
+	data:[byte];
+}
+
+root_type WireMessage;
