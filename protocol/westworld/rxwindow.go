@@ -60,7 +60,7 @@ func (self *rxWindow) rx(wm *pb.WireMessage) error {
 					if n != len(wm.(*pb.WireMessage).Data) {
 						return errors.New("short buffer write")
 					}
-					logrus.Infof("[%d] <- {#%d}[%d] <-", self.buffer.Len(), key, n)
+					//logrus.Infof("[%d] <- {#%d}[%d] <-", self.buffer.Len(), key, n)
 				}
 
 			} else {

@@ -23,7 +23,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
 		peer: peer,
 		seq:  util.NewSequence(util.RandomSequence()),
 	}
-	ackQueue := make(chan int32, ackQueueLength)
+	ackQueue := make(chan int32, queueLength)
 	dc.txWindow = newTxWindow(ackQueue, conn, peer)
 	dc.rxWindow = newRxWindow(ackQueue, conn, peer, dc.txWindow)
 	return dc
@@ -31,7 +31,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
 
 func (self *dialerConn) Read(p []byte) (int, error) {
 	if n, err := self.rxWindow.read(p); err == nil && n > 0 {
-		logrus.Infof("+[%d] <-", n)
+		//logrus.Infof("+[%d] <-", n)
 		return n, nil
 	}
 
@@ -42,7 +42,7 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 		}
 
 		if wm.Type == pb.MessageType_DATA {
-			logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
+			//logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
@@ -54,12 +54,12 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 			}
 
 			if n, err := self.rxWindow.read(p); err == nil && n > 0 {
-				logrus.Infof("[%d] <-", n)
+				//logrus.Infof("[%d] <-", n)
 				return n, nil
 			}
 
 		} else if wm.Type == pb.MessageType_ACK {
-			logrus.Infof("<- {@%d} <-", wm.Ack)
+			//logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)

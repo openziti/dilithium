@@ -14,6 +14,8 @@ func init() {
 }
 
 func main() {
+	defer logrus.Errorf("finished")
+
 	if err := dilithium.RootCmd.Execute(); err != nil {
 		logrus.Fatalf("error (%v)", err)
 	}

@@ -25,7 +25,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 		rxQueue: make(chan *pb.WireMessage, 1024),
 		seq:     util.NewSequence(util.RandomSequence()),
 	}
-	ackQueue := make(chan int32, ackQueueLength)
+	ackQueue := make(chan int32, queueLength)
 	lc.txWindow = newTxWindow(ackQueue, conn, peer)
 	lc.rxWindow = newRxWindow(ackQueue, conn, peer, lc.txWindow)
 	return lc
@@ -33,7 +33,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 
 func (self *listenerConn) Read(p []byte) (int, error) {
 	if n, err := self.rxWindow.read(p); err == nil && n > 0 {
-		logrus.Infof("+[%d] <-", n)
+		//logrus.Infof("+[%d] <-", n)
 		return n, nil
 	}
 
@@ -44,7 +44,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 		}
 
 		if wm.Type == pb.MessageType_DATA {
-			logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
+			//logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
@@ -56,7 +56,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			}
 
 			if n, err := self.rxWindow.read(p); err == nil && n > 0 {
-				logrus.Infof("[%d] <-", n)
+				//logrus.Infof("[%d] <-", n)
 				return n, nil
 			} else {
 				if err != nil {
@@ -65,7 +65,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			}
 
 		} else if wm.Type == pb.MessageType_ACK {
-			logrus.Infof("<- {@%d} <-", wm.Ack)
+			//logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)

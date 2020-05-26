@@ -50,8 +50,6 @@ func (self *txWindow) tx(wm *pb.WireMessage) {
 	self.capacity--
 
 	self.txQueue <- wm
-
-	logrus.Infof("queued")
 }
 
 func (self *txWindow) ack(sequence int32) {
@@ -87,7 +85,7 @@ func (self *txWindow) txer() {
 			wm.Ack = ackSequence
 
 			if err := pb.WriteWireMessage(wm, self.conn, self.peer); err == nil {
-				logrus.Infof("-> {#%d,@%d}[%d] ->", wm.Sequence, wm.Ack, len(wm.Data))
+				//logrus.Infof("-> {#%d,@%d}[%d] ->", wm.Sequence, wm.Ack, len(wm.Data))
 
 			} else {
 				logrus.Errorf("-> {#%d,@%d)[%d] -> (%v)", wm.Sequence, wm.Ack, len(wm.Data), err)
@@ -100,7 +98,7 @@ func (self *txWindow) txer() {
 			}
 			wm := pb.NewAck(sequence)
 			if err := pb.WriteWireMessage(wm, self.conn, self.peer); err == nil {
-				logrus.Infof("{@%d} ->", sequence)
+				//logrus.Infof("{@%d} ->", sequence)
 
 			} else {
 				logrus.Errorf("{@%d} -> (%v)", sequence, err)
