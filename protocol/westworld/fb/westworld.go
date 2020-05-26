@@ -6,13 +6,30 @@ import (
 	"net"
 )
 
-func NewHello(sequence int32, builder *flatbuffers.Builder) []byte {
+type WireModel struct {
+	Sequence int32
+	Type     Type
+	Ack      int32
+	Data     []byte
+	out      []byte
+	builder  *flatbuffers.Builder
+}
+
+func NewHello(sequence int32, builder *flatbuffers.Builder) *WireModel {
 	builder.Reset()
 	WireMessageStart(builder)
 	WireMessageAddSequence(builder, sequence)
 	WireMessageAddType(builder, TypeHELLO)
+	WireMessageAddAck(builder, -1)
 	builder.Finish(WireMessageEnd(builder))
-	return builder.FinishedBytes()
+	return &WireModel{
+		Sequence: sequence,
+		Type:     TypeHELLO,
+		Ack:      -1,
+		Data:     nil,
+		out:      builder.FinishedBytes(),
+		builder:  builder,
+	}
 }
 
 func NewHelloAck(sequence int32, ack int32, builder *flatbuffers.Builder) []byte {
@@ -45,7 +62,7 @@ func NewAck(forSequence int32, builder *flatbuffers.Builder) []byte {
 	return builder.FinishedBytes()
 }
 
-func ReadWireMessage(conn *net.UDPConn) (wm *WireMessage, peer *net.UDPAddr, err error) {
+func ReadWireMessage(conn *net.UDPConn) (wm *WireModel, peer *net.UDPAddr, err error) {
 	buffer := make([]byte, 64*1024)
 
 	_, peer, err = conn.ReadFromUDP(buffer)
@@ -53,5 +70,12 @@ func ReadWireMessage(conn *net.UDPConn) (wm *WireMessage, peer *net.UDPAddr, err
 		return nil, peer, errors.Wrap(err, "read")
 	}
 
-	return GetRootAsWireMessage(buffer, 0), peer, nil
+	wmm := GetRootAsWireMessage(buffer, 0)
+
+	return &WireModel{
+		Sequence: wmm.Sequence(),
+		Type: wmm.Type(),
+		Ack: wmm.Ack(),
+		// Data: ?
+	}, peer, nil
 }
