@@ -11,7 +11,6 @@ table WireMessage {
 	sequence:int32;
 	type:Type;
 	ack:int32;
-	data:[byte];
 }
 
 root_type WireMessage;

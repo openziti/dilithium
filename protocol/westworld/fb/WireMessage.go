@@ -62,34 +62,8 @@ func (rcv *WireMessage) MutateAck(n int32) bool {
 	return rcv._tab.MutateInt32Slot(8, n)
 }
 
-func (rcv *WireMessage) Data(j int) int8 {
-	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
-	if o != 0 {
-		a := rcv._tab.Vector(o)
-		return rcv._tab.GetInt8(a + flatbuffers.UOffsetT(j*1))
-	}
-	return 0
-}
-
-func (rcv *WireMessage) DataLength() int {
-	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
-	if o != 0 {
-		return rcv._tab.VectorLen(o)
-	}
-	return 0
-}
-
-func (rcv *WireMessage) MutateData(j int, n int8) bool {
-	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
-	if o != 0 {
-		a := rcv._tab.Vector(o)
-		return rcv._tab.MutateInt8(a+flatbuffers.UOffsetT(j*1), n)
-	}
-	return false
-}
-
 func WireMessageStart(builder *flatbuffers.Builder) {
-	builder.StartObject(4)
+	builder.StartObject(3)
 }
 func WireMessageAddSequence(builder *flatbuffers.Builder, sequence int32) {
 	builder.PrependInt32Slot(0, sequence, 0)
@@ -99,12 +73,6 @@ func WireMessageAddType(builder *flatbuffers.Builder, type_ Type) {
 }
 func WireMessageAddAck(builder *flatbuffers.Builder, ack int32) {
 	builder.PrependInt32Slot(2, ack, 0)
-}
-func WireMessageAddData(builder *flatbuffers.Builder, data flatbuffers.UOffsetT) {
-	builder.PrependUOffsetTSlot(3, flatbuffers.UOffsetT(data), 0)
-}
-func WireMessageStartDataVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
-	return builder.StartVector(1, numElems, 1)
 }
 func WireMessageEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()
