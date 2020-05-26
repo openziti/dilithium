@@ -86,7 +86,7 @@ func (self *txWindow) ack(highWater int32, missing []int32) {
 					if n == len(data) {
 						logrus.Infof("{!#%d} ->", m)
 					} else {
-						logrus.Errorf("{!#%d} (short write)")
+						logrus.Errorf("{!#%d} (short write)", m)
 					}
 				} else {
 					logrus.Errorf("{!#%d} (%v)", m, err)

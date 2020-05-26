@@ -1,7 +1,6 @@
 package wb
 
 import (
-	"bytes"
 	"encoding/binary"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
@@ -36,18 +35,34 @@ func NewHello(sequence int32, buffer []byte) (*WireMessage, error) {
 	return wm.encode()
 }
 
-func NewHelloAck(sequence, ack int32) (*WireMessage, error) {
+func NewHelloAck(sequence, ack int32, buffer []byte) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     HELLO,
 		Ack:      ack,
 		Data:     nil,
+		buffer:   buffer,
 	}
 	return wm.encode()
 }
 
+func NewData(sequence int32, data []byte, buffer []byte) (*WireMessage, error) {
+	wm := &WireMessage{
+		Sequence: sequence,
+		Type:     DATA,
+		Ack:      -1,
+		Data:     data,
+		buffer:   buffer,
+	}
+	return wm.encode()
+}
+
+func (self *WireMessage) ToBuffer() []byte {
+	return self.buffer[:self.len]
+}
+
 func (self *WireMessage) encode() (*WireMessage, error) {
-	buffer := bytes.NewBuffer(self.buffer)
+	buffer := util.NewByteWriter(self.buffer)
 	if err := binary.Write(buffer, binary.LittleEndian, self.Sequence); err != nil {
 		return nil, err
 	}
