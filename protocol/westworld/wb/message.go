@@ -69,6 +69,7 @@ func (self *WireMessage) encode() (*WireMessage, error) {
 			return nil, errors.New("short write")
 		}
 	}
+	self.Data = self.buffer[13 : 13+len(self.Data)]
 	self.len = buffer.Len()
 	return self, nil
 }
