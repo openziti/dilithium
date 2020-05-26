@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"net"
+	"sync"
 )
 
 type Type uint8
@@ -22,37 +24,53 @@ type WireMessage struct {
 	Data     []byte
 	buffer   []byte
 	len      int
+	pool     *sync.Pool
 }
 
-func NewHello(sequence int32, buffer []byte) (*WireMessage, error) {
+func NewHello(sequence int32, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     HELLO,
 		Ack:      -1,
 		Data:     nil,
 		buffer:   buffer,
+		pool:     pool,
 	}
 	return wm.encode()
 }
 
-func NewHelloAck(sequence, ack int32, buffer []byte) (*WireMessage, error) {
+func NewHelloAck(sequence, ack int32, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     HELLO,
 		Ack:      ack,
 		Data:     nil,
 		buffer:   buffer,
+		pool:     pool,
 	}
 	return wm.encode()
 }
 
-func NewData(sequence int32, data []byte, buffer []byte) (*WireMessage, error) {
+func NewData(sequence int32, data []byte, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     DATA,
 		Ack:      -1,
 		Data:     data,
 		buffer:   buffer,
+		pool:     pool,
+	}
+	return wm.encode()
+}
+
+func NewAck(forSequence int32, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+	wm := &WireMessage{
+		Sequence: -1,
+		Type:     ACK,
+		Ack:      forSequence,
+		Data:     nil,
+		buffer:   buffer,
+		pool:     pool,
 	}
 	return wm.encode()
 }
@@ -89,8 +107,8 @@ func (self *WireMessage) encode() (*WireMessage, error) {
 	return self, nil
 }
 
-func FromBuffer(buffer []byte) (*WireMessage, error) {
-	wm := &WireMessage{buffer: buffer}
+func FromBuffer(buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+	wm := &WireMessage{buffer: buffer, pool: pool}
 	if sequence, err := util.ReadInt32(buffer[:4]); err == nil {
 		wm.Sequence = sequence
 	} else {
@@ -113,4 +131,30 @@ func FromBuffer(buffer []byte) (*WireMessage, error) {
 		return nil, err
 	}
 	return wm, nil
+}
+
+func ReadWireMessage(conn *net.UDPConn, buffer []byte, pool *sync.Pool) (wm *WireMessage, peer *net.UDPAddr, err error) {
+	_, peer, err = conn.ReadFromUDP(buffer)
+	if err == nil {
+		return nil, peer, errors.Wrap(err, "read from peer")
+	}
+
+	wm, err = FromBuffer(buffer, pool)
+	if err != nil {
+		return nil, peer, errors.Wrap(err, "from data")
+	}
+
+	return wm, peer, err
+}
+
+func (self *WireMessage) WriteMessage(conn *net.UDPConn, peer *net.UDPAddr) error {
+	n, err := conn.WriteToUDP(self.buffer[:self.len], peer)
+	if err != nil {
+		return errors.Wrap(err, "write to peer")
+	}
+	if n != self.len {
+		return errors.New("short write to peer")
+	}
+
+	return nil
 }
