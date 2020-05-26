@@ -60,7 +60,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 				return n, nil
 			} else {
 				if err != nil {
-					logrus.Errorf("read (%v)", err)
+					return 0, errors.Wrap(err, "read")
 				}
 			}
 
