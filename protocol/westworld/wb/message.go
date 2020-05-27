@@ -161,6 +161,15 @@ func (self *WireMessage) WriteMessage(conn *net.UDPConn, peer *net.UDPAddr) erro
 	return nil
 }
 
+func (self *WireMessage) RewriteAck(ack int32) error {
+	buffer := util.NewByteWriter(self.buffer[5:9])
+	if err := binary.Write(buffer, binary.LittleEndian, self.Ack); err != nil {
+		return err
+	}
+	self.Ack = ack
+	return nil
+}
+
 func (self *WireMessage) Free() {
 	if self.pool != nil && self.buffer != nil {
 		self.pool.Put(self.buffer)

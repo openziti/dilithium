@@ -100,15 +100,16 @@ func (self *txWindow) txer() {
 				return
 			}
 
-			/*
-			ackSequence := int32(-1)
 			select {
-			case sequence := <-self.ackQueue:
-				ackSequence = sequence
+			case ackSequence := <-self.ackQueue:
+				if err := wm.RewriteAck(ackSequence); err == nil {
+					logrus.Warnf("sliplined ack {@%d}", ackSequence)
+				} else {
+					logrus.Errorf("error rewriting ack (%v)", err)
+				}
+
 			default:
 			}
-			wm.Ack = ackSequence
-			*/
 
 			if err := wm.WriteMessage(self.conn, self.peer); err == nil {
 				//logrus.Infof("-> {#%d,@%d}[%d] ->", wm.Sequence, wm.Ack, len(wm.Data))
