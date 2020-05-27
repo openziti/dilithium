@@ -1,7 +1,7 @@
 package westworld
 
 import (
-	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
+	"github.com/michaelquigley/dilithium/protocol/westworld/wb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -12,18 +12,20 @@ import (
 type listenerConn struct {
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
-	rxQueue  chan *pb.WireMessage
+	rxQueue  chan *wb.WireMessage
 	seq      *util.Sequence
 	txWindow *txWindow
 	rxWindow *rxWindow
+	pool     *wb.BufferPool
 }
 
 func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,
-		rxQueue: make(chan *pb.WireMessage, 1024),
+		rxQueue: make(chan *wb.WireMessage, 1024),
 		seq:     util.NewSequence(0),
+		pool:    wb.NewBufferPool("listenerConn"),
 	}
 	ackQueue := make(chan int32, queueLength)
 	lc.txWindow = newTxWindow(ackQueue, conn, peer)
@@ -38,12 +40,12 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 	}
 
 	for {
-		wm, ok := <- self.rxQueue
+		wm, ok := <-self.rxQueue
 		if !ok {
 			return 0, errors.New("closed")
 		}
 
-		if wm.Type == pb.MessageType_DATA {
+		if wm.Type == wb.DATA {
 			//logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
 
 			if wm.Ack != -1 {
@@ -59,22 +61,28 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 				//logrus.Infof("[%d] <-", n)
 				return n, nil
 			}
+			wm.Free()
 
-		} else if wm.Type == pb.MessageType_ACK {
+		} else if wm.Type == wb.ACK {
 			//logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
 			}
+			wm.Free()
 
 		} else {
-			return 0, errors.Errorf("invalid message [%s]", wm.Type.String())
+			wm.Free()
+			return 0, errors.Errorf("invalid message [%d]", wm.Type)
 		}
 	}
 }
 
 func (self *listenerConn) Write(p []byte) (int, error) {
-	wm := pb.NewData(self.seq.Next(), p)
+	wm, err := wb.NewData(self.seq.Next(), p, self.pool)
+	if err != nil {
+		return 0, errors.Wrap(err, "alloc")
+	}
 	self.txWindow.tx(wm)
 
 	select {
@@ -110,19 +118,27 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func (self *listenerConn) queue(wm *pb.WireMessage) {
+func (self *listenerConn) queue(wm *wb.WireMessage) {
 	self.rxQueue <- wm
 }
 
-func (self *listenerConn) hello(hello *pb.WireMessage) error {
+func (self *listenerConn) hello(hello *wb.WireMessage) error {
 	logrus.Infof("{hello} <- [%s]", self.peer)
 
 	self.rxWindow.accepted = hello.Sequence
+	hello.Free()
 
 	helloAckSeq := self.seq.Next()
-	if err := pb.WriteWireMessage(pb.NewHelloAck(helloAckSeq, hello.Sequence), self.conn, self.peer); err != nil {
+
+	wm, err := wb.NewHelloAck(helloAckSeq, hello.Sequence, self.pool)
+	if err != nil {
+		return errors.Wrap(err, "alloc")
+	}
+	if err := wm.WriteMessage(self.conn, self.peer); err != nil {
+		wm.Free()
 		return errors.Wrap(err, "write hello ack")
 	}
+	wm.Free()
 	logrus.Infof("{helloack} -> [%s]", self.peer)
 
 	select {
@@ -130,7 +146,9 @@ func (self *listenerConn) hello(hello *pb.WireMessage) error {
 		if !ok {
 			return errors.New("rx queue closed")
 		}
-		if ack.Type == pb.MessageType_ACK && ack.Ack == helloAckSeq {
+		ack.Free()
+
+		if ack.Type == wb.ACK && ack.Ack == helloAckSeq {
 			logrus.Infof("{ack} <- [%s]", self.peer)
 			logrus.Infof("connection established with [%s]", self.peer)
 			return nil

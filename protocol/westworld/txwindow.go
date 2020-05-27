@@ -3,7 +3,7 @@ package westworld
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
+	"github.com/michaelquigley/dilithium/protocol/westworld/wb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -17,11 +17,12 @@ type txWindow struct {
 	capacity          int
 	capacityAvailable *sync.Cond
 	txMonitor         *txMonitor
-	txQueue           chan *pb.WireMessage
+	txQueue           chan *wb.WireMessage
 	txErrors          chan error
 	ackQueue          chan int32
 	conn              *net.UDPConn
 	peer              *net.UDPAddr
+	pool              *wb.BufferPool
 }
 
 type txMonitor struct {
@@ -34,7 +35,7 @@ type txMonitor struct {
 type txMonitored struct {
 	timeout time.Time
 	retries int
-	wm      *pb.WireMessage
+	wm      *wb.WireMessage
 }
 
 func newTxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
@@ -43,11 +44,12 @@ func newTxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txW
 		tree:      btree.NewWith(startingTreeSize, utils.Int32Comparator),
 		capacity:  startingWindowCapacity,
 		txMonitor: &txMonitor{},
-		txQueue:   make(chan *pb.WireMessage, startingTreeSize),
+		txQueue:   make(chan *wb.WireMessage, startingTreeSize),
 		txErrors:  make(chan error, startingTreeSize),
 		ackQueue:  ackQueue,
 		conn:      conn,
 		peer:      peer,
+		pool:      wb.NewBufferPool("txWindow"),
 	}
 	txw.capacityAvailable = sync.NewCond(txw.lock)
 	txw.txMonitor.ready = sync.NewCond(txw.lock)
@@ -56,7 +58,7 @@ func newTxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txW
 	return txw
 }
 
-func (self *txWindow) tx(wm *pb.WireMessage) {
+func (self *txWindow) tx(wm *wb.WireMessage) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
@@ -76,8 +78,9 @@ func (self *txWindow) ack(sequence int32) {
 	defer self.lock.Unlock()
 
 	if wm, found := self.tree.Get(sequence); found {
-		self.cancelMonitor(wm.(*pb.WireMessage))
+		self.cancelMonitor(wm.(*wb.WireMessage))
 		self.tree.Remove(sequence)
+		wm.(*wb.WireMessage).Free()
 		self.capacity++
 		self.capacityAvailable.Signal()
 
@@ -96,6 +99,8 @@ func (self *txWindow) txer() {
 			if !ok {
 				return
 			}
+
+			/*
 			ackSequence := int32(-1)
 			select {
 			case sequence := <-self.ackQueue:
@@ -103,8 +108,9 @@ func (self *txWindow) txer() {
 			default:
 			}
 			wm.Ack = ackSequence
+			*/
 
-			if err := pb.WriteWireMessage(wm, self.conn, self.peer); err == nil {
+			if err := wm.WriteMessage(self.conn, self.peer); err == nil {
 				//logrus.Infof("-> {#%d,@%d}[%d] ->", wm.Sequence, wm.Ack, len(wm.Data))
 
 			} else {
@@ -116,13 +122,17 @@ func (self *txWindow) txer() {
 			if !ok {
 				return
 			}
-			wm := pb.NewAck(sequence)
-			if err := pb.WriteWireMessage(wm, self.conn, self.peer); err == nil {
-				//logrus.Infof("{@%d} ->", sequence)
+			if wm, err := wb.NewAck(sequence, self.pool); err == nil {
+				if err := wm.WriteMessage(self.conn, self.peer); err == nil {
+					//logrus.Infof("{@%d} ->", sequence)
+				} else {
+					logrus.Errorf("{@%d} -> (%v)", sequence, err)
+					self.txErrors <- errors.Wrap(err, "write ack")
+				}
+				wm.Free()
 
 			} else {
 				logrus.Errorf("{@%d} -> (%v)", sequence, err)
-				self.txErrors <- errors.Wrap(err, "write ack")
 			}
 		}
 	}
@@ -156,13 +166,13 @@ func (self *txWindow) monitor() {
 	}
 }
 
-func (self *txWindow) addMonitor(wm *pb.WireMessage) {
+func (self *txWindow) addMonitor(wm *wb.WireMessage) {
 	timeout := time.Now().Add(retransmissionDelayMs * time.Millisecond)
 	self.txMonitor.waiting = append(self.txMonitor.waiting, &txMonitored{timeout: timeout, wm: wm})
 	self.txMonitor.ready.Signal()
 }
 
-func (self *txWindow) cancelMonitor(wm *pb.WireMessage) {
+func (self *txWindow) cancelMonitor(wm *wb.WireMessage) {
 	i := -1
 	for j, monitor := range self.txMonitor.waiting {
 		if monitor.wm == wm {

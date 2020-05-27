@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
+	"github.com/michaelquigley/dilithium/protocol/westworld/wb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -36,13 +36,14 @@ func newRxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr, txWi
 	return rxw
 }
 
-func (self *rxWindow) rx(wm *pb.WireMessage) error {
+func (self *rxWindow) rx(wm *wb.WireMessage) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
 	if wm.Sequence > self.accepted {
 		self.tree.Put(wm.Sequence, wm)
 	} else {
+		wm.Free()
 		logrus.Warnf("~ <- {#%d} <-", wm.Sequence)
 	}
 	self.txWindow.ackQueue <- wm.Sequence
@@ -52,15 +53,19 @@ func (self *rxWindow) rx(wm *pb.WireMessage) error {
 		for _, key := range self.tree.Keys() {
 			if key.(int32) == next {
 				wm, _ := self.tree.Get(key)
-				self.tree.Remove(key)
-				self.accepted = next
-				next++
+				if n, err := self.buffer.Write(wm.(*wb.WireMessage).Data); err == nil {
+					self.tree.Remove(key)
+					self.accepted = next
+					next++
+					wm.(*wb.WireMessage).Free()
 
-				if n, err := self.buffer.Write(wm.(*pb.WireMessage).Data); err == nil {
-					if n != len(wm.(*pb.WireMessage).Data) {
+					if n != len(wm.(*wb.WireMessage).Data) {
 						return errors.New("short buffer write")
 					}
 					//logrus.Infof("[%d] <- {#%d}[%d] <-", self.buffer.Len(), key, n)
+
+				} else {
+					return errors.Wrap(err, "buffer fill")
 				}
 
 			} else {

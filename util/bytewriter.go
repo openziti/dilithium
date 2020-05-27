@@ -16,13 +16,12 @@ func NewByteWriter(buffer []byte) *ByteWriter {
 
 func (self *ByteWriter) Write(p []byte) (n int, err error) {
 	if self.pos+len(p) > self.len {
-		return 0, errors.New("short")
+		return 0, errors.New("short2")
 	}
-	n = 0
-	for i := 0; self.pos < self.len && i < len(p); i++ {
-		self.buffer[self.pos] = p[i]
-		self.pos++
-		n++
+	n = copy(self.buffer[self.pos:self.len], p)
+	self.pos += n
+	if n != len(p) {
+		return 0, errors.Errorf("short [%d != %d]", n, len(p))
 	}
 	return n, nil
 }

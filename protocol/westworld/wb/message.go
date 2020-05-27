@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
-	"sync"
 )
 
 type Type uint8
@@ -24,52 +24,52 @@ type WireMessage struct {
 	Data     []byte
 	buffer   []byte
 	len      int
-	pool     *sync.Pool
+	pool     *BufferPool
 }
 
-func NewHello(sequence int32, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+func NewHello(sequence int32, pool *BufferPool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     HELLO,
 		Ack:      -1,
 		Data:     nil,
-		buffer:   buffer,
+		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
 	return wm.encode()
 }
 
-func NewHelloAck(sequence, ack int32, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+func NewHelloAck(sequence, ack int32, pool *BufferPool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     HELLO,
 		Ack:      ack,
 		Data:     nil,
-		buffer:   buffer,
+		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
 	return wm.encode()
 }
 
-func NewData(sequence int32, data []byte, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+func NewData(sequence int32, data []byte, pool *BufferPool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: sequence,
 		Type:     DATA,
 		Ack:      -1,
 		Data:     data,
-		buffer:   buffer,
+		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
 	return wm.encode()
 }
 
-func NewAck(forSequence int32, buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+func NewAck(forSequence int32, pool *BufferPool) (*WireMessage, error) {
 	wm := &WireMessage{
 		Sequence: -1,
 		Type:     ACK,
 		Ack:      forSequence,
 		Data:     nil,
-		buffer:   buffer,
+		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
 	return wm.encode()
@@ -107,7 +107,7 @@ func (self *WireMessage) encode() (*WireMessage, error) {
 	return self, nil
 }
 
-func FromBuffer(buffer []byte, pool *sync.Pool) (*WireMessage, error) {
+func FromBuffer(buffer []byte, pool *BufferPool) (*WireMessage, error) {
 	wm := &WireMessage{buffer: buffer, pool: pool}
 	if sequence, err := util.ReadInt32(buffer[:4]); err == nil {
 		wm.Sequence = sequence
@@ -133,9 +133,11 @@ func FromBuffer(buffer []byte, pool *sync.Pool) (*WireMessage, error) {
 	return wm, nil
 }
 
-func ReadWireMessage(conn *net.UDPConn, buffer []byte, pool *sync.Pool) (wm *WireMessage, peer *net.UDPAddr, err error) {
+func ReadWireMessage(conn *net.UDPConn, pool *BufferPool) (wm *WireMessage, peer *net.UDPAddr, err error) {
+	buffer := pool.Get().([]byte)
+
 	_, peer, err = conn.ReadFromUDP(buffer)
-	if err == nil {
+	if err != nil {
 		return nil, peer, errors.Wrap(err, "read from peer")
 	}
 
@@ -157,4 +159,14 @@ func (self *WireMessage) WriteMessage(conn *net.UDPConn, peer *net.UDPAddr) erro
 	}
 
 	return nil
+}
+
+func (self *WireMessage) Free() {
+	if self.pool != nil && self.buffer != nil {
+		self.pool.Put(self.buffer)
+		self.pool = nil
+		self.buffer = nil
+	} else {
+		logrus.Warnf("double-free")
+	}
 }

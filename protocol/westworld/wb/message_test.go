@@ -6,9 +6,9 @@ import (
 )
 
 func TestReadWrite(t *testing.T) {
+	pool := NewBufferPool("test")
 	data := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
-	buffer := make([]byte, 64*1024)
-	wm, err := NewData(1, data, buffer, nil)
+	wm, err := NewData(1, data, pool)
 	assert.Nil(t, err)
 	assert.Equal(t, int32(1), wm.Sequence)
 	assert.Equal(t, DATA, wm.Type)

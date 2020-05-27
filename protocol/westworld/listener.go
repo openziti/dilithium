@@ -2,7 +2,7 @@ package westworld
 
 import (
 	"github.com/emirpasic/gods/trees/btree"
-	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
+	"github.com/michaelquigley/dilithium/protocol/westworld/wb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -16,6 +16,7 @@ type listener struct {
 	peers       *btree.Tree
 	acceptQueue chan net.Conn
 	closed      bool
+	pool        *wb.BufferPool
 }
 
 func Listen(addr *net.UDPAddr) (net.Listener, error) {
@@ -35,6 +36,7 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 		addr:        addr,
 		peers:       btree.NewWith(16*1024, addrComparator),
 		acceptQueue: make(chan net.Conn, 1024),
+		pool:        wb.NewBufferPool("listener"),
 	}
 	go l.run()
 	return l, nil
@@ -62,16 +64,17 @@ func (self *listener) run() {
 	defer logrus.Warnf("exited")
 
 	for {
-		if wm, peer, err := pb.ReadWireMessage(self.conn); err == nil {
+		if wm, peer, err := wb.ReadWireMessage(self.conn, self.pool); err == nil {
 			conn, found := self.peers.Get(peer)
 			if found {
 				conn.(*listenerConn).queue(wm)
 
 			} else {
-				if wm.Type == pb.MessageType_HELLO {
+				if wm.Type == wb.HELLO {
 					go self.hello(wm, peer)
 
 				} else {
+					wm.Free()
 					logrus.Errorf("unknown peer [%s]", peer)
 				}
 			}
@@ -81,7 +84,7 @@ func (self *listener) run() {
 	}
 }
 
-func (self *listener) hello(hello *pb.WireMessage, peer *net.UDPAddr) {
+func (self *listener) hello(hello *wb.WireMessage, peer *net.UDPAddr) {
 	conn := newListenerConn(self.conn, peer)
 
 	self.lock.Lock()

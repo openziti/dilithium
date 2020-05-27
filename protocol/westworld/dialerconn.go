@@ -1,7 +1,7 @@
 package westworld
 
 import (
-	"github.com/michaelquigley/dilithium/protocol/westworld/pb"
+	"github.com/michaelquigley/dilithium/protocol/westworld/wb"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -15,6 +15,8 @@ type dialerConn struct {
 	seq      *util.Sequence
 	txWindow *txWindow
 	rxWindow *rxWindow
+	rxPool   *wb.BufferPool
+	txPool   *wb.BufferPool
 }
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
@@ -22,6 +24,8 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
 		conn: conn,
 		peer: peer,
 		seq:  util.NewSequence(0),
+		rxPool: wb.NewBufferPool("dialerConn.Read"),
+		txPool: wb.NewBufferPool("dialerConn.Write"),
 	}
 	ackQueue := make(chan int32, queueLength)
 	dc.txWindow = newTxWindow(ackQueue, conn, peer)
@@ -36,12 +40,12 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 	}
 
 	for {
-		wm, _, err := pb.ReadWireMessage(self.conn)
+		wm, _, err := wb.ReadWireMessage(self.conn, self.rxPool)
 		if err != nil {
 			return 0, errors.Wrap(err, "read")
 		}
 
-		if wm.Type == pb.MessageType_DATA {
+		if wm.Type == wb.DATA {
 			//logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
 
 			if wm.Ack != -1 {
@@ -57,22 +61,28 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 				//logrus.Infof("[%d] <-", n)
 				return n, nil
 			}
+			wm.Free()
 
-		} else if wm.Type == pb.MessageType_ACK {
+		} else if wm.Type == wb.ACK {
 			//logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
 			}
+			wm.Free()
 
 		} else {
-			return 0, errors.Errorf("invalid message [%s]", wm.Type.String())
+			wm.Free()
+			return 0, errors.Errorf("invalid message [%d]", wm.Type)
 		}
 	}
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
-	wm := pb.NewData(self.seq.Next(), p)
+	wm, err := wb.NewData(self.seq.Next(), p, self.txPool)
+	if err != nil {
+		return 0, errors.Wrap(err, "alloc")
+	}
 	self.txWindow.tx(wm)
 
 	select {
@@ -110,34 +120,50 @@ func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 
 func (self *dialerConn) hello() error {
 	helloSeq := self.seq.Next()
-	if err := pb.WriteWireMessage(pb.NewHello(helloSeq), self.conn, self.peer); err != nil {
+	wm, err := wb.NewHello(helloSeq, self.txPool)
+	if err != nil {
+		return errors.Wrap(err, "alloc")
+	}
+	if err := wm.WriteMessage(self.conn, self.peer); err != nil {
+		wm.Free()
 		return errors.Wrap(err, "write hello")
 	}
+	wm.Free()
 	logrus.Infof("{hello} -> [%s]", self.peer)
 
 	if err := self.conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return errors.Wrap(err, "set read deadline")
 	}
-	wm, _, err := pb.ReadWireMessage(self.conn)
+	wm, _, err = wb.ReadWireMessage(self.conn, self.rxPool)
 	if err != nil {
 		return errors.Wrap(err, "read hello ack")
 	}
-	if wm.Type != pb.MessageType_HELLO {
+	if wm.Type != wb.HELLO {
+		wm.Free()
 		return errors.Wrap(err, "unexpected response")
 	}
 	if wm.Ack != helloSeq {
+		wm.Free()
 		return errors.New("invalid hello ack")
 	}
 	if err := self.conn.SetReadDeadline(time.Time{}); err != nil {
+		wm.Free()
 		return errors.Wrap(err, "clear read deadline")
 	}
+	wm.Free()
 	logrus.Infof("{helloack} <- [%s]", self.peer)
 
 	self.rxWindow.accepted = wm.Sequence
 
-	if err := pb.WriteWireMessage(pb.NewAck(wm.Sequence), self.conn, self.peer); err != nil {
+	wm, err = wb.NewAck(wm.Sequence, self.txPool)
+	if err != nil {
+		return errors.Wrap(err, "alloc")
+	}
+	if err := wm.WriteMessage(self.conn, self.peer); err != nil {
+		wm.Free()
 		return errors.Wrap(err, "write ack")
 	}
+	wm.Free()
 	logrus.Infof("{ack} -> [%s]", self.peer)
 
 	logrus.Infof("connection established with [%s]", self.peer)
