@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
+	"runtime"
 )
 
 type Type uint8
@@ -36,6 +37,7 @@ func NewHello(sequence int32, pool *BufferPool) (*WireMessage, error) {
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
+	runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
 }
 
@@ -163,7 +165,7 @@ func (self *WireMessage) WriteMessage(conn *net.UDPConn, peer *net.UDPAddr) erro
 
 func (self *WireMessage) RewriteAck(ack int32) error {
 	buffer := util.NewByteWriter(self.buffer[5:9])
-	if err := binary.Write(buffer, binary.LittleEndian, self.Ack); err != nil {
+	if err := binary.Write(buffer, binary.LittleEndian, ack); err != nil {
 		return err
 	}
 	self.Ack = ack
@@ -175,7 +177,12 @@ func (self *WireMessage) Free() {
 		self.pool.Put(self.buffer)
 		self.pool = nil
 		self.buffer = nil
+		//runtime.GC()
 	} else {
 		logrus.Warnf("double-free")
 	}
+}
+
+func finalizer(wm *WireMessage) {
+	logrus.Errorf("finalizing [%d] [%p]", wm.Sequence, wm)
 }

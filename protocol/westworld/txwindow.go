@@ -103,7 +103,7 @@ func (self *txWindow) txer() {
 			select {
 			case ackSequence := <-self.ackQueue:
 				if err := wm.RewriteAck(ackSequence); err == nil {
-					logrus.Warnf("sliplined ack {@%d}", ackSequence)
+					//logrus.Warnf("sliplined ack {@%d}", ackSequence)
 				} else {
 					logrus.Errorf("error rewriting ack (%v)", err)
 				}
