@@ -74,7 +74,7 @@ func (self *listener) run() {
 					go self.hello(wm, peer)
 
 				} else {
-					wm.Free()
+					wm.Free("listener.run (after not-dispatchable)")
 					logrus.Errorf("unknown peer [%s]", peer)
 				}
 			}

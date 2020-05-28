@@ -26,6 +26,8 @@ type WireMessage struct {
 	buffer   []byte
 	len      int
 	pool     *BufferPool
+	trace    []string
+	freed    bool
 }
 
 func NewHello(sequence int32, pool *BufferPool) (*WireMessage, error) {
@@ -50,6 +52,7 @@ func NewHelloAck(sequence, ack int32, pool *BufferPool) (*WireMessage, error) {
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
+	runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
 }
 
@@ -62,6 +65,7 @@ func NewData(sequence int32, data []byte, pool *BufferPool) (*WireMessage, error
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
 	}
+	runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
 }
 
@@ -172,17 +176,27 @@ func (self *WireMessage) RewriteAck(ack int32) error {
 	return nil
 }
 
-func (self *WireMessage) Free() {
-	if self.pool != nil && self.buffer != nil {
+func (self *WireMessage) Touch(where string) {
+	self.trace = append(self.trace, where)
+	if self.freed {
+		logrus.Errorf("touch after free! [%p]", self.trace)
+	}
+}
+
+func (self *WireMessage) Free(where string) {
+	self.trace = append(self.trace, where)
+	if !self.freed && self.pool != nil && self.buffer != nil {
 		self.pool.Put(self.buffer)
 		self.pool = nil
 		self.buffer = nil
-		//runtime.GC()
+		self.freed = true
 	} else {
-		logrus.Warnf("double-free")
+		logrus.Errorf("double-free! [%v]", self.trace)
 	}
 }
 
 func finalizer(wm *WireMessage) {
-	logrus.Errorf("finalizing [%d] [%p]", wm.Sequence, wm)
+	if !wm.freed {
+		logrus.Errorf("not-freed, finalizing [%d] [%p]", wm.Sequence, wm)
+	}
 }

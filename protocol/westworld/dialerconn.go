@@ -61,7 +61,6 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 				//logrus.Infof("[%d] <-", n)
 				return n, nil
 			}
-			wm.Free()
 
 		} else if wm.Type == wb.ACK {
 			//logrus.Infof("<- {@%d} <-", wm.Ack)
@@ -69,10 +68,10 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
 			}
-			wm.Free()
+			wm.Free("dialerConn.Read (after txWindow.ack)")
 
 		} else {
-			wm.Free()
+			wm.Free("dialerConn.Read (after unknown type)")
 			return 0, errors.Errorf("invalid message [%d]", wm.Type)
 		}
 	}
@@ -125,10 +124,10 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "alloc")
 	}
 	if err := wm.WriteMessage(self.conn, self.peer); err != nil {
-		wm.Free()
+		wm.Free("dialerConn.hello (after write hello errored)")
 		return errors.Wrap(err, "write hello")
 	}
-	wm.Free()
+	wm.Free("dialerConn.hello (after write hello)")
 	logrus.Infof("{hello} -> [%s]", self.peer)
 
 	if err := self.conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
@@ -139,18 +138,18 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "read hello ack")
 	}
 	if wm.Type != wb.HELLO {
-		wm.Free()
+		wm.Free("dialerConn.hello (after invalid hello error)")
 		return errors.Wrap(err, "unexpected response")
 	}
 	if wm.Ack != helloSeq {
-		wm.Free()
+		wm.Free("dialerConn.hello (after sequence mismatch)")
 		return errors.New("invalid hello ack")
 	}
 	if err := self.conn.SetReadDeadline(time.Time{}); err != nil {
-		wm.Free()
+		wm.Free("dialerConn.hello (after deadline failed)")
 		return errors.Wrap(err, "clear read deadline")
 	}
-	wm.Free()
+	wm.Free("dialerConn.hello (after hello read)")
 	logrus.Infof("{helloack} <- [%s]", self.peer)
 
 	self.rxWindow.accepted = wm.Sequence
@@ -160,10 +159,10 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "alloc")
 	}
 	if err := wm.WriteMessage(self.conn, self.peer); err != nil {
-		wm.Free()
+		wm.Free("dialerConn.hello (after ack failed)")
 		return errors.Wrap(err, "write ack")
 	}
-	wm.Free()
+	wm.Free("dialerConn.hello (after ack)")
 	logrus.Infof("{ack} -> [%s]", self.peer)
 
 	logrus.Infof("connection established with [%s]", self.peer)
