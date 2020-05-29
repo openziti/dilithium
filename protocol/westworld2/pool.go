@@ -19,15 +19,15 @@ func newPool(name string) *pool {
 	return p
 }
 
-func (self *pool) get() []byte {
-	return self.store.Get().([]byte)
+func (self *pool) get() *buffer {
+	return self.store.Get().(*buffer)
 }
 
-func (self *pool) put(buffer []byte) {
+func (self *pool) put(buffer *buffer) {
 	self.store.Put(buffer)
 }
 
 func (self *pool) allocate() interface{} {
 	logrus.WithField("context", self.name).Info("allocate")
-	return make([]byte, 64*1024)
+	return newBuffer(self)
 }
