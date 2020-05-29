@@ -3,11 +3,13 @@ package westworld2
 import (
 	"github.com/sirupsen/logrus"
 	"sync"
+	"sync/atomic"
 )
 
 type pool struct {
-	name  string
-	store *sync.Pool
+	name   string
+	store  *sync.Pool
+	allocs int64
 }
 
 func newPool(name string) *pool {
@@ -29,5 +31,6 @@ func (self *pool) put(buffer *buffer) {
 
 func (self *pool) allocate() interface{} {
 	logrus.WithField("context", self.name).Info("allocate")
+	atomic.AddInt64(&self.allocs, 1)
 	return newBuffer(self)
 }
