@@ -43,7 +43,7 @@ func (self *rxWindow) rx(wm *wb.WireMessage) error {
 	if wm.Sequence > self.accepted {
 		self.tree.Put(wm.Sequence, wm)
 	} else {
-		wm.Free("rxWindow.rx (after already treed)")
+		wm.Unref()
 		logrus.Warnf("~ <- {#%d} <-", wm.Sequence)
 	}
 	self.txWindow.ackQueue <- wm.Sequence
@@ -57,7 +57,7 @@ func (self *rxWindow) rx(wm *wb.WireMessage) error {
 					self.tree.Remove(key)
 					self.accepted = next
 					next++
-					wm.(*wb.WireMessage).Free("rxWindow.rx (after buffer)")
+					wm.(*wb.WireMessage).Unref()
 
 					if n != len(wm.(*wb.WireMessage).Data) {
 						return errors.New("short buffer write")

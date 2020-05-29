@@ -46,6 +46,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 		}
 
 		if wm.Type == wb.DATA {
+			wm.Touch()
 			//logrus.Infof("<- {#%d,@%d}[%d] <-", wm.Sequence, wm.Ack, len(wm.Data))
 
 			if wm.Ack != -1 {
@@ -63,15 +64,16 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			}
 
 		} else if wm.Type == wb.ACK {
+			wm.Touch()
 			//logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
 				self.txWindow.ack(wm.Ack)
 			}
-			wm.Free("listenerConn.Read (after ack)")
+			wm.Unref()
 
 		} else {
-			wm.Free("listenerConn.Read (after invalid message)")
+			wm.Unref()
 			return 0, errors.Errorf("invalid message [%d]", wm.Type)
 		}
 	}
@@ -125,7 +127,7 @@ func (self *listenerConn) hello(hello *wb.WireMessage) error {
 	logrus.Infof("{hello} <- [%s]", self.peer)
 
 	self.rxWindow.accepted = hello.Sequence
-	hello.Free("listenerConn.hello (after hello receive)")
+	hello.Unref()
 
 	helloAckSeq := self.seq.Next()
 
@@ -133,11 +135,11 @@ func (self *listenerConn) hello(hello *wb.WireMessage) error {
 	if err != nil {
 		return errors.Wrap(err, "alloc")
 	}
+	wm.Ref()
+	defer wm.Unref()
 	if err := wm.WriteMessage(self.conn, self.peer); err != nil {
-		wm.Free("listenerConn.hello (after hello ack failed)")
 		return errors.Wrap(err, "write hello ack")
 	}
-	wm.Free("listenerConn.hello (after hello ack)")
 	logrus.Infof("{helloack} -> [%s]", self.peer)
 
 	select {
@@ -145,7 +147,7 @@ func (self *listenerConn) hello(hello *wb.WireMessage) error {
 		if !ok {
 			return errors.New("rx queue closed")
 		}
-		ack.Free("listenerConn.hello (after ack received)")
+		ack.Unref()
 
 		if ack.Type == wb.ACK && ack.Ack == helloAckSeq {
 			logrus.Infof("{ack} <- [%s]", self.peer)

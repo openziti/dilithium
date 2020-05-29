@@ -65,16 +65,19 @@ func (self *listener) run() {
 
 	for {
 		if wm, peer, err := wb.ReadWireMessage(self.conn, self.pool); err == nil {
+			wm.Ref()
+
 			conn, found := self.peers.Get(peer)
 			if found {
 				conn.(*listenerConn).queue(wm)
 
 			} else {
+				wm.Touch()
 				if wm.Type == wb.HELLO {
 					go self.hello(wm, peer)
 
 				} else {
-					wm.Free("listener.run (after not-dispatchable)")
+					wm.Unref()
 					logrus.Errorf("unknown peer [%s]", peer)
 				}
 			}

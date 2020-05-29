@@ -80,7 +80,7 @@ func (self *txWindow) ack(sequence int32) {
 	if wm, found := self.tree.Get(sequence); found {
 		self.cancelMonitor(wm.(*wb.WireMessage))
 		self.tree.Remove(sequence)
-		wm.(*wb.WireMessage).Free("txWindow.ack (after untreed)")
+		wm.(*wb.WireMessage).Unref()
 		self.capacity++
 		self.capacityAvailable.Signal()
 
@@ -124,13 +124,14 @@ func (self *txWindow) txer() {
 				return
 			}
 			if wm, err := wb.NewAck(sequence, self.pool); err == nil {
+				wm.Ref()
 				if err := wm.WriteMessage(self.conn, self.peer); err == nil {
 					//logrus.Infof("{@%d} ->", sequence)
 				} else {
 					logrus.Errorf("{@%d} -> (%v)", sequence, err)
 					self.txErrors <- errors.Wrap(err, "write ack")
 				}
-				wm.Free("txWindow.txer (after ack send)")
+				wm.Unref()
 
 			} else {
 				logrus.Errorf("{@%d} -> (%v)", sequence, err)

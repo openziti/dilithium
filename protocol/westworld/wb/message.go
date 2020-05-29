@@ -2,11 +2,13 @@ package wb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
 	"runtime"
+	"sync"
 )
 
 type Type uint8
@@ -26,8 +28,10 @@ type WireMessage struct {
 	buffer   []byte
 	len      int
 	pool     *BufferPool
-	trace    []string
+	trace    []*stackFrame
 	freed    bool
+	refs     int
+	lock     *sync.Mutex
 }
 
 func NewHello(sequence int32, pool *BufferPool) (*WireMessage, error) {
@@ -38,6 +42,7 @@ func NewHello(sequence int32, pool *BufferPool) (*WireMessage, error) {
 		Data:     nil,
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
+		lock:     new(sync.Mutex),
 	}
 	runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
@@ -51,6 +56,7 @@ func NewHelloAck(sequence, ack int32, pool *BufferPool) (*WireMessage, error) {
 		Data:     nil,
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
+		lock:     new(sync.Mutex),
 	}
 	runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
@@ -64,6 +70,7 @@ func NewData(sequence int32, data []byte, pool *BufferPool) (*WireMessage, error
 		Data:     data,
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
+		lock:     new(sync.Mutex),
 	}
 	runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
@@ -77,11 +84,13 @@ func NewAck(forSequence int32, pool *BufferPool) (*WireMessage, error) {
 		Data:     nil,
 		buffer:   pool.Get().([]byte),
 		pool:     pool,
+		lock:     new(sync.Mutex),
 	}
 	return wm.encode()
 }
 
 func (self *WireMessage) ToBuffer() []byte {
+	self.recordStackFrame("toBuffer", 2)
 	return self.buffer[:self.len]
 }
 
@@ -156,6 +165,8 @@ func ReadWireMessage(conn *net.UDPConn, pool *BufferPool) (wm *WireMessage, peer
 }
 
 func (self *WireMessage) WriteMessage(conn *net.UDPConn, peer *net.UDPAddr) error {
+	self.recordStackFrame("write", 2)
+	//self.DumpTrace()
 	n, err := conn.WriteToUDP(self.buffer[:self.len], peer)
 	if err != nil {
 		return errors.Wrap(err, "write to peer")
@@ -168,6 +179,7 @@ func (self *WireMessage) WriteMessage(conn *net.UDPConn, peer *net.UDPAddr) erro
 }
 
 func (self *WireMessage) RewriteAck(ack int32) error {
+	self.recordStackFrame("rewriteAck", 2)
 	buffer := util.NewByteWriter(self.buffer[5:9])
 	if err := binary.Write(buffer, binary.LittleEndian, ack); err != nil {
 		return err
@@ -176,27 +188,72 @@ func (self *WireMessage) RewriteAck(ack int32) error {
 	return nil
 }
 
-func (self *WireMessage) Touch(where string) {
-	self.trace = append(self.trace, where)
+func (self *WireMessage) Touch() {
+	self.recordStackFrame("access", 2)
 	if self.freed {
-		logrus.Errorf("touch after free! [%p]", self.trace)
+		logrus.Errorf("touch after free! [%v]", self.trace)
 	}
 }
 
-func (self *WireMessage) Free(where string) {
-	self.trace = append(self.trace, where)
+func (self *WireMessage) Ref() {
+	self.lock.Lock()
+	self.refs++
+	self.lock.Unlock()
+}
+
+func (self *WireMessage) Unref() {
+	self.lock.Lock()
+	self.refs--
+	if self.refs == 0 {
+		self.free()
+	}
+	if self.refs < 0 {
+		logrus.Errorf("multi-unref! [%d]", self.refs)
+	}
+	self.lock.Unlock()
+}
+
+func (self *WireMessage) free() {
+	self.recordStackFrame("free", 3)
 	if !self.freed && self.pool != nil && self.buffer != nil {
 		self.pool.Put(self.buffer)
-		self.pool = nil
 		self.buffer = nil
+		self.len = 0
 		self.freed = true
+		runtime.GC()
 	} else {
 		logrus.Errorf("double-free! [%v]", self.trace)
 	}
+}
+
+func (self *WireMessage) DumpTrace() {
+	fmt.Printf("trace = #%d {\n", self.Sequence)
+	for i, frame := range self.trace {
+		fmt.Printf("\t[%d]: %s (%s)\n\t\t%s:%d\n", i, frame.f, frame.op, frame.file, frame.line)
+	}
+	fmt.Println("}")
 }
 
 func finalizer(wm *WireMessage) {
 	if !wm.freed {
 		logrus.Errorf("not-freed, finalizing [%d] [%p]", wm.Sequence, wm)
 	}
+}
+
+func (self *WireMessage) recordStackFrame(op string, deep int) {
+	pc, file, line, ok := runtime.Caller(deep)
+	if !ok {
+		self.trace = append(self.trace, &stackFrame{op, "?", 0, "?"})
+		return
+	}
+
+	fn := runtime.FuncForPC(pc)
+	self.trace = append(self.trace, &stackFrame{op, file, line, fn.Name()})
+}
+
+type stackFrame struct {
+	op   string
+	file string
+	line int
+	f    string
 }
