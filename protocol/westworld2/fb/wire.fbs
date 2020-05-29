@@ -1,0 +1,10 @@
+namespace fb;
+
+enum Type : byte { HELLO = 0, ACK, DATA, CLOSE }
+
+table Header {
+	sequence:int32;
+	type:Type;
+	ack:int32;
+	len:int16;
+}
