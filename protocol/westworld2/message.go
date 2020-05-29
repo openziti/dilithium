@@ -2,6 +2,7 @@ package westworld2
 
 import (
 	"github.com/pkg/errors"
+	"net"
 )
 
 type wireMessage struct {
@@ -10,6 +11,32 @@ type wireMessage struct {
 	ack    int32
 	data   []byte
 	buffer *buffer
+}
+
+func readWireMessage(conn *net.UDPConn, pool *pool) (wm *wireMessage, peer *net.UDPAddr, err error) {
+	buffer := pool.get()
+	_, peer, err = conn.ReadFromUDP(buffer.data)
+	if err != nil {
+		return nil, peer, errors.Wrap(err, "peer read")
+	}
+
+	wm, err = decode(buffer)
+	if err != nil {
+		return nil, peer, errors.Wrap(err, "decode")
+	}
+
+	return
+}
+
+func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr) error {
+	n, err := conn.WriteToUDP(wm.buffer.data[:wm.buffer.sz], peer)
+	if err != nil {
+		return errors.Wrap(err, "peer write")
+	}
+	if uint16(n) != wm.buffer.sz {
+		return errors.Errorf("short peer write [%d != %d]", n, wm.buffer.sz)
+	}
+	return nil
 }
 
 func newHello(seq int32, buffer *buffer) *wireMessage {
