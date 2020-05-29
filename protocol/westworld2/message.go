@@ -54,6 +54,11 @@ func newAck(seqFor int32, buffer *buffer) *wireMessage {
 	return wm.encode()
 }
 
+func (self *wireMessage) rewriteAck(seqFor int32) {
+	self.ack = seqFor
+	WriteInt32(self.buffer.data[5:9], self.ack)
+}
+
 func (self *wireMessage) encode() *wireMessage {
 	WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
@@ -88,27 +93,27 @@ const (
 )
 
 func ReadInt32(buf []byte) (v int32) {
-	v |= int32(buf[0])
-	v |= int32(buf[1]) << 8
-	v |= int32(buf[2]) << 16
-	v |= int32(buf[3]) << 24
+	v |= int32(buf[0]) << 24
+	v |= int32(buf[1]) << 16
+	v |= int32(buf[2]) << 8
+	v |= int32(buf[3])
 	return
 }
 
 func WriteInt32(buf []byte, v int32) {
-	buf[0] = byte(v)
-	buf[1] = byte(v >> 8)
-	buf[2] = byte(v >> 16)
-	buf[3] = byte(v >> 24)
+	buf[0] = byte(v >> 24)
+	buf[1] = byte(v >> 16)
+	buf[2] = byte(v >> 8)
+	buf[3] = byte(v)
 }
 
 func ReadUint16(buf []byte) (v uint16) {
-	v |= uint16(buf[0])
-	v |= uint16(buf[1]) << 8
+	v |= uint16(buf[0]) << 8
+	v |= uint16(buf[1])
 	return
 }
 
 func WriteUint16(buf []byte, v uint16) {
-	buf[0] = byte(v)
-	buf[1] = byte(v >> 8)
+	buf[0] = byte(v >> 8)
+	buf[1] = byte(v)
 }

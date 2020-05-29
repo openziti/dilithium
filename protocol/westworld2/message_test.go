@@ -8,12 +8,32 @@ import (
 	"time"
 )
 
-func TestMillionsOfMessages(t *testing.T) {
+func TestRewriteAck(t *testing.T) {
 	tp := newPool("test")
-	data, szs := makeData(16 * 1024)
+	data, _ := makeData(16*1024, 0)
+
+	wm := newData(99, data, tp.get())
+	assert.Equal(t, int32(-1), wm.ack)
+	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff}, wm.buffer.data[5:9])
+
+	wm.rewriteAck(8)
+	assert.Equal(t, int32(8), wm.ack)
+	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x08}, wm.buffer.data[5:9])
+
+	wm.buffer.unref()
+	assert.Equal(t, int64(1), tp.allocs)
+}
+
+func TestMillionsOfMessages(t *testing.T) {
+	maxDataLen := 16 * 1024
+	sizeVariations := 1024
+	data, szs := makeData(maxDataLen, sizeVariations)
+
+	tp := newPool("test")
+
+	cycles := 1000000
 	start := time.Now()
-	total := 1000000
-	for i := 0; i < total; i++ {
+	for i := 0; i < cycles; i++ {
 		szi := i % 1024
 		sz := szs[szi]
 		wmin := newData(int32(i), data[:sz], tp.get())
@@ -27,18 +47,22 @@ func TestMillionsOfMessages(t *testing.T) {
 		wmout.buffer.unref()
 	}
 	seconds := time.Since(start).Seconds()
-	log.Printf("%d messages, %.2f seconds. %.2f messages/sec", total, seconds, float64(total)/seconds)
+	log.Printf("%d messages, %.2f seconds. %.2f messages/sec", cycles, seconds, float64(cycles)/seconds)
 }
 
-func makeData(sz int) ([]byte, []int16) {
+func makeData(sz int, variations int) (data []byte, szs []int16) {
 	rand.Seed(time.Now().UnixNano())
-	data := make([]byte, sz)
-	for i := 0; i < sz; i++ {
-		data[i] = byte(rand.Int())
+	if sz > 0 {
+		data = make([]byte, sz)
+		for i := 0; i < sz; i++ {
+			data[i] = byte(rand.Int())
+		}
 	}
-	szs := make([]int16, 1024)
-	for i := 0; i < 1024; i++ {
-		szs[i] = int16(rand.Intn(sz))
+	if variations > 0 {
+		szs = make([]int16, variations)
+		for i := 0; i < 1024; i++ {
+			szs[i] = int16(rand.Intn(sz))
+		}
 	}
-	return data, szs
+	return
 }
