@@ -8,7 +8,7 @@ import (
 	"net"
 )
 
-type txWindow struct {
+type txPortal struct {
 	tree     *btree.Tree
 	capacity int
 	txQueue  chan *wireMessage
@@ -20,8 +20,8 @@ type txWindow struct {
 	pool     *pool
 }
 
-func newTxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txWindow {
-	return &txWindow{
+func newTxPortal(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
+	return &txPortal{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
 		capacity: startingWindowCapacity,
 		txQueue:  make(chan *wireMessage, txQueueSize),
@@ -30,11 +30,11 @@ func newTxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txW
 		txAcks:   make(chan int32, ackQueueSize),
 		conn:     conn,
 		peer:     peer,
-		pool:     newPool("txWindow"),
+		pool:     newPool("txPortal"),
 	}
 }
 
-func (self *txWindow) run() {
+func (self *txPortal) run() {
 	logrus.Info("started")
 	defer logrus.Warn("exited")
 
@@ -44,7 +44,7 @@ func (self *txWindow) run() {
 	}
 }
 
-func (self *txWindow) rxtxAcks() {
+func (self *txPortal) rxtxAcks() {
 	select {
 	case txAck, ok := <-self.txAcks:
 		if !ok {
@@ -76,7 +76,7 @@ func (self *txWindow) rxtxAcks() {
 	}
 }
 
-func (self *txWindow) txData() {
+func (self *txPortal) txData() {
 	if self.capacity > 0 {
 		select {
 		case wm, ok := <-self.txQueue:
