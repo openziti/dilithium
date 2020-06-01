@@ -39,16 +39,21 @@ func (self *txPortal) run() {
 	defer logrus.Warn("exited")
 
 	for {
-		self.rxtxAcks()
-		self.txData()
+		if err := self.rxtxAcks(); err != nil {
+			logrus.Errorf("rxtxAcks (%v)", err)
+			return
+		}
+		if err:= self.txData(); err != nil {
+			logrus.Errorf("txData (%v)", err)
+		}
 	}
 }
 
-func (self *txPortal) rxtxAcks() {
+func (self *txPortal) rxtxAcks() error {
 	select {
 	case txAck, ok := <-self.txAcks:
 		if !ok {
-			return
+			return errors.New("txAcks closed")
 		}
 
 		wm := newAck(txAck, self.pool.get())
@@ -59,7 +64,7 @@ func (self *txPortal) rxtxAcks() {
 
 	case rxAck, ok := <-self.rxAcks:
 		if !ok {
-			return
+			return errors.New("rxAcks closed")
 		}
 
 		if wm, found := self.tree.Get(rxAck); found {
@@ -74,14 +79,15 @@ func (self *txPortal) rxtxAcks() {
 	default:
 		// no acks to process
 	}
+	return nil
 }
 
-func (self *txPortal) txData() {
+func (self *txPortal) txData() error {
 	if self.capacity > 0 {
 		select {
 		case wm, ok := <-self.txQueue:
 			if !ok {
-				return
+				return errors.New("txQueue closed")
 			}
 
 			self.tree.Put(wm.seq, wm)
@@ -90,7 +96,7 @@ func (self *txPortal) txData() {
 			select {
 			case ack, ok := <-self.txAcks:
 				if !ok {
-					return
+					return errors.New("txAcks closed")
 				}
 				wm.rewriteAck(ack)
 			default:
@@ -106,4 +112,5 @@ func (self *txPortal) txData() {
 			// no wireMessage for tx
 		}
 	}
+	return nil
 }

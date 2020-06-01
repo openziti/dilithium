@@ -6,4 +6,7 @@ const (
 	txQueueSize            = 4
 	txErrorsSize           = 1024
 	ackQueueSize           = 1024
+	rxWmQueueSize          = 1024
+	rxDataQueueSize        = 1024
+	bufferSz               = 64 * 1024
 )
