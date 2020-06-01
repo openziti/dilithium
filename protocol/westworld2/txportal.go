@@ -18,9 +18,10 @@ type txPortal struct {
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	pool     *pool
+	ins      instrument
 }
 
-func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *txPortal {
 	txp := &txPortal{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
 		capacity: startingWindowCapacity,
@@ -31,6 +32,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
 		conn:     conn,
 		peer:     peer,
 		pool:     newPool("txPortal"),
+		ins:      ins,
 	}
 	go txp.run()
 	return txp
@@ -45,7 +47,7 @@ func (self *txPortal) run() {
 			logrus.Errorf("rxtxAcks (%v)", err)
 			return
 		}
-		if err:= self.txData(); err != nil {
+		if err := self.txData(); err != nil {
 			logrus.Errorf("txData (%v)", err)
 		}
 	}
@@ -108,6 +110,9 @@ func (self *txPortal) txData() error {
 			if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 				logrus.Errorf("-> {#%d,@%d}[%d] -> (%v)", wm.seq, wm.ack, len(wm.data), err)
 				self.txErrors <- errors.Wrap(err, "write")
+			}
+			if self.ins != nil {
+				self.ins.wireMessageTx(wm)
 			}
 
 		default:

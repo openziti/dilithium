@@ -122,6 +122,20 @@ const (
 	CLOSE
 )
 
+func mtString(mt messageType) string {
+	if mt == HELLO {
+		return "HELLO"
+	} else if mt == ACK {
+		return "ACK"
+	} else if mt == DATA {
+		return "DATA"
+	} else if mt == CLOSE {
+		return "CLOSE"
+	} else {
+		return "UNKNOWN"
+	}
+}
+
 func ReadInt32(buf []byte) (v int32) {
 	v |= int32(buf[0]) << 24
 	v |= int32(buf[1]) << 16

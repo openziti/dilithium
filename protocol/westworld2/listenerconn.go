@@ -18,7 +18,7 @@ type listenerConn struct {
 	pool     *pool
 }
 
-func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
+func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *listenerConn {
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,
@@ -26,7 +26,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr) *listenerConn {
 		seq:     util.NewSequence(0),
 		pool:    newPool("listenerConn"),
 	}
-	lc.txPortal = newTxPortal(conn, peer)
+	lc.txPortal = newTxPortal(conn, peer, ins)
 	lc.rxPortal = newRxPortal(lc.txPortal.txAcks)
 	return lc
 }

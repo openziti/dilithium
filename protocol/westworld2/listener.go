@@ -15,6 +15,7 @@ type listener struct {
 	conn        *net.UDPConn
 	addr        *net.UDPAddr
 	pool        *pool
+	ins         instrument
 }
 
 func Listen(addr *net.UDPAddr) (net.Listener, error) {
@@ -35,6 +36,7 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 		conn:        conn,
 		addr:        addr,
 		pool:        newPool("listener"),
+		ins:         &loggerInstrument{},
 	}
 	go l.run()
 	return l, nil
@@ -62,6 +64,7 @@ func (self *listener) run() {
 
 	for {
 		if wm, peer, err := readWireMessage(self.conn, self.pool); err == nil {
+
 			conn, found := self.peers.Get(peer)
 			if found {
 				conn.(*listenerConn).queue(wm)
@@ -80,7 +83,7 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
-	conn := newListenerConn(self.conn, peer)
+	conn := newListenerConn(self.conn, peer, &loggerInstrument{})
 
 	self.lock.Lock()
 	self.peers.Put(peer, conn)

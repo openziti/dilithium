@@ -15,16 +15,18 @@ type dialerConn struct {
 	txPortal *txPortal
 	rxPortal *rxPortal
 	pool     *pool
+	ins      instrument
 }
 
-func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
+func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *dialerConn {
 	dc := &dialerConn{
 		conn: conn,
 		peer: peer,
 		seq:  util.NewSequence(0),
 		pool: newPool("dialerConn"),
+		ins:  ins,
 	}
-	dc.txPortal = newTxPortal(conn, peer)
+	dc.txPortal = newTxPortal(conn, peer, ins)
 	dc.rxPortal = newRxPortal(dc.txPortal.txAcks)
 	return dc
 }
@@ -47,6 +49,9 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 		if err != nil {
 			return 0, errors.Wrap(err, "read")
 		}
+		if self.ins != nil {
+			self.ins.wireMessageRx(wm)
+		}
 
 		if wm.mt == DATA {
 			if wm.ack != -1 {
@@ -55,7 +60,7 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 			self.rxPortal.rxWmQueue <- wm
 
 			select {
-			case rxdr, ok := <- self.rxPortal.rxDataQueue:
+			case rxdr, ok := <-self.rxPortal.rxDataQueue:
 				if !ok {
 					return 0, errors.New("closed")
 				}

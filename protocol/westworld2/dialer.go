@@ -18,7 +18,7 @@ func Dial(addr *net.UDPAddr) (conn net.Conn, err error) {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
 
-	dConn := newDialerConn(lConn, addr)
+	dConn := newDialerConn(lConn, addr, &loggerInstrument{})
 	if err = dConn.hello(); err != nil {
 		return nil, errors.Wrap(err, "hello")
 	}
