@@ -21,7 +21,7 @@ type txPortal struct {
 }
 
 func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
-	return &txPortal{
+	txp := &txPortal{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
 		capacity: startingWindowCapacity,
 		txQueue:  make(chan *wireMessage, txQueueSize),
@@ -32,6 +32,8 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
 		peer:     peer,
 		pool:     newPool("txPortal"),
 	}
+	go txp.run()
+	return txp
 }
 
 func (self *txPortal) run() {

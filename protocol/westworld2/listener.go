@@ -2,6 +2,7 @@ package westworld2
 
 import (
 	"github.com/emirpasic/gods/trees/btree"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -17,7 +18,42 @@ type listener struct {
 }
 
 func Listen(addr *net.UDPAddr) (net.Listener, error) {
-	return nil, nil
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, errors.Wrap(err, "listen")
+	}
+	if err := conn.SetReadBuffer(bufferSz); err != nil {
+		return nil, errors.Wrap(err, "rx buffer")
+	}
+	if err := conn.SetWriteBuffer(bufferSz); err != nil {
+		return nil, errors.Wrap(err, "tx buffer")
+	}
+	l := &listener{
+		lock:        new(sync.Mutex),
+		peers:       btree.NewWith(treeSize, addrComparator),
+		acceptQueue: make(chan net.Conn, acceptQueueSz),
+		conn:        conn,
+		addr:        addr,
+		pool:        newPool("listener"),
+	}
+	go l.run()
+	return l, nil
+}
+
+func (self *listener) Accept() (net.Conn, error) {
+	conn, ok := <-self.acceptQueue
+	if !ok {
+		return nil, errors.New("listener closed")
+	}
+	return conn, nil
+}
+
+func (self *listener) Close() error {
+	return nil
+}
+
+func (self *listener) Addr() net.Addr {
+	return self.addr
 }
 
 func (self *listener) run() {

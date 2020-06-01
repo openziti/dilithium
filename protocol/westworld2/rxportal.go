@@ -29,7 +29,7 @@ func newRxPortal(ackQueue chan int32) *rxPortal {
 	pool.New = func() interface{} {
 		return make([]byte, bufferSz)
 	}
-	return &rxPortal{
+	rxp := &rxPortal{
 		tree:        btree.NewWith(treeSize, utils.Int32Comparator),
 		accepted:    -1,
 		rxWmQueue:   make(chan *wireMessage, rxWmQueueSize),
@@ -38,6 +38,8 @@ func newRxPortal(ackQueue chan int32) *rxPortal {
 		rxDataPool:  pool,
 		ackQueue:    ackQueue,
 	}
+	go rxp.run()
+	return rxp
 }
 
 func (self *rxPortal) run() {

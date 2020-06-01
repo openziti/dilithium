@@ -3,7 +3,7 @@ package dilithium
 import (
 	"github.com/michaelquigley/dilithium/protocol/blaster"
 	"github.com/michaelquigley/dilithium/protocol/conduit"
-	"github.com/michaelquigley/dilithium/protocol/westworld"
+	"github.com/michaelquigley/dilithium/protocol/westworld2"
 	"github.com/pkg/errors"
 	"net"
 )
@@ -115,7 +115,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 				return nil, errors.Wrap(err, "resolve address")
 			}
 
-			listener, err := westworld.Listen(listenAddress)
+			listener, err := westworld2.Listen(listenAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
@@ -128,7 +128,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 				return nil, errors.Wrap(err, "resolve address")
 			}
 
-			conn, err := westworld.Dial(dialAddress)
+			conn, err := westworld2.Dial(dialAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}

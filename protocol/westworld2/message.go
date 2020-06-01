@@ -15,10 +15,12 @@ type wireMessage struct {
 
 func readWireMessage(conn *net.UDPConn, pool *pool) (wm *wireMessage, peer *net.UDPAddr, err error) {
 	buffer := pool.get()
-	_, peer, err = conn.ReadFromUDP(buffer.data)
+	var n int
+	n, peer, err = conn.ReadFromUDP(buffer.data)
 	if err != nil {
 		return nil, peer, errors.Wrap(err, "peer read")
 	}
+	buffer.sz = uint16(n)
 
 	wm, err = decode(buffer)
 	if err != nil {
