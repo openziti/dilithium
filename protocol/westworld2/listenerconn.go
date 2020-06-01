@@ -88,6 +88,7 @@ func (self *listenerConn) Write(p []byte) (int, error) {
 	case err := <-self.txPortal.txErrors:
 		return 0, err
 	default:
+		// no error
 	}
 
 	return len(p), nil

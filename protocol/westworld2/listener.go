@@ -44,6 +44,19 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
+	conn := newListenerConn(self.conn, peer)
+
+	self.lock.Lock()
+	self.peers.Put(peer, conn)
+	self.lock.Unlock()
+
+	if err := conn.hello(hello); err != nil {
+		logrus.Errorf("connect establishment failed, peer [%s] (%v)", peer, err)
+		return
+	}
+
+	self.acceptQueue <- conn
+	logrus.Infof("accepted connection, peer [%s]", peer)
 }
 
 func addrComparator(i, j interface{}) int {
