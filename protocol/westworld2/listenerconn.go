@@ -56,17 +56,13 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 			}
 			self.rxPortal.rxWmQueue <- wm
 
-			select {
-			case rxdr, ok := <- self.rxPortal.rxDataQueue:
-				if !ok {
-					return 0, errors.New("closed")
-				}
-				n := copy(p, rxdr.buf[:rxdr.sz])
-				self.rxPortal.rxDataPool.Put(rxdr.buf)
-				return n, nil
-			default:
-				// no data
+			rxdr, ok := <-self.rxPortal.rxDataQueue
+			if !ok {
+				return 0, errors.New("closed")
 			}
+			n := copy(p, rxdr.buf[:rxdr.sz])
+			self.rxPortal.rxDataPool.Put(rxdr.buf)
+			return n, nil
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
