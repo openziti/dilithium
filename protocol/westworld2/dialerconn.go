@@ -28,56 +28,18 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *dialer
 	}
 	dc.txPortal = newTxPortal(conn, peer, ins)
 	dc.rxPortal = newRxPortal(dc.txPortal.txAcks)
+	go dc.rxer()
 	return dc
 }
 
 func (self *dialerConn) Read(p []byte) (int, error) {
-	select {
-	case rxdr, ok := <-self.rxPortal.rxDataQueue:
-		if !ok {
-			return 0, errors.New("closed")
-		}
-		n := copy(p, rxdr.buf[:rxdr.sz])
-		self.rxPortal.rxDataPool.Put(rxdr.buf)
-		return n, nil
-	default:
-		// no data
+	rxdr, ok := <-self.rxPortal.rxDataQueue
+	if !ok {
+		return 0, errors.New("closed")
 	}
-
-	for {
-		wm, _, err := readWireMessage(self.conn, self.pool)
-		if err != nil {
-			return 0, errors.Wrap(err, "read")
-		}
-		if self.ins != nil {
-			self.ins.wireMessageRx(wm)
-		}
-
-		if wm.mt == DATA {
-			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
-			}
-			self.rxPortal.rxWmQueue <- wm
-
-			rxdr, ok := <-self.rxPortal.rxDataQueue
-			if !ok {
-				return 0, errors.New("closed")
-			}
-			n := copy(p, rxdr.buf[:rxdr.sz])
-			self.rxPortal.rxDataPool.Put(rxdr.buf)
-			return n, nil
-
-		} else if wm.mt == ACK {
-			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
-			}
-			wm.buffer.unref()
-
-		} else {
-			wm.buffer.unref()
-			return 0, errors.Errorf("invalid mt [%d]", wm.mt)
-		}
-	}
+	n := copy(p, rxdr.buf[:rxdr.sz])
+	self.rxPortal.rxDataPool.Put(rxdr.buf)
+	return n, nil
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
@@ -115,6 +77,39 @@ func (self *dialerConn) SetReadDeadline(t time.Time) error {
 
 func (self *dialerConn) SetWriteDeadline(t time.Time) error {
 	return nil
+}
+
+func (self *dialerConn) rxer() {
+	logrus.Info("started")
+	defer logrus.Warn("exited")
+
+	for {
+		wm, _, err := readWireMessage(self.conn, self.pool)
+		if err != nil {
+			logrus.Errorf("read error (%v)", err)
+			continue
+		}
+		if self.ins != nil {
+			self.ins.wireMessageRx(wm)
+		}
+
+		if wm.mt == DATA {
+			if wm.ack != -1 {
+				self.txPortal.rxAcks <- wm.ack
+			}
+			self.rxPortal.rxWmQueue <- wm
+
+		} else if wm.mt == ACK {
+			if wm.ack != -1 {
+				self.txPortal.rxAcks <- wm.ack
+			}
+			wm.buffer.unref()
+
+		} else {
+			logrus.Errorf("invalid mt [%s]", mtString(wm.mt))
+			wm.buffer.unref()
+		}
+	}
 }
 
 func (self *dialerConn) hello() error {

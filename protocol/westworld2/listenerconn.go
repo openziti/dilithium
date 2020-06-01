@@ -28,53 +28,18 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *list
 	}
 	lc.txPortal = newTxPortal(conn, peer, ins)
 	lc.rxPortal = newRxPortal(lc.txPortal.txAcks)
+	go lc.rxer()
 	return lc
 }
 
 func (self *listenerConn) Read(p []byte) (int, error) {
-	select {
-	case rxdr, ok := <-self.rxPortal.rxDataQueue:
-		if !ok {
-			return 0, errors.New("closed")
-		}
-		n := copy(p, rxdr.buf[:rxdr.sz])
-		self.rxPortal.rxDataPool.Put(rxdr.buf)
-		return n, nil
-	default:
-		// no data
+	rxdr, ok := <-self.rxPortal.rxDataQueue
+	if !ok {
+		return 0, errors.New("closed")
 	}
-
-	for {
-		wm, ok := <-self.rxQueue
-		if !ok {
-			return 0, errors.New("closed")
-		}
-
-		if wm.mt == DATA {
-			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
-			}
-			self.rxPortal.rxWmQueue <- wm
-
-			rxdr, ok := <-self.rxPortal.rxDataQueue
-			if !ok {
-				return 0, errors.New("closed")
-			}
-			n := copy(p, rxdr.buf[:rxdr.sz])
-			self.rxPortal.rxDataPool.Put(rxdr.buf)
-			return n, nil
-
-		} else if wm.mt == ACK {
-			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
-			}
-			wm.buffer.unref()
-
-		} else {
-			wm.buffer.unref()
-			return 0, errors.Errorf("invalid mt [%d]", wm.mt)
-		}
-	}
+	n := copy(p, rxdr.buf[:rxdr.sz])
+	self.rxPortal.rxDataPool.Put(rxdr.buf)
+	return n, nil
 }
 
 func (self *listenerConn) Write(p []byte) (int, error) {
@@ -116,6 +81,35 @@ func (self *listenerConn) SetWriteDeadline(t time.Time) error {
 
 func (self *listenerConn) queue(wm *wireMessage) {
 	self.rxQueue <- wm
+}
+
+func (self *listenerConn) rxer() {
+	logrus.Info("started")
+	defer logrus.Warn("exited")
+
+	for {
+		wm, ok := <-self.rxQueue
+		if !ok {
+			return
+		}
+
+		if wm.mt == DATA {
+			if wm.ack != -1 {
+				self.txPortal.rxAcks <- wm.ack
+			}
+			self.rxPortal.rxWmQueue <- wm
+
+		} else if wm.mt == ACK {
+			if wm.ack != -1 {
+				self.txPortal.rxAcks <- wm.ack
+			}
+			wm.buffer.unref()
+
+		} else {
+			logrus.Errorf("invalid mt [%s]", mtString(wm.mt))
+			wm.buffer.unref()
+		}
+	}
 }
 
 func (self *listenerConn) hello(hello *wireMessage) error {

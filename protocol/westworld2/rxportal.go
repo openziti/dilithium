@@ -30,7 +30,7 @@ func newRxPortal(ackQueue chan int32) *rxPortal {
 		tree:        btree.NewWith(treeSize, utils.Int32Comparator),
 		accepted:    -1,
 		rxWmQueue:   make(chan *wireMessage),
-		rxDataQueue: make(chan *rxRead, treeSize),
+		rxDataQueue: make(chan *rxRead, rxDataQueueSize),
 		rxDataPool:  pool,
 		ackQueue:    ackQueue,
 	}
