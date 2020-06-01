@@ -39,27 +39,28 @@ func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr) err
 	return nil
 }
 
-func newHello(seq int32, buffer *buffer) *wireMessage {
+func newHello(seq int32, pool *pool) *wireMessage {
 	wm := &wireMessage{
 		seq:    seq,
 		mt:     HELLO,
 		ack:    -1,
-		buffer: buffer,
+		buffer: pool.get(),
 	}
 	return wm.encode()
 }
 
-func newHelloAck(seq, ack int32, buffer *buffer) *wireMessage {
+func newHelloAck(seq, ack int32, pool *pool) *wireMessage {
 	wm := &wireMessage{
 		seq:    seq,
 		mt:     HELLO,
 		ack:    ack,
-		buffer: buffer,
+		buffer: pool.get(),
 	}
 	return wm.encode()
 }
 
-func newData(seq int32, data []byte, buffer *buffer) *wireMessage {
+func newData(seq int32, data []byte, pool *pool) *wireMessage {
+	buffer := pool.get()
 	n := copy(buffer.data[11:], data)
 	wm := &wireMessage{
 		seq:    seq,
@@ -71,12 +72,12 @@ func newData(seq int32, data []byte, buffer *buffer) *wireMessage {
 	return wm.encode()
 }
 
-func newAck(seqFor int32, buffer *buffer) *wireMessage {
+func newAck(seqFor int32, pool *pool) *wireMessage {
 	wm := &wireMessage{
 		seq:    -1,
 		mt:     ACK,
 		ack:    seqFor,
-		buffer: buffer,
+		buffer: pool.get(),
 	}
 	return wm.encode()
 }

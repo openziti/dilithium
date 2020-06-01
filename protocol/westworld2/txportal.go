@@ -20,7 +20,7 @@ type txPortal struct {
 	pool     *pool
 }
 
-func newTxPortal(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr) *txPortal {
 	return &txPortal{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
 		capacity: startingWindowCapacity,
@@ -56,7 +56,7 @@ func (self *txPortal) rxtxAcks() error {
 			return errors.New("txAcks closed")
 		}
 
-		wm := newAck(txAck, self.pool.get())
+		wm := newAck(txAck, self.pool)
 		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			logrus.Errorf("{@%d} -> (%v)", txAck, err)
 		}

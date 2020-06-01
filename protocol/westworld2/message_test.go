@@ -9,10 +9,10 @@ import (
 )
 
 func TestRewriteAck(t *testing.T) {
-	tp := newPool("test")
+	testPool := newPool("test")
 	data, _ := makeData(16*1024, 0)
 
-	wm := newData(99, data, tp.get())
+	wm := newData(99, data, testPool)
 	assert.Equal(t, int32(-1), wm.ack)
 	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff}, wm.buffer.data[5:9])
 
@@ -21,7 +21,7 @@ func TestRewriteAck(t *testing.T) {
 	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x08}, wm.buffer.data[5:9])
 
 	wm.buffer.unref()
-	assert.Equal(t, int64(1), tp.allocs)
+	assert.Equal(t, int64(1), testPool.allocs)
 }
 
 func TestMillionsOfMessages(t *testing.T) {
@@ -29,14 +29,14 @@ func TestMillionsOfMessages(t *testing.T) {
 	sizeVariations := 1024
 	data, szs := makeData(maxDataLen, sizeVariations)
 
-	tp := newPool("test")
+	testPool := newPool("test")
 
 	cycles := 1000000
 	start := time.Now()
 	for i := 0; i < cycles; i++ {
 		szi := i % 1024
 		sz := szs[szi]
-		wmin := newData(int32(i), data[:sz], tp.get())
+		wmin := newData(int32(i), data[:sz], testPool)
 		wmout, err := decode(wmin.buffer)
 		assert.Nil(t, err)
 		assert.Equal(t, int32(i), wmout.seq)
