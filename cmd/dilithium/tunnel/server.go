@@ -34,7 +34,7 @@ func tunnelServer(_ *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("error creating tunnel listener (%v)", err)
 	}
-	logrus.Infof("created tunnel listener at [%s]", tunnelListener.Addr())
+	logrus.Infof("created tunnel listener at [%s]", listenAddress)
 
 	for {
 		conn, err := tunnelListener.Accept()

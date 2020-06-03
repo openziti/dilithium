@@ -30,7 +30,7 @@ func echoServer(_ *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("error listening (%v)", err)
 	}
-	logrus.Infof("listening at [%s]", listener.Addr())
+	logrus.Infof("listening at [%s]", listenAddress)
 
 	for {
 		conn, err := listener.Accept()

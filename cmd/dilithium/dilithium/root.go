@@ -14,7 +14,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doCpuProfile, "cpu", false, "Enable CPU profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMemoryProfile, "memory", false, "Enable memory profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
-	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld", "Select underlying protocol (tcp, conduit, blaster, westworld)")
+	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, quic, conduit, westworld, westworld2)")
 }
 
 var RootCmd = &cobra.Command{

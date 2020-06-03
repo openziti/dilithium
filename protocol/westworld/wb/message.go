@@ -9,6 +9,7 @@ import (
 	"net"
 	"runtime"
 	"sync"
+	"sync/atomic"
 )
 
 type Type uint8
@@ -30,7 +31,7 @@ type WireMessage struct {
 	pool     *BufferPool
 	trace    []*stackFrame
 	freed    bool
-	refs     int
+	refs     int32
 	lock     *sync.Mutex
 }
 
@@ -72,7 +73,7 @@ func NewData(sequence int32, data []byte, pool *BufferPool) (*WireMessage, error
 		pool:     pool,
 		lock:     new(sync.Mutex),
 	}
-	runtime.SetFinalizer(wm, finalizer)
+	//runtime.SetFinalizer(wm, finalizer)
 	return wm.encode()
 }
 
@@ -196,21 +197,15 @@ func (self *WireMessage) Touch() {
 }
 
 func (self *WireMessage) Ref() {
-	self.lock.Lock()
-	self.refs++
-	self.lock.Unlock()
+	atomic.AddInt32(&self.refs, 1)
 }
 
 func (self *WireMessage) Unref() {
-	self.lock.Lock()
-	self.refs--
-	if self.refs == 0 {
+	atomic.AddInt32(&self.refs, -1)
+	refs := atomic.LoadInt32(&self.refs)
+	if refs == 0 {
 		self.free()
 	}
-	if self.refs < 0 {
-		logrus.Errorf("multi-unref! [%d]", self.refs)
-	}
-	self.lock.Unlock()
 }
 
 func (self *WireMessage) free() {

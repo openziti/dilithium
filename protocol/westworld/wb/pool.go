@@ -1,7 +1,6 @@
 package wb
 
 import (
-	"github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -28,6 +27,6 @@ func (self *BufferPool) Put(x interface{}) {
 }
 
 func (self *BufferPool) Allocate() interface{} {
-	logrus.WithField("ctx", self.ctx).Info("allocating")
+	//logrus.WithField("ctx", self.ctx).Info("allocating")
 	return make([]byte, 64*1024)
 }
