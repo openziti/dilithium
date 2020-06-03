@@ -4,6 +4,7 @@ import (
 	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io"
 	"net"
 )
 
@@ -83,6 +84,10 @@ func handleTunnelInitiatorReader(initiator net.Conn, tunnel net.Conn) {
 	for {
 		n, err := tunnel.Read(buffer)
 		if err != nil {
+			if err == io.EOF {
+				logrus.Errorf("EOF (%v)", err)
+				return
+			}
 			logrus.Errorf("error reading from tunnel (%v)", err)
 		}
 		logrus.Debugf("<-(t) [%d]", n)
