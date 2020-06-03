@@ -66,6 +66,24 @@ func ProtocolFor(protocol string) (Protocol, error) {
 		}
 		return impl, nil
 
+	case "tls":
+		impl := struct{ ProtoProtocol }{}
+		impl.listen = func(address string) (Accepter, error) {
+			listener, err := tls.Listen("tcp", address, generateTLSConfig())
+			if err != nil {
+				return nil, errors.Wrap(err, "listen")
+			}
+			return listener, nil
+		}
+		impl.dial = func(address string) (net.Conn, error) {
+			conn, err := tls.Dial("tcp", address, generateTLSConfig())
+			if err != nil {
+				return nil, errors.Wrap(err, "dial")
+			}
+			return conn, nil
+		}
+		return impl, nil
+
 	case "quic":
 		impl := struct{ ProtoProtocol }{}
 		impl.listen = func(address string) (Accepter, error) {
@@ -73,7 +91,6 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
-
 			return &quicAccepter{listener}, nil
 		}
 		impl.dial = func(address string) (net.Conn, error) {
@@ -81,15 +98,12 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
-
 			stream, err := session.OpenStreamSync(context.Background())
 			if err != nil {
 				return nil, errors.Wrap(err, "stream")
 			}
-
 			return &quicConn{session, stream}, nil
 		}
-
 		return impl, nil
 
 	case "conduit":
@@ -99,12 +113,10 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-
 			listener, err := conduit.Listen(listenAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
-
 			return listener, nil
 		}
 		impl.dial = func(address string) (net.Conn, error) {
@@ -112,12 +124,10 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-
 			conn, err := conduit.Dial(dialAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
-
 			return conn, nil
 		}
 		return impl, nil
@@ -129,12 +139,10 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-
 			listener, err := westworld.Listen(listenAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
-
 			return listener, nil
 		}
 		impl.dial = func(address string) (net.Conn, error) {
@@ -142,15 +150,12 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-
 			conn, err := westworld.Dial(dialAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
-
 			return conn, nil
 		}
-
 		return impl, nil
 
 	case "westworld2":
@@ -160,12 +165,10 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-
 			listener, err := westworld2.Listen(listenAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
-
 			return listener, nil
 		}
 		impl.dial = func(address string) (net.Conn, error) {
@@ -173,15 +176,12 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-
 			conn, err := westworld2.Dial(dialAddress)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
-
 			return conn, nil
 		}
-
 		return impl, nil
 
 	default:

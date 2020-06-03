@@ -55,7 +55,7 @@ func (self *rxWindow) rx(m *message) error {
 					if n != len(m.(*message).payload) {
 						return errors.New("short buffer writes")
 					}
-					logrus.Infof("(%d) <- [+ #%d](%d) <-", self.buffer.Len(), key, n)
+					//logrus.Infof("(%d) <- [+ #%d](%d) <-", self.buffer.Len(), key, n)
 				}
 
 			} else {
@@ -72,7 +72,7 @@ func (self *rxWindow) ack(m *message) {
 		if data, err := ack.marshal(); err == nil {
 			if n, err := self.conn.WriteTo(data, self.peer); err == nil {
 				if n == len(data) {
-					logrus.Infof("[@%d] ->", m.sequence)
+					//logrus.Infof("[@%d] ->", m.sequence)
 				} else {
 					logrus.Errorf("ack, short write")
 				}

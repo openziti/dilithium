@@ -6,7 +6,6 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/protocol/westworld/wb"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
 )
@@ -44,7 +43,7 @@ func (self *rxWindow) rx(wm *wb.WireMessage) error {
 		self.tree.Put(wm.Sequence, wm)
 	} else {
 		wm.Unref()
-		logrus.Warnf("~ <- {#%d} <-", wm.Sequence)
+		//logrus.Warnf("~ <- {#%d} <-", wm.Sequence)
 	}
 	self.txWindow.ackQueue <- wm.Sequence
 

@@ -33,7 +33,7 @@ func newListenerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *
 
 func (self *listenerConn) Read(p []byte) (n int, err error) {
 	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
-		logrus.Infof("i[](%d) <-", n)
+		//logrus.Infof("i[](%d) <-", n)
 		return
 	}
 
@@ -41,20 +41,20 @@ func (self *listenerConn) Read(p []byte) (n int, err error) {
 		m, ok := <-self.readQueue
 		if ok {
 			if m.message == Payload {
-				logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
+				//logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
 
 				if err := self.rxWindow.rx(m); err != nil {
 					logrus.Errorf("rxWindow (%v)", err)
 				}
 
 				if n, err = self.rxWindow.read(p); err == nil && n > 0 {
-					logrus.Infof("[](%d) <-", n)
+					//logrus.Infof("[](%d) <-", n)
 					return
 				}
 
 			} else if m.message == Ack {
 				if sequence, err := util.ReadInt32(m.payload); err == nil {
-					logrus.Infof("[@%d] <-", sequence)
+					//logrus.Infof("[@%d] <-", sequence)
 					self.txWindow.ack(sequence)
 				} else {
 					return 0, errors.Wrap(err, "invalid ack")
@@ -88,7 +88,7 @@ func (self *listenerConn) Write(p []byte) (n int, err error) {
 		if n != len(data) {
 			return 0, errors.New("short write")
 		}
-		logrus.Infof("[#%d](%d) ->", m.sequence, len(m.payload))
+		//logrus.Infof("[#%d](%d) ->", m.sequence, len(m.payload))
 		return len(p), nil
 
 	} else {
@@ -164,7 +164,7 @@ func newDialerConn(conn *net.UDPConn, local *net.UDPAddr, peer *net.UDPAddr) *di
 
 func (self *dialerConn) Read(p []byte) (n int, err error) {
 	if n, err = self.rxWindow.read(p); err == nil && n > 0 {
-		logrus.Infof("i[](%d) <-", n)
+		//logrus.Infof("i[](%d) <-", n)
 		return
 	}
 
@@ -176,18 +176,18 @@ func (self *dialerConn) Read(p []byte) (n int, err error) {
 		}
 
 		if m.message == Payload {
-			logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
+			//logrus.Infof("[#%d](%d) <-", m.sequence, len(m.payload))
 			if err = self.rxWindow.rx(m); err != nil {
 				logrus.Errorf("rxWindow (%v)", err)
 			}
 			if n, err = self.rxWindow.read(p); err == nil && n > 0 {
-				logrus.Infof("[](%d) <-", n)
+				//logrus.Infof("[](%d) <-", n)
 				return
 			}
 
 		} else if m.message == Ack {
 			if sequence, err := util.ReadInt32(m.payload); err == nil {
-				logrus.Infof("[@%d] <-", sequence)
+				//logrus.Infof("[@%d] <-", sequence)
 				self.txWindow.ack(sequence)
 			} else {
 				return 0, errors.New("invalid ack")
@@ -217,7 +217,7 @@ func (self *dialerConn) Write(p []byte) (n int, err error) {
 		if n != len(data) {
 			return 0, errors.New("short write")
 		}
-		logrus.Infof("[#%d](%d) ->", m.sequence, len(m.payload))
+		//logrus.Infof("[#%d](%d) ->", m.sequence, len(m.payload))
 		return len(p), nil
 
 	} else {

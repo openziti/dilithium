@@ -69,33 +69,30 @@ func handleTunnelInitiator(initiator net.Conn, serverAddress string) {
 			logrus.Errorf("error reading from initiator (%v)", err)
 			return
 		}
-		logrus.Debugf("<-(i) [%d]", n)
 		n, err = tunnel.Write(buffer[:n])
 		if err != nil {
 			logrus.Errorf("error writing to tunnel (%v)", err)
 			return
 		}
-		logrus.Debugf("->(t) [%d]", n)
 	}
 }
 
 func handleTunnelInitiatorReader(initiator net.Conn, tunnel net.Conn) {
+	defer func() { _ = tunnel.Close() }()
+
 	buffer := make([]byte, bufferSize)
 	for {
 		n, err := tunnel.Read(buffer)
 		if err != nil {
 			if err == io.EOF {
-				logrus.Errorf("EOF (%v)", err)
 				return
 			}
 			logrus.Errorf("error reading from tunnel (%v)", err)
 		}
-		logrus.Debugf("<-(t) [%d]", n)
 		n, err = initiator.Write(buffer[:n])
 		if err != nil {
 			logrus.Errorf("error writing to initiator (%v)", err)
 			return
 		}
-		logrus.Debugf("->(i) [%d]", n)
 	}
 }
