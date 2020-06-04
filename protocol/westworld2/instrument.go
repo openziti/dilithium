@@ -6,18 +6,19 @@ import (
 )
 
 type instrument interface {
-	accepted(peer *net.UDPAddr)
+	connected(peer *net.UDPAddr)
 	wireMessageTx(wm *wireMessage)
 	wireMessageRx(wm *wireMessage)
 	unknownPeer(peer *net.UDPAddr)
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)
+	unexpectedMessageType(peer *net.UDPAddr, mt messageType)
 }
 
 type loggerInstrument struct{}
 
 func (self *loggerInstrument) accepted(peer *net.UDPAddr) {
-	logrus.Infof("accepted, peer [%s]", peer)
+	logrus.Infof("connected, peer [%s]", peer)
 }
 
 func (self *loggerInstrument) wireMessageRx(wm *wireMessage) {

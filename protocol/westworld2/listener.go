@@ -103,7 +103,7 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 	self.acceptQueue <- conn
 
 	if self.ins != nil {
-		self.ins.accepted(peer)
+		self.ins.connected(peer)
 	}
 }
 

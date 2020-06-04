@@ -85,7 +85,9 @@ func (self *dialerConn) rxer() {
 	for {
 		wm, _, err := readWireMessage(self.conn, self.pool, self.ins)
 		if err != nil {
-			logrus.Errorf("read error (%v)", err)
+			if self.ins != nil {
+				self.ins.readError(self.peer, err)
+			}
 			continue
 		}
 
@@ -102,13 +104,18 @@ func (self *dialerConn) rxer() {
 			wm.buffer.unref()
 
 		} else {
-			logrus.Errorf("invalid mt [%s]", mtString(wm.mt))
+			if self.ins != nil {
+				self.ins.unexpectedMessageType(self.peer, wm.mt)
+			}
 			wm.buffer.unref()
 		}
 	}
 }
 
 func (self *dialerConn) hello() error {
+	/*
+	 * Send Hello
+	 */
 	helloSeq := self.seq.Next()
 	hello := newHello(helloSeq, self.pool)
 	defer hello.buffer.unref()
@@ -116,8 +123,11 @@ func (self *dialerConn) hello() error {
 	if err := writeWireMessage(hello, self.conn, self.peer, self.ins); err != nil {
 		return errors.Wrap(err, "write hello")
 	}
-	logrus.Infof("{hello} -> [%s]", self.peer)
+	/* */
 
+	/*
+	 * Expect Ack'd Hello Response
+	 */
 	if err := self.conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return errors.Wrap(err, "set read deadline")
 	}
@@ -137,19 +147,25 @@ func (self *dialerConn) hello() error {
 	if err := self.conn.SetReadDeadline(time.Time{}); err != nil {
 		return errors.Wrap(err, "clear read deadline")
 	}
-	logrus.Infof("{helloack} <- [%s]", self.peer)
+	/* */
 
+	// The next sequence should be the next highest sequence
 	self.rxPortal.accepted = helloAck.seq
 
+	/*
+	 * Send Final Ack
+	 */
 	ack := newAck(helloAck.seq, self.pool)
 	defer ack.buffer.unref()
 
 	if err := writeWireMessage(ack, self.conn, self.peer, self.ins); err != nil {
 		return errors.Wrap(err, "write ack")
 	}
-	logrus.Infof("{ack} -> [%s]", self.peer)
+	/* */
 
-	logrus.Infof("connection established, peer [%s]", self.peer)
+	if self.ins != nil {
+		self.ins.connected(self.peer)
+	}
 
 	go self.rxer()
 
