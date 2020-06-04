@@ -70,13 +70,18 @@ func (self *listener) run() {
 			} else {
 				if wm.mt == HELLO {
 					go self.hello(wm, peer)
+
 				} else {
 					wm.buffer.unref()
-					logrus.Errorf("unknown peer [%s]", peer)
+					if self.ins != nil {
+						self.ins.unknownPeer(peer)
+					}
 				}
 			}
 		} else {
-			logrus.Errorf("read error, peer [%s] (%v)", peer, err)
+			if self.ins != nil {
+				self.ins.readError(peer, err)
+			}
 		}
 	}
 }
@@ -89,12 +94,17 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 	self.lock.Unlock()
 
 	if err := conn.hello(hello); err != nil {
-		logrus.Errorf("connect establishment failed, peer [%s] (%v)", peer, err)
+		if self.ins != nil {
+			self.ins.connectError(peer, err)
+		}
 		return
 	}
 
 	self.acceptQueue <- conn
-	logrus.Infof("accepted connection, peer [%s]", peer)
+
+	if self.ins != nil {
+		self.ins.accepted(peer)
+	}
 }
 
 func addrComparator(i, j interface{}) int {
