@@ -7,8 +7,8 @@ import (
 
 type instrument interface {
 	connected(peer *net.UDPAddr)
-	wireMessageTx(wm *wireMessage)
-	wireMessageRx(wm *wireMessage)
+	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
+	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
 	unknownPeer(peer *net.UDPAddr)
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)
@@ -21,12 +21,12 @@ func (self *loggerInstrument) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }
 
-func (self *loggerInstrument) wireMessageRx(wm *wireMessage) {
-	logrus.Infof("<- [{%c},#%d,@%d] <-", self.symbol(wm.mt), wm.seq, wm.ack)
+func (self *loggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
+	logrus.Infof("<- [{%c},#%d,@%d] <- [%s]", self.symbol(wm.mt), wm.seq, wm.ack, peer)
 }
 
-func (self *loggerInstrument) wireMessageTx(wm *wireMessage) {
-	logrus.Infof("-> [{%c},#%d,@%d] ->", self.symbol(wm.mt), wm.seq, wm.ack)
+func (self *loggerInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
+	logrus.Infof("-> [{%c},#%d,@%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, peer)
 }
 
 func (self *loggerInstrument) unknownPeer(peer *net.UDPAddr) {

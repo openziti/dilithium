@@ -28,7 +28,7 @@ func readWireMessage(conn *net.UDPConn, pool *pool, i instrument) (wm *wireMessa
 	}
 
 	if i != nil {
-		i.wireMessageRx(wm)
+		i.wireMessageRx(peer, wm)
 	}
 
 	return
@@ -43,7 +43,7 @@ func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i i
 		return errors.Errorf("short peer write [%d != %d]", n, wm.buffer.sz)
 	}
 	if i != nil {
-		i.wireMessageTx(wm)
+		i.wireMessageTx(peer, wm)
 	}
 	return nil
 }
