@@ -1,6 +1,7 @@
 package dilithium
 
 import (
+	"github.com/michaelquigley/dilithium/protocol/westworld2"
 	"github.com/pkg/profile"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -15,6 +16,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doMemoryProfile, "memory", false, "Enable memory profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
 	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, tls, quic, conduit, westworld, westworld2)")
+	RootCmd.PersistentFlags().StringVarP(&SelectedWestworld2Instrument, "instrument", "i", "logger", "Select westworld2 instrument (logger, nil)")
 }
 
 var RootCmd = &cobra.Command{
@@ -23,6 +25,14 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(_ *cobra.Command, _ []string) {
 		if verbose {
 			logrus.SetLevel(logrus.DebugLevel)
+		}
+		switch SelectedWestworld2Instrument {
+		case "logger":
+			Westworld2Instrument = &westworld2.LoggerInstrument{}
+		case "nil":
+			Westworld2Instrument = nil
+		default:
+			logrus.Fatalf("unknown westworld2 logger instrument [%s]", SelectedWestworld2Instrument)
 		}
 		if doCpuProfile {
 			cpuProfile = profile.Start(profile.CPUProfile)
@@ -48,6 +58,7 @@ var RootCmd = &cobra.Command{
 }
 var verbose bool
 var SelectedProtocol string
+var SelectedWestworld2Instrument string
 var doCpuProfile bool
 var cpuProfile interface{ Stop() }
 var doMemoryProfile bool

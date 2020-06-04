@@ -15,10 +15,10 @@ type listener struct {
 	conn        *net.UDPConn
 	addr        *net.UDPAddr
 	pool        *pool
-	ins         instrument
+	ins         Instrument
 }
 
-func Listen(addr *net.UDPAddr) (net.Listener, error) {
+func Listen(addr *net.UDPAddr, ins Instrument) (net.Listener, error) {
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return nil, errors.Wrap(err, "listen")
@@ -29,7 +29,6 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 	if err := conn.SetWriteBuffer(bufferSz); err != nil {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
-	ins := &loggerInstrument{}
 	l := &listener{
 		lock:        new(sync.Mutex),
 		peers:       btree.NewWith(treeSize, addrComparator),
@@ -88,7 +87,7 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
-	conn := newListenerConn(self.conn, peer, &loggerInstrument{})
+	conn := newListenerConn(self.conn, peer, self.ins)
 
 	self.lock.Lock()
 	self.peers.Put(peer, conn)

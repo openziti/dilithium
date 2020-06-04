@@ -15,10 +15,10 @@ type dialerConn struct {
 	txPortal *txPortal
 	rxPortal *rxPortal
 	pool     *pool
-	ins      instrument
+	ins      Instrument
 }
 
-func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *dialerConn {
+func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *dialerConn {
 	dc := &dialerConn{
 		conn: conn,
 		peer: peer,

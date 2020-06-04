@@ -7,10 +7,10 @@ import (
 type pool struct {
 	name  string
 	store *sync.Pool
-	ins   instrument
+	ins   Instrument
 }
 
-func newPool(name string, ins instrument) *pool {
+func newPool(name string, ins Instrument) *pool {
 	p := &pool{
 		name:  name,
 		store: new(sync.Pool),

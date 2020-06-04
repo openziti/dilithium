@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func Dial(addr *net.UDPAddr) (conn net.Conn, err error) {
+func Dial(addr *net.UDPAddr, ins Instrument) (conn net.Conn, err error) {
 	var lConn *net.UDPConn
 	lConn, err = net.ListenUDP("udp", nil)
 	if err != nil {
@@ -18,7 +18,7 @@ func Dial(addr *net.UDPAddr) (conn net.Conn, err error) {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
 
-	dConn := newDialerConn(lConn, addr, &loggerInstrument{})
+	dConn := newDialerConn(lConn, addr, ins)
 	if err = dConn.hello(); err != nil {
 		return nil, errors.Wrap(err, "hello")
 	}

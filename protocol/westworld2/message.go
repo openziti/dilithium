@@ -13,7 +13,7 @@ type wireMessage struct {
 	buffer *buffer
 }
 
-func readWireMessage(conn *net.UDPConn, pool *pool, i instrument) (wm *wireMessage, peer *net.UDPAddr, err error) {
+func readWireMessage(conn *net.UDPConn, pool *pool, i Instrument) (wm *wireMessage, peer *net.UDPAddr, err error) {
 	buffer := pool.get()
 	var n int
 	n, peer, err = conn.ReadFromUDP(buffer.data)
@@ -34,7 +34,7 @@ func readWireMessage(conn *net.UDPConn, pool *pool, i instrument) (wm *wireMessa
 	return
 }
 
-func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i instrument) error {
+func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i Instrument) error {
 	n, err := conn.WriteToUDP(wm.buffer.data[:wm.buffer.sz], peer)
 	if err != nil {
 		return errors.Wrap(err, "peer write")

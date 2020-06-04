@@ -16,10 +16,10 @@ type listenerConn struct {
 	txPortal *txPortal
 	rxPortal *rxPortal
 	pool     *pool
-	ins      instrument
+	ins      Instrument
 }
 
-func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *listenerConn {
+func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *listenerConn {
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,

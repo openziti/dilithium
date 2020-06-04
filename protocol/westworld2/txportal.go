@@ -20,7 +20,7 @@ type txPortal struct {
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	pool     *pool
-	ins      instrument
+	ins      Instrument
 }
 
 type retx struct {
@@ -28,7 +28,7 @@ type retx struct {
 	wm       *wireMessage
 }
 
-func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPortal {
 	txp := &txPortal{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
 		capacity: startingWindowCapacity,

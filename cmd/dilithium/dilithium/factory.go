@@ -34,6 +34,8 @@ type Accepter interface {
 func (self ProtoProtocol) Listen(address string) (Accepter, error) { return self.listen(address) }
 func (self ProtoProtocol) Dial(address string) (net.Conn, error)   { return self.dial(address) }
 
+var Westworld2Instrument westworld2.Instrument
+
 func ProtocolFor(protocol string) (Protocol, error) {
 	switch protocol {
 	case "tcp":
@@ -165,7 +167,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			listener, err := westworld2.Listen(listenAddress)
+			listener, err := westworld2.Listen(listenAddress, Westworld2Instrument)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
@@ -176,7 +178,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			conn, err := westworld2.Dial(dialAddress)
+			conn, err := westworld2.Dial(dialAddress, Westworld2Instrument)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
