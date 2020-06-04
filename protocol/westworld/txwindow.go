@@ -85,7 +85,7 @@ func (self *txWindow) ack(sequence int32) {
 		self.capacityAvailable.Signal()
 
 	} else {
-		logrus.Warnf("~ <- [@#%d] <-", sequence) // already acked
+		logrus.Warnf("~ <- [@%d] <-", sequence) // already acked
 	}
 }
 
@@ -160,7 +160,7 @@ func (self *txWindow) monitor() {
 
 		self.lock.Lock()
 		if !self.txMonitor.cancelled {
-			logrus.Warnf("[!#%d] ->", self.txMonitor.monitoring.wm.Sequence)
+			logrus.Warnf("[!%d] ->", self.txMonitor.monitoring.wm.Sequence)
 			self.txQueue <- self.txMonitor.monitoring.wm
 			self.txMonitor.monitoring.timeout = time.Now().Add(retransmissionDelayMs * time.Millisecond)
 		}

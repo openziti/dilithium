@@ -13,7 +13,7 @@ type wireMessage struct {
 	buffer *buffer
 }
 
-func readWireMessage(conn *net.UDPConn, pool *pool) (wm *wireMessage, peer *net.UDPAddr, err error) {
+func readWireMessage(conn *net.UDPConn, pool *pool, i instrument) (wm *wireMessage, peer *net.UDPAddr, err error) {
 	buffer := pool.get()
 	var n int
 	n, peer, err = conn.ReadFromUDP(buffer.data)
@@ -27,16 +27,23 @@ func readWireMessage(conn *net.UDPConn, pool *pool) (wm *wireMessage, peer *net.
 		return nil, peer, errors.Wrap(err, "decode")
 	}
 
+	if i != nil {
+		i.wireMessageRx(wm)
+	}
+
 	return
 }
 
-func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr) error {
+func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i instrument) error {
 	n, err := conn.WriteToUDP(wm.buffer.data[:wm.buffer.sz], peer)
 	if err != nil {
 		return errors.Wrap(err, "peer write")
 	}
 	if uint16(n) != wm.buffer.sz {
 		return errors.Errorf("short peer write [%d != %d]", n, wm.buffer.sz)
+	}
+	if i != nil {
+		i.wireMessageTx(wm)
 	}
 	return nil
 }

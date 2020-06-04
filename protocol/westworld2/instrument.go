@@ -10,9 +10,24 @@ type instrument interface {
 type loggerInstrument struct{}
 
 func (self *loggerInstrument) wireMessageRx(wm *wireMessage) {
-	logrus.Infof("<- {%s}[#%d] <-", mtString(wm.mt), wm.seq)
+	logrus.Infof("<- [{%c},#%d,@%d] <-", self.symbol(wm.mt), wm.seq, wm.ack)
 }
 
 func (self *loggerInstrument) wireMessageTx(wm *wireMessage) {
-	logrus.Infof("-> {%s}[#%d] ->", mtString(wm.mt), wm.seq)
+	logrus.Infof("-> [{%c},#%d,@%d] ->", self.symbol(wm.mt), wm.seq, wm.ack)
+}
+
+func (self *loggerInstrument) symbol(mt messageType) rune {
+	switch mt {
+	case HELLO:
+		return '&'
+	case ACK:
+		return '@'
+	case DATA:
+		return '#'
+	case CLOSE:
+		return '-'
+	default:
+		return '?'
+	}
 }

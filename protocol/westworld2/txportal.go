@@ -73,7 +73,7 @@ func (self *txPortal) rxtxAcks() error {
 		}
 
 		wm := newAck(txAck, self.pool)
-		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
+		if err := writeWireMessage(wm, self.conn, self.peer, self.ins); err != nil {
 			logrus.Errorf("{@%d} -> (%v)", txAck, err)
 		}
 		wm.buffer.unref()
@@ -104,7 +104,7 @@ func (self *txPortal) retxData() error {
 		re := self.retxList[0]
 		if time.Since(re.deadline).Milliseconds() > retxTimeoutMs {
 			logrus.Infof("retx [#%d]", re.wm.seq)
-			if err := writeWireMessage(re.wm, self.conn, self.peer); err != nil {
+			if err := writeWireMessage(re.wm, self.conn, self.peer, self.ins); err != nil {
 				return errors.Wrap(err, "retx write")
 			}
 			re.deadline = time.Now().Add(retxTimeoutMs * time.Millisecond)
@@ -138,12 +138,9 @@ func (self *txPortal) txData() error {
 				// no ack for slipstream
 			}
 
-			if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
+			if err := writeWireMessage(wm, self.conn, self.peer, self.ins); err != nil {
 				logrus.Errorf("-> {#%d,@%d}[%d] -> (%v)", wm.seq, wm.ack, len(wm.data), err)
 				self.txErrors <- errors.Wrap(err, "write")
-			}
-			if self.ins != nil {
-				self.ins.wireMessageTx(wm)
 			}
 
 		default:

@@ -16,6 +16,7 @@ type listenerConn struct {
 	txPortal *txPortal
 	rxPortal *rxPortal
 	pool     *pool
+	ins      instrument
 }
 
 func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *listenerConn {
@@ -25,6 +26,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *list
 		rxQueue: make(chan *wireMessage, rxQueueSize),
 		seq:     util.NewSequence(0),
 		pool:    newPool("listenerConn"),
+		ins:     ins,
 	}
 	lc.txPortal = newTxPortal(conn, peer, ins)
 	lc.rxPortal = newRxPortal(lc.txPortal.txAcks)
@@ -122,7 +124,7 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	helloAck := newHelloAck(helloAckSeq, hello.seq, self.pool)
 	defer helloAck.buffer.unref()
 
-	if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
+	if err := writeWireMessage(helloAck, self.conn, self.peer, self.ins); err != nil {
 		return errors.Wrap(err, "write hello ack")
 	}
 	logrus.Infof("{helloack} -> [%s]", self.peer)

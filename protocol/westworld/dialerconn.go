@@ -65,7 +65,6 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 			}
 
 		} else if wm.Type == wb.ACK {
-			wm.Touch()
 			//logrus.Infof("<- {@%d} <-", wm.Ack)
 
 			if wm.Ack != -1 {
