@@ -28,7 +28,6 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *dialer
 	}
 	dc.txPortal = newTxPortal(conn, peer, ins)
 	dc.rxPortal = newRxPortal(dc.txPortal.txAcks)
-	go dc.rxer()
 	return dc
 }
 
@@ -151,6 +150,8 @@ func (self *dialerConn) hello() error {
 	logrus.Infof("{ack} -> [%s]", self.peer)
 
 	logrus.Infof("connection established, peer [%s]", self.peer)
+
+	go self.rxer()
 
 	return nil
 }
