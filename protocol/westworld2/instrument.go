@@ -13,6 +13,7 @@ type instrument interface {
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)
 	unexpectedMessageType(peer *net.UDPAddr, mt messageType)
+	allocate(ctx string)
 }
 
 type loggerInstrument struct{}
@@ -43,6 +44,10 @@ func (self *loggerInstrument) connectError(peer *net.UDPAddr, err error) {
 
 func (self *loggerInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
 	logrus.Errorf("unexpected message type [%s], peer [%s]", mtString(mt), peer)
+}
+
+func (self *loggerInstrument) allocate(ctx string) {
+	logrus.WithField("context", ctx).Warn("allocate")
 }
 
 func (self *loggerInstrument) symbol(mt messageType) rune {

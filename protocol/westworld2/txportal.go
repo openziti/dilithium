@@ -38,7 +38,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *txPortal
 		txAcks:   make(chan int32, ackQueueSize),
 		conn:     conn,
 		peer:     peer,
-		pool:     newPool("txPortal"),
+		pool:     newPool("txPortal", ins),
 		ins:      ins,
 	}
 	go txp.run()

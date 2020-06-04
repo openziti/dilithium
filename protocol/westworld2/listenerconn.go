@@ -25,7 +25,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *list
 		peer:    peer,
 		rxQueue: make(chan *wireMessage, rxQueueSize),
 		seq:     util.NewSequence(0),
-		pool:    newPool("listenerConn"),
+		pool:    newPool("listenerConn", ins),
 		ins:     ins,
 	}
 	lc.txPortal = newTxPortal(conn, peer, ins)

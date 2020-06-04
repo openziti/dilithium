@@ -29,14 +29,15 @@ func Listen(addr *net.UDPAddr) (net.Listener, error) {
 	if err := conn.SetWriteBuffer(bufferSz); err != nil {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
+	ins := &loggerInstrument{}
 	l := &listener{
 		lock:        new(sync.Mutex),
 		peers:       btree.NewWith(treeSize, addrComparator),
 		acceptQueue: make(chan net.Conn, acceptQueueSz),
 		conn:        conn,
 		addr:        addr,
-		pool:        newPool("listener"),
-		ins:         &loggerInstrument{},
+		pool:        newPool("listener", ins),
+		ins:         ins,
 	}
 	go l.run()
 	return l, nil

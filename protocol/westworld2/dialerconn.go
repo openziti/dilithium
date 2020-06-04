@@ -23,7 +23,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins instrument) *dialer
 		conn: conn,
 		peer: peer,
 		seq:  util.NewSequence(0),
-		pool: newPool("dialerConn"),
+		pool: newPool("dialerConn", ins),
 		ins:  ins,
 	}
 	dc.txPortal = newTxPortal(conn, peer, ins)
