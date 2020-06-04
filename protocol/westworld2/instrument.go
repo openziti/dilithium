@@ -17,7 +17,7 @@ type instrument interface {
 
 type loggerInstrument struct{}
 
-func (self *loggerInstrument) accepted(peer *net.UDPAddr) {
+func (self *loggerInstrument) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }
 
@@ -39,6 +39,10 @@ func (self *loggerInstrument) readError(peer *net.UDPAddr, err error) {
 
 func (self *loggerInstrument) connectError(peer *net.UDPAddr, err error) {
 	logrus.Errorf("connect failed, peer [%s] (%v)", peer, err)
+}
+
+func (self *loggerInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
+	logrus.Errorf("unexpected message type [%s], peer [%s]", mtString(mt), peer)
 }
 
 func (self *loggerInstrument) symbol(mt messageType) rune {

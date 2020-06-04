@@ -108,18 +108,26 @@ func (self *listenerConn) rxer() {
 			wm.buffer.unref()
 
 		} else {
-			logrus.Errorf("invalid mt [%s]", mtString(wm.mt))
 			wm.buffer.unref()
+
+			if self.ins != nil {
+				self.ins.unexpectedMessageType(self.peer, wm.mt)
+			}
 		}
 	}
 }
 
 func (self *listenerConn) hello(hello *wireMessage) error {
-	logrus.Infof("{hello} <- [%s]", self.peer)
-
+	/*
+	 * Receive Hello
+	 */
 	self.rxPortal.accepted = hello.seq
 	hello.buffer.unref()
+	/* */
 
+	/*
+	 * Send Ack'd Hello
+	 */
 	helloAckSeq := self.seq.Next()
 	helloAck := newHelloAck(helloAckSeq, hello.seq, self.pool)
 	defer helloAck.buffer.unref()
@@ -127,8 +135,11 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	if err := writeWireMessage(helloAck, self.conn, self.peer, self.ins); err != nil {
 		return errors.Wrap(err, "write hello ack")
 	}
-	logrus.Infof("{helloack} -> [%s]", self.peer)
+	/* */
 
+	/*
+	 * Receive Final Ack
+	 */
 	select {
 	case ack, ok := <-self.rxQueue:
 		if !ok {
@@ -137,8 +148,6 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 		defer ack.buffer.unref()
 
 		if ack.mt == ACK && ack.ack == helloAckSeq {
-			logrus.Infof("{ack} <- [%s]", self.peer)
-			logrus.Infof("connection established, peer [%s]", self.peer)
 			return nil
 		}
 		return errors.New("invalid hello ack")
@@ -146,4 +155,5 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	case <-time.After(5 * time.Second):
 		return errors.New("timeout")
 	}
+	/* */
 }
