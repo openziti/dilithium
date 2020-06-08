@@ -21,9 +21,9 @@ type dialerConn struct {
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr) *dialerConn {
 	dc := &dialerConn{
-		conn: conn,
-		peer: peer,
-		seq:  util.NewSequence(0),
+		conn:   conn,
+		peer:   peer,
+		seq:    util.NewSequence(0),
 		rxPool: wb.NewBufferPool("dialerConn.Read"),
 		txPool: wb.NewBufferPool("dialerConn.Write"),
 	}

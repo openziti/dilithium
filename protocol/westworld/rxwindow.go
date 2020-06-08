@@ -11,26 +11,26 @@ import (
 )
 
 type rxWindow struct {
-	lock       *sync.Mutex
-	buffer     *bytes.Buffer
-	tree       *btree.Tree
-	accepted   int32
-	ackQueue   chan int32
-	conn       *net.UDPConn
-	peer       *net.UDPAddr
-	txWindow   *txWindow
+	lock     *sync.Mutex
+	buffer   *bytes.Buffer
+	tree     *btree.Tree
+	accepted int32
+	ackQueue chan int32
+	conn     *net.UDPConn
+	peer     *net.UDPAddr
+	txWindow *txWindow
 }
 
 func newRxWindow(ackQueue chan int32, conn *net.UDPConn, peer *net.UDPAddr, txWindow *txWindow) *rxWindow {
 	rxw := &rxWindow{
-		lock:       new(sync.Mutex),
-		buffer:     new(bytes.Buffer),
-		tree:       btree.NewWith(startingTreeSize, utils.Int32Comparator),
-		accepted:   -1,
-		ackQueue:   ackQueue,
-		conn:       conn,
-		peer:       peer,
-		txWindow:   txWindow,
+		lock:     new(sync.Mutex),
+		buffer:   new(bytes.Buffer),
+		tree:     btree.NewWith(startingTreeSize, utils.Int32Comparator),
+		accepted: -1,
+		ackQueue: ackQueue,
+		conn:     conn,
+		peer:     peer,
+		txWindow: txWindow,
 	}
 	return rxw
 }

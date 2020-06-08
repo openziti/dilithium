@@ -64,5 +64,4 @@ var cpuProfile interface{ Stop() }
 var doMemoryProfile bool
 var memoryProfile interface{ Stop() }
 var doMutexProfile bool
-var mutexProfile interface { Stop() }
-
+var mutexProfile interface{ Stop() }

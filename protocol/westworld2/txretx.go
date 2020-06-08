@@ -16,7 +16,7 @@ type txRetx struct {
 	queue     []*txRetxMonitor
 	conn      *net.UDPConn
 	peer      *net.UDPAddr
-	ins Instrument
+	ins       Instrument
 }
 
 type txRetxMonitor struct {
@@ -77,7 +77,6 @@ accept:
 
 			wm.buffer.ref()
 			self.queue = append(self.queue, &txRetxMonitor{time.Now().Add(retxTimeoutMs * time.Millisecond), wm})
-
 
 		default:
 			break accept

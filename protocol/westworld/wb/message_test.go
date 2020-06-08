@@ -17,12 +17,12 @@ func TestReadWrite(t *testing.T) {
 	assert.Equal(t, int32(-1), wm.Ack)
 	assert.Equal(t, data, wm.Data)
 
-	 wm2, err := FromBuffer(wm.ToBuffer(), nil)
-	 assert.Nil(t, err)
-	 assert.Equal(t, wm.Sequence, wm2.Sequence)
-	 assert.Equal(t, wm.Type, wm2.Type)
-	 assert.Equal(t, wm.Ack, wm2.Ack)
-	 assert.Equal(t, wm.Data, wm2.Data)
+	wm2, err := FromBuffer(wm.ToBuffer(), nil)
+	assert.Nil(t, err)
+	assert.Equal(t, wm.Sequence, wm2.Sequence)
+	assert.Equal(t, wm.Type, wm2.Type)
+	assert.Equal(t, wm.Ack, wm2.Ack)
+	assert.Equal(t, wm.Data, wm2.Data)
 }
 
 func TestRewriteAck(t *testing.T) {

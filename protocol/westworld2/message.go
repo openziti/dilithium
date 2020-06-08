@@ -75,7 +75,7 @@ func newData(seq int32, data []byte, pool *pool) *wireMessage {
 		seq:    seq,
 		mt:     DATA,
 		ack:    -1,
-		data:   buffer.data[11:11+n],
+		data:   buffer.data[11 : 11+n],
 		buffer: buffer,
 	}
 	return wm.encode()
@@ -114,7 +114,7 @@ func decode(buffer *buffer) (*wireMessage, error) {
 		seq:    ReadInt32(buffer.data[0:4]),
 		mt:     messageType(buffer.data[4]),
 		ack:    ReadInt32(buffer.data[5:9]),
-		data:   buffer.data[11:11+dataLen],
+		data:   buffer.data[11 : 11+dataLen],
 		buffer: buffer,
 	}
 	return wm, nil

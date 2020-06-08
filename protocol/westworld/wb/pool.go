@@ -11,7 +11,7 @@ type BufferPool struct {
 
 func NewBufferPool(ctx string) *BufferPool {
 	pool := &BufferPool{
-		ctx: ctx,
+		ctx:  ctx,
 		pool: new(sync.Pool),
 	}
 	pool.pool.New = pool.Allocate
