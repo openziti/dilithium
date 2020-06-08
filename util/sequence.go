@@ -1,26 +1,21 @@
 package util
 
-import "sync"
+import (
+	"sync/atomic"
+)
 
 type Sequence struct {
 	nextValue int32
-	lock      *sync.Mutex
 }
 
 func NewSequence(nextValue int32) *Sequence {
-	return &Sequence{nextValue: nextValue, lock: new(sync.Mutex)}
+	return &Sequence{nextValue: nextValue - 1}
 }
 
 func (self *Sequence) ResetTo(nextValue int32) {
-	self.lock.Lock()
-	self.nextValue = nextValue
-	self.lock.Unlock()
+	atomic.StoreInt32(&self.nextValue, nextValue-1)
 }
 
 func (self *Sequence) Next() int32 {
-	self.lock.Lock()
-	n := self.nextValue
-	self.nextValue++
-	self.lock.Unlock()
-	return n
+	return atomic.AddInt32(&self.nextValue, 1)
 }
