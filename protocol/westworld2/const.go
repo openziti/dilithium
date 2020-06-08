@@ -10,5 +10,5 @@ const (
 	rxDataQueueSize        = 1024
 	acceptQueueSz          = 1024
 	bufferSz               = 64 * 1024
-	retxTimeoutMs          = 30
+	retxTimeoutMs          = 15
 )

@@ -4,6 +4,7 @@ import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/sirupsen/logrus"
+	"net"
 	"sync"
 )
 
@@ -13,7 +14,10 @@ type rxPortal struct {
 	rxWmQueue   chan *wireMessage
 	rxDataQueue chan *rxRead
 	rxDataPool  *sync.Pool
-	ackQueue    chan int32
+	txPool      *pool
+	conn        *net.UDPConn
+	peer        *net.UDPAddr
+	ins         Instrument
 }
 
 type rxRead struct {
@@ -21,7 +25,7 @@ type rxRead struct {
 	sz  int
 }
 
-func newRxPortal(ackQueue chan int32) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal {
 	pool := new(sync.Pool)
 	pool.New = func() interface{} {
 		return make([]byte, bufferSz)
@@ -32,7 +36,10 @@ func newRxPortal(ackQueue chan int32) *rxPortal {
 		rxWmQueue:   make(chan *wireMessage),
 		rxDataQueue: make(chan *rxRead, rxDataQueueSize),
 		rxDataPool:  pool,
-		ackQueue:    ackQueue,
+		conn:        conn,
+		peer:        peer,
+		txPool:      newPool("txPool", ins),
+		ins:         ins,
 	}
 	go rxp.run()
 	return rxp
@@ -52,10 +59,14 @@ func (self *rxPortal) run() {
 			if wm.seq > self.accepted {
 				self.tree.Put(wm.seq, wm)
 			} else {
-				wm.buffer.unref()
 				logrus.Warnf("~ <- {#%d} <-", wm.seq)
 			}
-			self.ackQueue <- wm.seq
+
+			ack := newAck(wm.seq, self.txPool)
+			if err := writeWireMessage(ack, self.conn, self.peer, self.ins); err != nil {
+				logrus.Errorf("error sending ack (%v)", err)
+			}
+			ack.buffer.unref()
 
 			if self.tree.Size() > 0 {
 				next := self.accepted + 1

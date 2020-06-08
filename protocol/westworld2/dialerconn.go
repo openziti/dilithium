@@ -27,7 +27,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *dialer
 		ins:  ins,
 	}
 	dc.txPortal = newTxPortal(conn, peer, ins)
-	dc.rxPortal = newRxPortal(dc.txPortal.txAcks)
+	dc.rxPortal = newRxPortal(conn, peer, ins)
 	return dc
 }
 

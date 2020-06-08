@@ -9,6 +9,7 @@ type Instrument interface {
 	connected(peer *net.UDPAddr)
 	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
+	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
 	unknownPeer(peer *net.UDPAddr)
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)
@@ -28,6 +29,10 @@ func (self *LoggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) 
 
 func (self *LoggerInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
 	logrus.Infof("-> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
+}
+
+func (self *LoggerInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
+	logrus.Warnf("!> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
 func (self *LoggerInstrument) unknownPeer(peer *net.UDPAddr) {

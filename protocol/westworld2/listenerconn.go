@@ -29,7 +29,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *list
 		ins:     ins,
 	}
 	lc.txPortal = newTxPortal(conn, peer, ins)
-	lc.rxPortal = newRxPortal(lc.txPortal.txAcks)
+	lc.rxPortal = newRxPortal(conn, peer, ins)
 	go lc.rxer()
 	return lc
 }
