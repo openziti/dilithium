@@ -75,7 +75,9 @@ accept:
 				return errors.New("closed")
 			}
 
+			wm.buffer.ref()
 			self.queue = append(self.queue, &txRetxMonitor{time.Now().Add(retxTimeoutMs * time.Millisecond), wm})
+
 
 		default:
 			break accept
@@ -103,6 +105,7 @@ cancel:
 			}
 
 			if i > -1 {
+				wm.buffer.unref()
 				self.queue = append(self.queue[:i], self.queue[i+1:]...)
 			}
 
