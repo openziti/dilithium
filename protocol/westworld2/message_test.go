@@ -9,7 +9,7 @@ import (
 )
 
 func TestRewriteAck(t *testing.T) {
-	testPool := newPool("test")
+	testPool := newPool("test", nil)
 	data, _ := makeData(16*1024, 0)
 
 	wm := newData(99, data, testPool)
@@ -21,7 +21,6 @@ func TestRewriteAck(t *testing.T) {
 	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x08}, wm.buffer.data[5:9])
 
 	wm.buffer.unref()
-	assert.Equal(t, int64(1), testPool.allocs)
 }
 
 func TestMillionsOfMessages(t *testing.T) {
@@ -29,7 +28,7 @@ func TestMillionsOfMessages(t *testing.T) {
 	sizeVariations := 1024
 	data, szs := makeData(maxDataLen, sizeVariations)
 
-	testPool := newPool("test")
+	testPool := newPool("test", nil)
 
 	cycles := 1000000
 	start := time.Now()

@@ -23,11 +23,11 @@ func (self *LoggerInstrument) connected(peer *net.UDPAddr) {
 }
 
 func (self *LoggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	logrus.Infof("<- [{%c},#%d,@%d] <- [%s]", self.symbol(wm.mt), wm.seq, wm.ack, peer)
+	logrus.Infof("<- [%c/#%d/@%d/:%d] <- [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
 func (self *LoggerInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
-	logrus.Infof("-> [{%c},#%d,@%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, peer)
+	logrus.Infof("-> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
 func (self *LoggerInstrument) unknownPeer(peer *net.UDPAddr) {
