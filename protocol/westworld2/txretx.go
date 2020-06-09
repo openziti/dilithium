@@ -1,8 +1,6 @@
 package westworld2
 
 import (
-	"fmt"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
 	"time"
@@ -14,6 +12,7 @@ const cancelInSz = 1024
 type txRetx struct {
 	monitorIn chan *wireMessage
 	cancelIn  chan int32
+	doneIn    chan *txRetxMonitor
 	queue     []*txRetxMonitor
 	conn      *net.UDPConn
 	peer      *net.UDPAddr
@@ -21,14 +20,16 @@ type txRetx struct {
 }
 
 type txRetxMonitor struct {
-	deadline time.Time
-	wm       *wireMessage
+	deadline  time.Time
+	cancelled bool
+	wm        *wireMessage
 }
 
 func newTxRetx(conn *net.UDPConn, peer *net.UDPAddr) *txRetx {
 	tr := &txRetx{
 		monitorIn: make(chan *wireMessage, monitorInSz),
 		cancelIn:  make(chan int32, cancelInSz),
+		doneIn:    make(chan *txRetxMonitor, cancelInSz),
 		conn:      conn,
 		peer:      peer,
 	}
@@ -38,70 +39,11 @@ func newTxRetx(conn *net.UDPConn, peer *net.UDPAddr) *txRetx {
 
 func (self *txRetx) run() {
 	for {
-		if err := self.accept(); err != nil {
-			return
-		}
-		if err := self.cancel(); err != nil {
-			return
-		}
-
-		if len(self.queue) > 0 {
-			head := self.queue[0]
-			time.Sleep(time.Until(head.deadline))
-
-			if err := self.cancel(); err != nil {
-				return
-			}
-
-			if len(self.queue) > 0 && head == self.queue[0] {
-				logrus.Warnf("retransmitting")
-
-				if self.ins != nil {
-					self.ins.wireMessageRetx(self.peer, head.wm)
-				}
-
-				if err := writeWireMessage(head.wm, self.conn, self.peer, self.ins); err != nil {
-					logrus.Errorf("retx (%v)", err)
-				}
-
-				head.deadline = time.Now().Add(retxTimeoutMs * time.Millisecond)
-				if len(self.queue) > 1 {
-					self.queue = append(self.queue[1:], self.queue[0])
-				}
-			}
-		}
-	}
-}
-
-func (self *txRetx) accept() error {
-accept:
-	for {
-		select {
-		case wm, ok := <-self.monitorIn:
-			if !ok {
-				return errors.New("closed")
-			}
-
-			wm.buffer.ref()
-			self.queue = append(self.queue, &txRetxMonitor{time.Now().Add(retxTimeoutMs * time.Millisecond), wm})
-
-		default:
-			break accept
-		}
-	}
-	return nil
-}
-
-func (self *txRetx) cancel() error {
-cancel:
-	for {
 		select {
 		case ack, ok := <-self.cancelIn:
 			if !ok {
-				return errors.New("closed")
+				return
 			}
-
-			self.dump("before cancel")
 
 			done := false
 			for !done {
@@ -115,27 +57,43 @@ cancel:
 				}
 
 				if i > -1 {
-					self.queue[i].wm.buffer.unref()
+					self.queue[i].cancelled = true
 					self.queue = append(self.queue[:i], self.queue[i+1:]...)
 				} else {
 					done = true
 				}
 			}
 
-			self.dump("after cancel")
+		case rem, ok := <-self.doneIn:
+			if !ok {
+				return
+			}
 
-		default:
-			break cancel
+			if !rem.cancelled {
+				rem.deadline = time.Now().Add(retxTimeoutMs * time.Millisecond)
+				go self.retxer(rem)
+			} else {
+				//rem.wm.buffer.unref()
+			}
+
+		case wm, ok := <-self.monitorIn:
+			if !ok {
+				return
+			}
+			wm.buffer.ref()
+			rem := &txRetxMonitor{time.Now().Add(retxTimeoutMs * time.Millisecond), false, wm}
+			self.queue = append(self.queue, rem)
+			go self.retxer(rem)
 		}
 	}
-	return nil
 }
 
-func (self *txRetx) dump(label string) {
-	out := fmt.Sprintf("queue (%s) {\n", label)
-	for i, re := range self.queue {
-		out += fmt.Sprintf("[%d]: #%d\n", i, re.wm.seq)
+func (self *txRetx) retxer(rem *txRetxMonitor) {
+	time.Sleep(time.Until(rem.deadline))
+	if !rem.cancelled {
+		if err := writeWireMessage(rem.wm, self.conn, self.peer, self.ins); err != nil {
+			logrus.Errorf("retx (%v)", err)
+		}
 	}
-	out += "}\n"
-	logrus.Infof(out)
+	self.doneIn <- rem
 }

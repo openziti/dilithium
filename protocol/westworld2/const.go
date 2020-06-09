@@ -1,7 +1,7 @@
 package westworld2
 
 const (
-	startingWindowCapacity = 8
+	startingWindowCapacity = 2
 	treeSize               = 1024
 	txQueueSize            = 4
 	txErrorsSize           = 1024
@@ -10,5 +10,5 @@ const (
 	rxDataQueueSize        = 1024
 	acceptQueueSz          = 1024
 	bufferSz               = 64 * 1024
-	retxTimeoutMs          = 15
+	retxTimeoutMs          = 20
 )

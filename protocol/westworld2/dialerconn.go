@@ -13,7 +13,7 @@ type dialerConn struct {
 	peer     *net.UDPAddr
 	seq      *util.Sequence
 	txPortal2 *txPortal2
-	rxPortal *rxPortal
+	rxPortal2 *rxPortal2
 	pool     *pool
 	ins      Instrument
 }
@@ -27,18 +27,12 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *dialer
 		ins:  ins,
 	}
 	dc.txPortal2 = newTxPortal2(conn, peer, ins)
-	dc.rxPortal = newRxPortal(conn, peer, ins)
+	dc.rxPortal2 = newRxPortal2(conn, peer, ins)
 	return dc
 }
 
 func (self *dialerConn) Read(p []byte) (int, error) {
-	rxdr, ok := <-self.rxPortal.rxDataQueue
-	if !ok {
-		return 0, errors.New("closed")
-	}
-	n := copy(p, rxdr.buf[:rxdr.sz])
-	self.rxPortal.rxDataPool.Put(rxdr.buf)
-	return n, nil
+	return self.rxPortal2.read(p)
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
@@ -90,7 +84,7 @@ func (self *dialerConn) rxer() {
 			if wm.ack != -1 {
 				self.txPortal2.ack(wm.ack)
 			}
-			self.rxPortal.rxWmQueue <- wm
+			self.rxPortal2.rx(wm)
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
@@ -145,7 +139,7 @@ func (self *dialerConn) hello() error {
 	/* */
 
 	// The next sequence should be the next highest sequence
-	self.rxPortal.accepted = helloAck.seq
+	self.rxPortal2.setAccepted(helloAck.seq)
 
 	/*
 	 * Send Final Ack

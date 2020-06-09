@@ -14,6 +14,7 @@ type Instrument interface {
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)
 	unexpectedMessageType(peer *net.UDPAddr, mt messageType)
+	duplicateRx(peer *net.UDPAddr, wm *wireMessage)
 	allocate(ctx string)
 }
 
@@ -49,6 +50,10 @@ func (self *LoggerInstrument) connectError(peer *net.UDPAddr, err error) {
 
 func (self *LoggerInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
 	logrus.Errorf("unexpected message type [%s], peer [%s]", mtString(mt), peer)
+}
+
+func (self *LoggerInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
+	logrus.Warnf("~ <- [#%d] <- [%s]", wm.seq, peer)
 }
 
 func (self *LoggerInstrument) allocate(ctx string) {

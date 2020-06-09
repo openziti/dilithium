@@ -51,9 +51,9 @@ func (self *txTree) run() {
 				}
 
 				self.retxCancel <- acked
-				if _, found := self.tree.Get(acked); found {
+				if wm, found := self.tree.Get(acked); found {
 					self.tree.Remove(acked)
-					//wm.(*wireMessage).buffer.unref()
+					wm.(*wireMessage).buffer.unref()
 					self.capacity++
 
 				} else {

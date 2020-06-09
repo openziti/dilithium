@@ -14,7 +14,7 @@ type listenerConn struct {
 	rxQueue  chan *wireMessage
 	seq      *util.Sequence
 	txPortal2 *txPortal2
-	rxPortal *rxPortal
+	rxPortal2 *rxPortal2
 	pool     *pool
 	ins      Instrument
 }
@@ -29,19 +29,13 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *list
 		ins:     ins,
 	}
 	lc.txPortal2 = newTxPortal2(conn, peer, ins)
-	lc.rxPortal = newRxPortal(conn, peer, ins)
+	lc.rxPortal2 = newRxPortal2(conn, peer, ins)
 	go lc.rxer()
 	return lc
 }
 
 func (self *listenerConn) Read(p []byte) (int, error) {
-	rxdr, ok := <-self.rxPortal.rxDataQueue
-	if !ok {
-		return 0, errors.New("closed")
-	}
-	n := copy(p, rxdr.buf[:rxdr.sz])
-	self.rxPortal.rxDataPool.Put(rxdr.buf)
-	return n, nil
+	return self.rxPortal2.read(p)
 }
 
 func (self *listenerConn) Write(p []byte) (int, error) {
@@ -94,7 +88,7 @@ func (self *listenerConn) rxer() {
 			if wm.ack != -1 {
 				self.txPortal2.ack(wm.ack)
 			}
-			self.rxPortal.rxWmQueue <- wm
+			self.rxPortal2.rx(wm)
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
@@ -116,7 +110,7 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	/*
 	 * Receive Hello
 	 */
-	self.rxPortal.accepted = hello.seq
+	self.rxPortal2.setAccepted(hello.seq)
 	hello.buffer.unref()
 	/* */
 
