@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"github.com/lucas-clemente/quic-go"
-	"github.com/michaelquigley/dilithium/protocol/conduit"
 	"github.com/michaelquigley/dilithium/protocol/westworld2"
 	"github.com/pkg/errors"
 	"math/big"
@@ -104,32 +103,6 @@ func ProtocolFor(protocol string) (Protocol, error) {
 				return nil, errors.Wrap(err, "stream")
 			}
 			return &quicConn{session, stream}, nil
-		}
-		return impl, nil
-
-	case "conduit":
-		impl := struct{ ProtoProtocol }{}
-		impl.listen = func(address string) (Accepter, error) {
-			listenAddress, err := net.ResolveUDPAddr("udp", address)
-			if err != nil {
-				return nil, errors.Wrap(err, "resolve address")
-			}
-			listener, err := conduit.Listen(listenAddress)
-			if err != nil {
-				return nil, errors.Wrap(err, "listen")
-			}
-			return listener, nil
-		}
-		impl.dial = func(address string) (net.Conn, error) {
-			dialAddress, err := net.ResolveUDPAddr("udp", address)
-			if err != nil {
-				return nil, errors.Wrap(err, "resolve address")
-			}
-			conn, err := conduit.Dial(dialAddress)
-			if err != nil {
-				return nil, errors.Wrap(err, "dial")
-			}
-			return conn, nil
 		}
 		return impl, nil
 
