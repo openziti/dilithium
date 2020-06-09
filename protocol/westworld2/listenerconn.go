@@ -14,7 +14,7 @@ type listenerConn struct {
 	rxQueue  chan *wireMessage
 	seq      *util.Sequence
 	txPortal3 *txPortal
-	rxPortal2 *rxPortal2
+	rxPortal2 *rxPortal
 	pool     *pool
 	ins      Instrument
 }

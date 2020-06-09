@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-type rxPortal2 struct {
+type rxPortal struct {
 	tree     *btree.Tree
 	accepted int32
 	rxs      chan *wireMessage
@@ -26,8 +26,8 @@ type rxRead struct {
 	sz  int
 }
 
-func newRxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal2 {
-	rxp := &rxPortal2{
+func newRxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal {
+	rxp := &rxPortal{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
 		accepted: -1,
 		rxs:      make(chan *wireMessage),
@@ -45,7 +45,7 @@ func newRxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPorta
 	return rxp
 }
 
-func (self *rxPortal2) read(p []byte) (int, error) {
+func (self *rxPortal) read(p []byte) (int, error) {
 	read, ok := <-self.reads
 	if !ok {
 		return 0, errors.New("closed")
@@ -55,15 +55,15 @@ func (self *rxPortal2) read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (self *rxPortal2) rx(wm *wireMessage) {
+func (self *rxPortal) rx(wm *wireMessage) {
 	self.rxs <- wm
 }
 
-func (self *rxPortal2) setAccepted(accepted int32) {
+func (self *rxPortal) setAccepted(accepted int32) {
 	self.accepted = accepted
 }
 
-func (self *rxPortal2) run() {
+func (self *rxPortal) run() {
 	logrus.Info("started")
 	defer logrus.Warn("exited")
 
