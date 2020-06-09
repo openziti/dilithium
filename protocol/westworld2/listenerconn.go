@@ -13,7 +13,7 @@ type listenerConn struct {
 	peer     *net.UDPAddr
 	rxQueue  chan *wireMessage
 	seq      *util.Sequence
-	txPortal2 *txPortal2
+	txPortal3 *txPortal3
 	rxPortal2 *rxPortal2
 	pool     *pool
 	ins      Instrument
@@ -28,7 +28,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *list
 		pool:    newPool("listenerConn", ins),
 		ins:     ins,
 	}
-	lc.txPortal2 = newTxPortal2(conn, peer, ins)
+	lc.txPortal3 = newTxPortal3(conn, peer, ins)
 	lc.rxPortal2 = newRxPortal2(conn, peer, ins)
 	go lc.rxer()
 	return lc
@@ -39,8 +39,7 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 }
 
 func (self *listenerConn) Write(p []byte) (int, error) {
-	self.txPortal2.queueTx(newData(self.seq.Next(), p, self.pool))
-	if err := self.txPortal2.txError(); err != nil {
+	if err := self.txPortal3.tx(newData(self.seq.Next(), p, self.pool)); err != nil {
 		return 0, err
 	}
 	return len(p), nil
@@ -86,13 +85,13 @@ func (self *listenerConn) rxer() {
 
 		if wm.mt == DATA {
 			if wm.ack != -1 {
-				self.txPortal2.ack(wm.ack)
+				self.txPortal3.ack(wm.ack)
 			}
 			self.rxPortal2.rx(wm)
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
-				self.txPortal2.ack(wm.ack)
+				self.txPortal3.ack(wm.ack)
 			}
 			wm.buffer.unref()
 

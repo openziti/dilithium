@@ -12,7 +12,7 @@ type dialerConn struct {
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	seq      *util.Sequence
-	txPortal2 *txPortal2
+	txPortal3 *txPortal3
 	rxPortal2 *rxPortal2
 	pool     *pool
 	ins      Instrument
@@ -26,7 +26,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *dialer
 		pool: newPool("dialerConn", ins),
 		ins:  ins,
 	}
-	dc.txPortal2 = newTxPortal2(conn, peer, ins)
+	dc.txPortal3 = newTxPortal3(conn, peer, ins)
 	dc.rxPortal2 = newRxPortal2(conn, peer, ins)
 	return dc
 }
@@ -36,8 +36,7 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
-	self.txPortal2.queueTx(newData(self.seq.Next(), p, self.pool))
-	if err := self.txPortal2.txError(); err != nil {
+	if err := self.txPortal3.tx(newData(self.seq.Next(), p, self.pool)); err != nil {
 		return 0, err
 	}
 	return len(p), nil
@@ -82,13 +81,13 @@ func (self *dialerConn) rxer() {
 
 		if wm.mt == DATA {
 			if wm.ack != -1 {
-				self.txPortal2.ack(wm.ack)
+				self.txPortal3.ack(wm.ack)
 			}
 			self.rxPortal2.rx(wm)
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
-				self.txPortal2.ack(wm.ack)
+				self.txPortal3.ack(wm.ack)
 			}
 			wm.buffer.unref()
 
