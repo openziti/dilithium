@@ -15,7 +15,7 @@ type txTree struct {
 	txs         chan *wireMessage
 	errors      chan error
 	retxMonitor chan *wireMessage
-	retxCancel  chan *wireMessage
+	retxCancel  chan int32
 	tree        *btree.Tree
 	capacity    int
 	conn        *net.UDPConn
@@ -23,7 +23,7 @@ type txTree struct {
 	ins         Instrument
 }
 
-func newTxTree(retxMonitor, retxCancel chan *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txTree {
+func newTxTree(retxMonitor chan *wireMessage, retxCancel chan int32, conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txTree {
 	tt := &txTree{
 		acks:        make(chan int32, txTreeSz),
 		txs:         make(chan *wireMessage, txTreeSz),
@@ -50,11 +50,11 @@ func (self *txTree) run() {
 					return
 				}
 
-				if wm, found := self.tree.Get(acked); found {
+				self.retxCancel <- acked
+				if _, found := self.tree.Get(acked); found {
 					self.tree.Remove(acked)
-					wm.(*wireMessage).buffer.unref()
+					//wm.(*wireMessage).buffer.unref()
 					self.capacity++
-					self.retxCancel <- wm.(*wireMessage)
 
 				} else {
 					logrus.Warnf("~ [@%d] <- (capacity: %d)", acked, self.capacity)

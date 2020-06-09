@@ -1,6 +1,9 @@
 package westworld2
 
-import "net"
+import (
+	"github.com/pkg/errors"
+	"net"
+)
 
 type txPortal2 struct {
 	txTree *txTree
@@ -16,11 +19,22 @@ func newTxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPorta
 }
 
 func (self *txPortal2) queueTx(wm *wireMessage) {
+	self.txTree.txs <- wm
 }
 
 func (self *txPortal2) txError() error {
+	select {
+	case inerr, ok := <- self.txTree.errors:
+		if !ok {
+			return errors.New("closed")
+		}
+		return inerr
+	default:
+		// no queued error
+	}
 	return nil
 }
 
 func (self *txPortal2) ack(sequence int32) {
+	self.txTree.acks <- sequence
 }

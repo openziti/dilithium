@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -12,7 +13,7 @@ const cancelInSz = 1024
 
 type txRetx struct {
 	monitorIn chan *wireMessage
-	cancelIn  chan *wireMessage
+	cancelIn  chan int32
 	queue     []*txRetxMonitor
 	conn      *net.UDPConn
 	peer      *net.UDPAddr
@@ -27,7 +28,7 @@ type txRetxMonitor struct {
 func newTxRetx(conn *net.UDPConn, peer *net.UDPAddr) *txRetx {
 	tr := &txRetx{
 		monitorIn: make(chan *wireMessage, monitorInSz),
-		cancelIn:  make(chan *wireMessage, cancelInSz),
+		cancelIn:  make(chan int32, cancelInSz),
 		conn:      conn,
 		peer:      peer,
 	}
@@ -53,6 +54,12 @@ func (self *txRetx) run() {
 			}
 
 			if len(self.queue) > 0 && head == self.queue[0] {
+				logrus.Warnf("retransmitting")
+
+				if self.ins != nil {
+					self.ins.wireMessageRetx(self.peer, head.wm)
+				}
+
 				if err := writeWireMessage(head.wm, self.conn, self.peer, self.ins); err != nil {
 					logrus.Errorf("retx (%v)", err)
 				}
@@ -89,28 +96,46 @@ func (self *txRetx) cancel() error {
 cancel:
 	for {
 		select {
-		case wm, ok := <-self.cancelIn:
+		case ack, ok := <-self.cancelIn:
 			if !ok {
 				return errors.New("closed")
 			}
 
-			i := -1
-		search:
-			for j, c := range self.queue {
-				if c.wm.seq == wm.seq {
-					i = j
-					break search
+			self.dump("before cancel")
+
+			done := false
+			for !done {
+				i := -1
+			search:
+				for j, c := range self.queue {
+					if c.wm.seq == ack {
+						i = j
+						break search
+					}
+				}
+
+				if i > -1 {
+					self.queue[i].wm.buffer.unref()
+					self.queue = append(self.queue[:i], self.queue[i+1:]...)
+				} else {
+					done = true
 				}
 			}
 
-			if i > -1 {
-				wm.buffer.unref()
-				self.queue = append(self.queue[:i], self.queue[i+1:]...)
-			}
+			self.dump("after cancel")
 
 		default:
 			break cancel
 		}
 	}
 	return nil
+}
+
+func (self *txRetx) dump(label string) {
+	out := fmt.Sprintf("queue (%s) {\n", label)
+	for i, re := range self.queue {
+		out += fmt.Sprintf("[%d]: #%d\n", i, re.wm.seq)
+	}
+	out += "}\n"
+	logrus.Infof(out)
 }

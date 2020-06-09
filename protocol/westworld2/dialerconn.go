@@ -12,7 +12,7 @@ type dialerConn struct {
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	seq      *util.Sequence
-	txPortal *txPortal
+	txPortal2 *txPortal2
 	rxPortal *rxPortal
 	pool     *pool
 	ins      Instrument
@@ -26,7 +26,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *dialer
 		pool: newPool("dialerConn", ins),
 		ins:  ins,
 	}
-	dc.txPortal = newTxPortal(conn, peer, ins)
+	dc.txPortal2 = newTxPortal2(conn, peer, ins)
 	dc.rxPortal = newRxPortal(conn, peer, ins)
 	return dc
 }
@@ -42,15 +42,10 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
-	self.txPortal.txQueue <- newData(self.seq.Next(), p, self.pool)
-
-	select {
-	case err := <-self.txPortal.txErrors:
+	self.txPortal2.queueTx(newData(self.seq.Next(), p, self.pool))
+	if err := self.txPortal2.txError(); err != nil {
 		return 0, err
-	default:
-		// no error
 	}
-
 	return len(p), nil
 }
 
@@ -93,13 +88,13 @@ func (self *dialerConn) rxer() {
 
 		if wm.mt == DATA {
 			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
+				self.txPortal2.ack(wm.ack)
 			}
 			self.rxPortal.rxWmQueue <- wm
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
+				self.txPortal2.ack(wm.ack)
 			}
 			wm.buffer.unref()
 

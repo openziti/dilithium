@@ -13,7 +13,7 @@ type listenerConn struct {
 	peer     *net.UDPAddr
 	rxQueue  chan *wireMessage
 	seq      *util.Sequence
-	txPortal *txPortal
+	txPortal2 *txPortal2
 	rxPortal *rxPortal
 	pool     *pool
 	ins      Instrument
@@ -28,7 +28,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *list
 		pool:    newPool("listenerConn", ins),
 		ins:     ins,
 	}
-	lc.txPortal = newTxPortal(conn, peer, ins)
+	lc.txPortal2 = newTxPortal2(conn, peer, ins)
 	lc.rxPortal = newRxPortal(conn, peer, ins)
 	go lc.rxer()
 	return lc
@@ -45,15 +45,10 @@ func (self *listenerConn) Read(p []byte) (int, error) {
 }
 
 func (self *listenerConn) Write(p []byte) (int, error) {
-	self.txPortal.txQueue <- newData(self.seq.Next(), p, self.pool)
-
-	select {
-	case err := <-self.txPortal.txErrors:
+	self.txPortal2.queueTx(newData(self.seq.Next(), p, self.pool))
+	if err := self.txPortal2.txError(); err != nil {
 		return 0, err
-	default:
-		// no error
 	}
-
 	return len(p), nil
 }
 
@@ -97,13 +92,13 @@ func (self *listenerConn) rxer() {
 
 		if wm.mt == DATA {
 			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
+				self.txPortal2.ack(wm.ack)
 			}
 			self.rxPortal.rxWmQueue <- wm
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
-				self.txPortal.rxAcks <- wm.ack
+				self.txPortal2.ack(wm.ack)
 			}
 			wm.buffer.unref()
 
