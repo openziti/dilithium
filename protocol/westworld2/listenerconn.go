@@ -13,7 +13,7 @@ type listenerConn struct {
 	peer     *net.UDPAddr
 	rxQueue  chan *wireMessage
 	seq      *util.Sequence
-	txPortal3 *txPortal3
+	txPortal3 *txPortal
 	rxPortal2 *rxPortal2
 	pool     *pool
 	ins      Instrument
