@@ -21,6 +21,11 @@ type rxPortal2 struct {
 	ins      Instrument
 }
 
+type rxRead struct {
+	buf []byte
+	sz  int
+}
+
 func newRxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal2 {
 	rxp := &rxPortal2{
 		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
