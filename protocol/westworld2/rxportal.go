@@ -26,7 +26,7 @@ type rxRead struct {
 	sz  int
 }
 
-func newRxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal {
 	rxp := &rxPortal{
 		tree:     btree.NewWith(treeSz, utils.Int32Comparator),
 		accepted: -1,
@@ -79,6 +79,7 @@ func (self *rxPortal) run() {
 			if self.ins != nil {
 				self.ins.duplicateRx(self.peer, wm)
 			}
+			wm.buffer.unref()
 		}
 
 		ack := newAck(wm.seq, self.ackPool)
@@ -91,13 +92,14 @@ func (self *rxPortal) run() {
 			next := self.accepted + 1
 			for _, key := range self.tree.Keys() {
 				if key.(int32) == next {
-					wm, _ := self.tree.Get(key)
+					v, _ := self.tree.Get(key)
+					wm := v.(*wireMessage)
 					buf := self.readPool.Get().([]byte)
-					n := copy(buf, wm.(*wireMessage).data)
+					n := copy(buf, wm.data)
 					self.reads <- &rxRead{buf, n}
 
 					self.tree.Remove(key)
-					wm.(*wireMessage).buffer.unref()
+					wm.buffer.unref()
 					self.accepted = next
 					next++
 				}

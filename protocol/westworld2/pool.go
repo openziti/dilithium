@@ -21,7 +21,9 @@ func newPool(name string, ins Instrument) *pool {
 }
 
 func (self *pool) get() *buffer {
-	return self.store.Get().(*buffer)
+	buf := self.store.Get().(*buffer)
+	buf.ref()
+	return buf
 }
 
 func (self *pool) put(buffer *buffer) {

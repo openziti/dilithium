@@ -99,6 +99,7 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 		}
 		return
 	}
+	go conn.rxer()
 
 	self.acceptQueue <- conn
 

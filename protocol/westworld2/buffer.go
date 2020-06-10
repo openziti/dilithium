@@ -1,6 +1,8 @@
 package westworld2
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 type buffer struct {
 	data []byte
@@ -13,12 +15,8 @@ func newBuffer(pool *pool) *buffer {
 	return &buffer{
 		data: make([]byte, 64*1024),
 		pool: pool,
-		refs: 1,
+		refs: 0,
 	}
-}
-
-func (self *buffer) view() []byte {
-	return self.data[:self.sz]
 }
 
 func (self *buffer) ref() {

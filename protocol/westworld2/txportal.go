@@ -35,7 +35,7 @@ type retxSubject struct {
 	wm       *wireMessage
 }
 
-func newTxPortal3(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPortal {
 	txp := &txPortal{
 		lock:     new(sync.Mutex),
 		tree:     btree.NewWith(treeSz, utils.Int32Comparator),
@@ -81,9 +81,10 @@ func (self *txPortal) ack(sequence int32) {
 		wm := v.(*wireMessage)
 		self.cancelMonitor(wm)
 		self.tree.Remove(sequence)
-		wm.buffer.unref()
 		self.capacity += len(wm.data)
+		wm.buffer.unref()
 		self.ready.Signal()
+
 	} else {
 		if self.ins != nil {
 			self.ins.duplicateAck(self.peer, sequence)
@@ -121,8 +122,6 @@ func (self *txPortal) runMonitor() {
 			sort.Slice(self.monitor.waiting, func(i, j int) bool {
 				return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 			})
-		} else {
-			self.monitor.head.wm.buffer.unref()
 		}
 		self.lock.Unlock()
 	}
@@ -143,6 +142,7 @@ func (self *txPortal) cancelMonitor(wm *wireMessage) {
 		}
 	}
 	if i > -1 {
+		self.monitor.waiting[i].wm.buffer.unref()
 		self.monitor.waiting = append(self.monitor.waiting[:i], self.monitor.waiting[i+1:]...)
 	}
 	if self.monitor.head != nil && self.monitor.head.wm == wm {
