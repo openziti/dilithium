@@ -121,6 +121,8 @@ func (self *txPortal) runMonitor() {
 			sort.Slice(self.monitor.waiting, func(i, j int) bool {
 				return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 			})
+		} else {
+			self.monitor.head.wm.buffer.unref()
 		}
 		self.lock.Unlock()
 	}
