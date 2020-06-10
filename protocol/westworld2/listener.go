@@ -31,7 +31,7 @@ func Listen(addr *net.UDPAddr, ins Instrument) (net.Listener, error) {
 	}
 	l := &listener{
 		lock:        new(sync.Mutex),
-		peers:       btree.NewWith(treeSize, addrComparator),
+		peers:       btree.NewWith(treeSz, addrComparator),
 		acceptQueue: make(chan net.Conn, acceptQueueSz),
 		conn:        conn,
 		addr:        addr,

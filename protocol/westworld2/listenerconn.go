@@ -9,21 +9,21 @@ import (
 )
 
 type listenerConn struct {
-	conn     *net.UDPConn
-	peer     *net.UDPAddr
-	rxQueue  chan *wireMessage
-	seq      *util.Sequence
+	conn      *net.UDPConn
+	peer      *net.UDPAddr
+	rxQueue   chan *wireMessage
+	seq       *util.Sequence
 	txPortal3 *txPortal
 	rxPortal2 *rxPortal
-	pool     *pool
-	ins      Instrument
+	pool      *pool
+	ins       Instrument
 }
 
 func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *listenerConn {
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,
-		rxQueue: make(chan *wireMessage, rxQueueSize),
+		rxQueue: make(chan *wireMessage, listenerRxQueueSz),
 		seq:     util.NewSequence(0),
 		pool:    newPool("listenerConn", ins),
 		ins:     ins,

@@ -38,7 +38,7 @@ type retxSubject struct {
 func newTxPortal3(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPortal {
 	txp := &txPortal{
 		lock:     new(sync.Mutex),
-		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
+		tree:     btree.NewWith(treeSz, utils.Int32Comparator),
 		capacity: startingWindowCapacity,
 		monitor:  &retxMonitor{},
 		conn:     conn,
@@ -53,15 +53,17 @@ func newTxPortal3(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPorta
 }
 
 func (self *txPortal) tx(wm *wireMessage) error {
+	sz := len(wm.data)
+
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	for self.capacity < 1 {
+	for self.capacity < sz {
 		self.ready.Wait()
 	}
 
 	self.tree.Put(wm.seq, wm)
-	self.capacity--
+	self.capacity -= sz
 	self.addMonitor(wm)
 
 	if err := writeWireMessage(wm, self.conn, self.peer, self.ins); err != nil {
@@ -75,11 +77,12 @@ func (self *txPortal) ack(sequence int32) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if wm, found := self.tree.Get(sequence); found {
-		self.cancelMonitor(wm.(*wireMessage))
+	if v, found := self.tree.Get(sequence); found {
+		wm := v.(*wireMessage)
+		self.cancelMonitor(wm)
 		self.tree.Remove(sequence)
-		wm.(*wireMessage).buffer.unref()
-		self.capacity++
+		wm.buffer.unref()
+		self.capacity += len(wm.data)
 		self.ready.Signal()
 	} else {
 		if self.ins != nil {

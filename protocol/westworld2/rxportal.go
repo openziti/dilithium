@@ -28,10 +28,10 @@ type rxRead struct {
 
 func newRxPortal2(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal {
 	rxp := &rxPortal{
-		tree:     btree.NewWith(treeSize, utils.Int32Comparator),
+		tree:     btree.NewWith(treeSz, utils.Int32Comparator),
 		accepted: -1,
 		rxs:      make(chan *wireMessage),
-		reads:    make(chan *rxRead, rxQueueSize),
+		reads:    make(chan *rxRead, readsSz),
 		readPool: new(sync.Pool),
 		ackPool:  newPool("ackPool", ins),
 		conn:     conn,
