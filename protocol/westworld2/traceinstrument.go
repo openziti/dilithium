@@ -10,23 +10,25 @@ import (
 
 type traceInstrument struct {
 	lock   *sync.Mutex
+	last  time.Time
 	buffer []string
 }
 
 func NewTraceInstrument() Instrument {
 	ti := &traceInstrument{
-		lock: new(sync.Mutex),
+		lock:  new(sync.Mutex),
+		last: time.Now(),
 	}
 	go ti.dumper()
 	return ti
 }
 
 func (self *traceInstrument) connected(peer *net.UDPAddr) {
-	self.append(fmt.Sprintf("#| %-64s [%s]", "CONNECTED", peer))
+	self.append(fmt.Sprintf("#| %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CONNECTED", peer))
 }
 
 func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	decode := fmt.Sprintf("%-12s", "RX " + self.mt(wm.mt))
+	decode := fmt.Sprintf("%-12s", "RX "+self.mt(wm.mt))
 	if wm.seq != -1 {
 		decode += fmt.Sprintf("%-8s", fmt.Sprintf("#%d", wm.seq))
 	}
@@ -36,11 +38,11 @@ func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	if len(wm.data) > 0 {
 		decode += fmt.Sprintf("[%d]", len(wm.data))
 	}
-	self.append(fmt.Sprintf("#| %-64s [%s]", decode, peer))
+	self.append(fmt.Sprintf("#| %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
 func (self *traceInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
-	decode := fmt.Sprintf("%-12s", "TX " + self.mt(wm.mt))
+	decode := fmt.Sprintf("%-12s", "TX "+self.mt(wm.mt))
 	if wm.seq != -1 {
 		decode += fmt.Sprintf("%-8s", fmt.Sprintf("#%d", wm.seq))
 	}
@@ -50,11 +52,11 @@ func (self *traceInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
 	if len(wm.data) > 0 {
 		decode += fmt.Sprintf("[%d]", len(wm.data))
 	}
-	self.append(fmt.Sprintf("#| %-64s [%s]", decode, peer))
+	self.append(fmt.Sprintf("#| %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
 func (self *traceInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
-	decode := fmt.Sprintf("%-12s", "RETX " + self.mt(wm.mt))
+	decode := fmt.Sprintf("%-12s", "RETX "+self.mt(wm.mt))
 	if wm.seq != -1 {
 		decode += fmt.Sprintf("%-8s", fmt.Sprintf("#%d", wm.seq))
 	}
@@ -64,7 +66,7 @@ func (self *traceInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
 	if len(wm.data) > 0 {
 		decode += fmt.Sprintf("[%d]", len(wm.data))
 	}
-	self.append(fmt.Sprintf("#| %-64s [%s]", decode, peer))
+	self.append(fmt.Sprintf("#| %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
 func (self *traceInstrument) unknownPeer(peer *net.UDPAddr) {
@@ -84,7 +86,7 @@ func (self *traceInstrument) unexpectedMessageType(peer *net.UDPAddr, mt message
 }
 
 func (self *traceInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
-	decode := fmt.Sprintf("%-12s", "DPRX " + self.mt(wm.mt))
+	decode := fmt.Sprintf("%-12s", "DPRX "+self.mt(wm.mt))
 	if wm.seq != -1 {
 		decode += fmt.Sprintf("%-8s", fmt.Sprintf("#%d", wm.seq))
 	}
@@ -94,18 +96,18 @@ func (self *traceInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
 	if len(wm.data) > 0 {
 		decode += fmt.Sprintf("[%d]", len(wm.data))
 	}
-	self.append(fmt.Sprintf("#| %-64s [%s]", decode, peer))
+	self.append(fmt.Sprintf("#| %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
 func (self *traceInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
 	decode := fmt.Sprintf("%-12s", "DPACK")
 	decode += fmt.Sprintf("%-8s", fmt.Sprintf("@%d", ack))
-	self.append(fmt.Sprintf("#| %-64s [%s]", decode, peer))
+	self.append(fmt.Sprintf("#| %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
 func (self *traceInstrument) allocate(ctx string) {
 	decode := fmt.Sprintf("%-12s %s", "ALLOCATE", ctx)
-	self.append(fmt.Sprintf("#| %-64s", decode))
+	self.append(fmt.Sprintf("#| %-10d %-64s", time.Since(self.last).Milliseconds(), decode))
 }
 
 func (self *traceInstrument) mt(mt messageType) string {
@@ -127,6 +129,7 @@ func (self *traceInstrument) append(msg string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.buffer = append(self.buffer, msg)
+	self.last = time.Now()
 }
 
 func (self *traceInstrument) dumper() {
