@@ -16,7 +16,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doMemoryProfile, "memory", false, "Enable memory profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
 	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, tls, quic, westworld2)")
-	RootCmd.PersistentFlags().StringVarP(&SelectedWestworld2Instrument, "instrument", "i", "logger", "Select westworld2 instrument (logger, stats, nil)")
+	RootCmd.PersistentFlags().StringVarP(&SelectedWestworld2Instrument, "instrument", "i", "nil", "Select westworld2 instrument (nil, logger, stats, trace)")
 }
 
 var RootCmd = &cobra.Command{
@@ -31,6 +31,8 @@ var RootCmd = &cobra.Command{
 			Westworld2Instrument = westworld2.NewLoggerInstrument()
 		case "stats":
 			Westworld2Instrument = westworld2.NewStatsInstrument()
+		case "trace":
+			Westworld2Instrument = westworld2.NewTraceInstrument()
 		case "nil":
 			Westworld2Instrument = nil
 		default:
