@@ -1,7 +1,8 @@
 package westworld2
 
 const (
-	startingWindowCapacity = 16 * 1024
+	startingWindowCapacity = 4 * 1024
+	mss                    = 1500
 	retxTimeoutMs          = 25
 	treeSz                 = 1024
 	readsSz                = 1024

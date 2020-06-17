@@ -3,8 +3,10 @@ package westworld2
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"math"
 	"net"
 	"sort"
 	"sync"
@@ -52,25 +54,33 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *txPortal
 	return txp
 }
 
-func (self *txPortal) tx(wm *wireMessage) error {
-	sz := len(wm.data)
-
+func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	for self.capacity < sz {
-		self.ready.Wait()
+	remaining := len(p)
+	n = 0
+	for remaining > 0 {
+		sz := int(math.Min(float64(remaining), mss))
+		wm := newData(seq.Next(), p[n:n+sz], self.pool)
+
+		for self.capacity < sz {
+			self.ready.Wait()
+		}
+
+		self.tree.Put(wm.seq, wm)
+		self.capacity -= sz
+		self.addMonitor(wm)
+
+		if err = writeWireMessage(wm, self.conn, self.peer, self.ins); err != nil {
+			return 0, errors.Wrap(err, "tx")
+		}
+
+		n += sz
+		remaining -= sz
 	}
 
-	self.tree.Put(wm.seq, wm)
-	self.capacity -= sz
-	self.addMonitor(wm)
-
-	if err := writeWireMessage(wm, self.conn, self.peer, self.ins); err != nil {
-		return errors.Wrap(err, "tx")
-	}
-
-	return nil
+	return n, nil
 }
 
 func (self *txPortal) ack(sequence int32) {

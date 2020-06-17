@@ -36,10 +36,7 @@ func (self *dialerConn) Read(p []byte) (int, error) {
 }
 
 func (self *dialerConn) Write(p []byte) (int, error) {
-	if err := self.txPortal.tx(newData(self.seq.Next(), p, self.pool)); err != nil {
-		return 0, err
-	}
-	return len(p), nil
+	return self.txPortal.tx(p, self.seq)
 }
 
 func (self *dialerConn) Close() error {

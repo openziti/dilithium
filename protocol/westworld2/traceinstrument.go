@@ -10,13 +10,13 @@ import (
 
 type traceInstrument struct {
 	lock   *sync.Mutex
-	last  time.Time
+	last   time.Time
 	buffer []string
 }
 
 func NewTraceInstrument() Instrument {
 	ti := &traceInstrument{
-		lock:  new(sync.Mutex),
+		lock: new(sync.Mutex),
 		last: time.Now(),
 	}
 	go ti.dumper()
