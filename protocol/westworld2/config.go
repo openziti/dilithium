@@ -3,6 +3,7 @@ package westworld2
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"reflect"
 )
 
 type Config struct {
@@ -88,7 +89,7 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 		}
 	}
 	if v, found := data["instrument"]; found {
-		if submap, ok := v.(map[interface{}]interface{}); ok {
+		if submap, ok := v.(map[string]interface{}); ok {
 			var data map[interface{}]interface{}
 			if v, found := submap["config"]; found {
 				if config, ok := v.(map[interface{}]interface{}); ok {
@@ -113,7 +114,7 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			if self.i != nil {
 			}
 		} else {
-			return errors.New("invalid 'instrument' value")
+			return errors.Errorf("invalid 'instrument' value [%v]", reflect.TypeOf(v))
 		}
 	}
 	return nil
@@ -129,6 +130,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-20s %d\n", "reads_q_len", self.readsQLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "listener_rx_q_len", self.listenerRxQLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "accept_q_len", self.acceptQLen)
+	out += fmt.Sprintf("\t%-20s %v\n", "instrument", reflect.TypeOf(self.i))
 	out += "}"
 	return out
 }
