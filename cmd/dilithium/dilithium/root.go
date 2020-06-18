@@ -5,6 +5,8 @@ import (
 	"github.com/pkg/profile"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +19,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
 	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, tls, quic, westworld2)")
 	RootCmd.PersistentFlags().StringVarP(&SelectedWestworld2Instrument, "instrument", "i", "nil", "Select westworld2 instrument (nil, logger, stats, trace)")
+	RootCmd.PersistentFlags().StringVarP(&westworldConfigPath, "config", "c", "", "Config file path for westworld2")
 }
 
 var RootCmd = &cobra.Command{
@@ -47,6 +50,23 @@ var RootCmd = &cobra.Command{
 		if doMutexProfile {
 			mutexProfile = profile.Start(profile.MutexProfile)
 		}
+
+		WestworldConfig = westworld2.NewDefaultConfig()
+		if westworldConfigPath != "" {
+			data, err := ioutil.ReadFile(westworldConfigPath)
+			if err != nil {
+				logrus.Fatalf("error reading config file [%s] (%v)", westworldConfigPath, err)
+			}
+			dataMap := make(map[interface{}]interface{})
+			if err := yaml.Unmarshal(data, dataMap); err != nil {
+				logrus.Fatalf("error unmarshaling config data [%s] (%v)", westworldConfigPath, err)
+			}
+
+			if err := WestworldConfig.Load(dataMap); err != nil {
+				logrus.Fatalf("error loading config [%s] (%v)", westworldConfigPath, err)
+			}
+		}
+		logrus.Infof("WestworldConfig = %s", WestworldConfig.Dump())
 	},
 	PersistentPostRun: func(_ *cobra.Command, _ []string) {
 		if cpuProfile != nil {

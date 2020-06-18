@@ -33,6 +33,8 @@ func (self ProtoProtocol) Listen(address string) (Accepter, error) { return self
 func (self ProtoProtocol) Dial(address string) (net.Conn, error)   { return self.dial(address) }
 
 var Westworld2Instrument westworld2.Instrument
+var WestworldConfig *westworld2.Config
+var westworldConfigPath string
 
 func ProtocolFor(protocol string) (Protocol, error) {
 	switch protocol {
