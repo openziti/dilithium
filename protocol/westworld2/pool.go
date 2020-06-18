@@ -5,16 +5,16 @@ import (
 )
 
 type pool struct {
-	name  string
-	store *sync.Pool
-	ins   Instrument
+	name   string
+	store  *sync.Pool
+	config *Config
 }
 
-func newPool(name string, ins Instrument) *pool {
+func newPool(name string, config *Config) *pool {
 	p := &pool{
-		name:  name,
-		store: new(sync.Pool),
-		ins:   ins,
+		name:   name,
+		store:  new(sync.Pool),
+		config: config,
 	}
 	p.store.New = p.allocate
 	return p
@@ -31,8 +31,8 @@ func (self *pool) put(buffer *buffer) {
 }
 
 func (self *pool) allocate() interface{} {
-	if self.ins != nil {
-		self.ins.allocate(self.name)
+	if self.config != nil && self.config.i != nil {
+		self.config.i.allocate(self.name)
 	}
 	return newBuffer(self)
 }

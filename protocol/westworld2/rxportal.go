@@ -18,7 +18,7 @@ type rxPortal struct {
 	ackPool  *pool
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
-	ins      Instrument
+	config   *Config
 }
 
 type rxRead struct {
@@ -26,20 +26,20 @@ type rxRead struct {
 	sz  int
 }
 
-func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *rxPortal {
 	rxp := &rxPortal{
-		tree:     btree.NewWith(treeSz, utils.Int32Comparator),
+		tree:     btree.NewWith(config.treeLen, utils.Int32Comparator),
 		accepted: -1,
 		rxs:      make(chan *wireMessage),
-		reads:    make(chan *rxRead, readsSz),
+		reads:    make(chan *rxRead, config.readsQLen),
 		readPool: new(sync.Pool),
-		ackPool:  newPool("ackPool", ins),
+		ackPool:  newPool("ackPool", config),
 		conn:     conn,
 		peer:     peer,
-		ins:      ins,
+		config:   config,
 	}
 	rxp.readPool.New = func() interface{} {
-		return make([]byte, bufferSz)
+		return make([]byte, config.poolBufferSz)
 	}
 	go rxp.run()
 	return rxp
@@ -76,14 +76,14 @@ func (self *rxPortal) run() {
 		if wm.seq > self.accepted {
 			self.tree.Put(wm.seq, wm)
 		} else {
-			if self.ins != nil {
-				self.ins.duplicateRx(self.peer, wm)
+			if self.config.i != nil {
+				self.config.i.duplicateRx(self.peer, wm)
 			}
 			wm.buffer.unref()
 		}
 
 		ack := newAck(wm.seq, self.ackPool)
-		if err := writeWireMessage(ack, self.conn, self.peer, self.ins); err != nil {
+		if err := writeWireMessage(ack, self.conn, self.peer, self.config.i); err != nil {
 			logrus.Errorf("error sending ack (%v)", err)
 		}
 		ack.buffer.unref()

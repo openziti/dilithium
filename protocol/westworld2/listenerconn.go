@@ -16,20 +16,20 @@ type listenerConn struct {
 	txPortal *txPortal
 	rxPortal *rxPortal
 	pool     *pool
-	ins      Instrument
+	config   *Config
 }
 
-func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *listenerConn {
+func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *listenerConn {
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,
-		rxQueue: make(chan *wireMessage, listenerRxQueueSz),
+		rxQueue: make(chan *wireMessage, config.listenerRxQLen),
 		seq:     util.NewSequence(0),
-		pool:    newPool("listenerConn", ins),
-		ins:     ins,
+		pool:    newPool("listenerConn", config),
+		config:  config,
 	}
-	lc.txPortal = newTxPortal(conn, peer, ins)
-	lc.rxPortal = newRxPortal(conn, peer, ins)
+	lc.txPortal = newTxPortal(conn, peer, config)
+	lc.rxPortal = newRxPortal(conn, peer, config)
 	return lc
 }
 
@@ -92,8 +92,8 @@ func (self *listenerConn) rxer() {
 			wm.buffer.unref()
 
 		} else {
-			if self.ins != nil {
-				self.ins.unexpectedMessageType(self.peer, wm.mt)
+			if self.config.i != nil {
+				self.config.i.unexpectedMessageType(self.peer, wm.mt)
 			}
 			wm.buffer.unref()
 		}
@@ -115,7 +115,7 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	helloAck := newHelloAck(helloAckSeq, hello.seq, self.pool)
 	defer helloAck.buffer.unref()
 
-	if err := writeWireMessage(helloAck, self.conn, self.peer, self.ins); err != nil {
+	if err := writeWireMessage(helloAck, self.conn, self.peer, self.config.i); err != nil {
 		return errors.Wrap(err, "write hello ack")
 	}
 	/* */

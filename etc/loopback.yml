@@ -1,8 +1,8 @@
 # loopback speedboat
 #
 
-# we start with a 64k window
-portal_start_sz:      65536
+# we start with a 72k window
+portal_start_sz:      73728
 
 # we allow jumbo frames
 max_segment_sz:       65536

@@ -115,7 +115,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			listener, err := westworld2.Listen(listenAddress, Westworld2Instrument)
+			listener, err := westworld2.Listen(listenAddress, WestworldConfig)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
@@ -126,7 +126,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			conn, err := westworld2.Dial(dialAddress, Westworld2Instrument)
+			conn, err := westworld2.Dial(dialAddress, WestworldConfig)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}

@@ -15,19 +15,19 @@ type dialerConn struct {
 	txPortal *txPortal
 	rxPortal *rxPortal
 	pool     *pool
-	ins      Instrument
+	config   *Config
 }
 
-func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, ins Instrument) *dialerConn {
+func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *dialerConn {
 	dc := &dialerConn{
-		conn: conn,
-		peer: peer,
-		seq:  util.NewSequence(0),
-		pool: newPool("dialerConn", ins),
-		ins:  ins,
+		conn:   conn,
+		peer:   peer,
+		seq:    util.NewSequence(0),
+		pool:   newPool("dialerConn", config),
+		config: config,
 	}
-	dc.txPortal = newTxPortal(conn, peer, ins)
-	dc.rxPortal = newRxPortal(conn, peer, ins)
+	dc.txPortal = newTxPortal(conn, peer, config)
+	dc.rxPortal = newRxPortal(conn, peer, config)
 	return dc
 }
 
@@ -68,10 +68,10 @@ func (self *dialerConn) rxer() {
 	defer logrus.Warn("exited")
 
 	for {
-		wm, _, err := readWireMessage(self.conn, self.pool, self.ins)
+		wm, _, err := readWireMessage(self.conn, self.pool, self.config.i)
 		if err != nil {
-			if self.ins != nil {
-				self.ins.readError(self.peer, err)
+			if self.config.i != nil {
+				self.config.i.readError(self.peer, err)
 			}
 			continue
 		}
@@ -89,8 +89,8 @@ func (self *dialerConn) rxer() {
 			wm.buffer.unref()
 
 		} else {
-			if self.ins != nil {
-				self.ins.unexpectedMessageType(self.peer, wm.mt)
+			if self.config.i != nil {
+				self.config.i.unexpectedMessageType(self.peer, wm.mt)
 			}
 			wm.buffer.unref()
 		}
@@ -105,7 +105,7 @@ func (self *dialerConn) hello() error {
 	hello := newHello(helloSeq, self.pool)
 	defer hello.buffer.unref()
 
-	if err := writeWireMessage(hello, self.conn, self.peer, self.ins); err != nil {
+	if err := writeWireMessage(hello, self.conn, self.peer, self.config.i); err != nil {
 		return errors.Wrap(err, "write hello")
 	}
 	/* */
@@ -117,7 +117,7 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "set read deadline")
 	}
 
-	helloAck, _, err := readWireMessage(self.conn, self.pool, self.ins)
+	helloAck, _, err := readWireMessage(self.conn, self.pool, self.config.i)
 	if err != nil {
 		return errors.Wrap(err, "read hello ack")
 	}
@@ -143,13 +143,13 @@ func (self *dialerConn) hello() error {
 	ack := newAck(helloAck.seq, self.pool)
 	defer ack.buffer.unref()
 
-	if err := writeWireMessage(ack, self.conn, self.peer, self.ins); err != nil {
+	if err := writeWireMessage(ack, self.conn, self.peer, self.config.i); err != nil {
 		return errors.Wrap(err, "write ack")
 	}
 	/* */
 
-	if self.ins != nil {
-		self.ins.connected(self.peer)
+	if self.config.i != nil {
+		self.config.i.connected(self.peer)
 	}
 
 	go self.rxer()

@@ -15,28 +15,28 @@ type listener struct {
 	conn        *net.UDPConn
 	addr        *net.UDPAddr
 	pool        *pool
-	ins         Instrument
+	config      *Config
 }
 
-func Listen(addr *net.UDPAddr, ins Instrument) (net.Listener, error) {
+func Listen(addr *net.UDPAddr, config *Config) (net.Listener, error) {
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return nil, errors.Wrap(err, "listen")
 	}
-	if err := conn.SetReadBuffer(bufferSz); err != nil {
+	if err := conn.SetReadBuffer(config.poolBufferSz); err != nil {
 		return nil, errors.Wrap(err, "rx buffer")
 	}
-	if err := conn.SetWriteBuffer(bufferSz); err != nil {
+	if err := conn.SetWriteBuffer(config.poolBufferSz); err != nil {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
 	l := &listener{
 		lock:        new(sync.Mutex),
-		peers:       btree.NewWith(treeSz, addrComparator),
-		acceptQueue: make(chan net.Conn, acceptQueueSz),
+		peers:       btree.NewWith(config.treeLen, addrComparator),
+		acceptQueue: make(chan net.Conn, config.acceptQLen),
 		conn:        conn,
 		addr:        addr,
-		pool:        newPool("listener", ins),
-		ins:         ins,
+		pool:        newPool("listener", config),
+		config:      config,
 	}
 	go l.run()
 	return l, nil
@@ -63,7 +63,7 @@ func (self *listener) run() {
 	defer logrus.Warn("exited")
 
 	for {
-		if wm, peer, err := readWireMessage(self.conn, self.pool, self.ins); err == nil {
+		if wm, peer, err := readWireMessage(self.conn, self.pool, self.config.i); err == nil {
 			conn, found := self.peers.Get(peer)
 			if found {
 				conn.(*listenerConn).queue(wm)
@@ -73,29 +73,29 @@ func (self *listener) run() {
 
 				} else {
 					wm.buffer.unref()
-					if self.ins != nil {
-						self.ins.unknownPeer(peer)
+					if self.config.i != nil {
+						self.config.i.unknownPeer(peer)
 					}
 				}
 			}
 		} else {
-			if self.ins != nil {
-				self.ins.readError(peer, err)
+			if self.config.i != nil {
+				self.config.i.readError(peer, err)
 			}
 		}
 	}
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
-	conn := newListenerConn(self.conn, peer, self.ins)
+	conn := newListenerConn(self.conn, peer, self.config)
 
 	self.lock.Lock()
 	self.peers.Put(peer, conn)
 	self.lock.Unlock()
 
 	if err := conn.hello(hello); err != nil {
-		if self.ins != nil {
-			self.ins.connectError(peer, err)
+		if self.config.i != nil {
+			self.config.i.connectError(peer, err)
 		}
 		return
 	}
@@ -103,8 +103,8 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 
 	self.acceptQueue <- conn
 
-	if self.ins != nil {
-		self.ins.connected(peer)
+	if self.config.i != nil {
+		self.config.i.connected(peer)
 	}
 }
 
