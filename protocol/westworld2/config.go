@@ -26,7 +26,7 @@ func NewDefaultConfig() *Config {
 		readsQSz:      1024,
 		listenerRxQSz: 1024,
 		acceptQSz:     1024,
-		bufferSz:      1024,
+		bufferSz:      64 * 1024,
 	}
 }
 
@@ -45,6 +45,48 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'mss' value")
 		}
 	}
+	if v, found := data["retx_timeout_ms"]; found {
+		if i, ok := v.(int); ok {
+			self.retxTimeoutMs = i
+		} else {
+			return errors.New("invalid 'retx_timeout_ms' value")
+		}
+	}
+	if v, found := data["tree_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.treeSz = i
+		} else {
+			return errors.New("invalid 'tree_sz' value")
+		}
+	}
+	if v, found := data["reads_q_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.readsQSz = i
+		} else {
+			return errors.New("invalid 'reads_q_sz' value")
+		}
+	}
+	if v, found := data["listener_rx_q_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.listenerRxQSz = i
+		} else {
+			return errors.New("invalid 'listener_rx_q_sz' value")
+		}
+	}
+	if v, found := data["accept_q_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.acceptQSz = i
+		} else {
+			return errors.New("invalid 'accept_q_sz' value")
+		}
+	}
+	if v, found := data["buffer_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.bufferSz = i
+		} else {
+			return errors.New("invalid 'buffer_sz' value")
+		}
+	}
 	return nil
 }
 
@@ -53,6 +95,11 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-20s %d\n", "portalStartSz", self.portalStartSz)
 	out += fmt.Sprintf("\t%-20s %d\n", "mss", self.mss)
 	out += fmt.Sprintf("\t%-20s %d\n", "retxTimeoutMs", self.retxTimeoutMs)
-	out += "}\n"
+	out += fmt.Sprintf("\t%-20s %d\n", "treeSz", self.treeSz)
+	out += fmt.Sprintf("\t%-20s %d\n", "readsQSz", self.readsQSz)
+	out += fmt.Sprintf("\t%-20s %d\n", "listenerRxQSz", self.listenerRxQSz)
+	out += fmt.Sprintf("\t%-20s %d\n", "acceptQSz", self.acceptQSz)
+	out += fmt.Sprintf("\t%-20s %d\n", "bufferSz", self.bufferSz)
+	out += "}"
 	return out
 }

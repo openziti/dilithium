@@ -66,7 +66,7 @@ var RootCmd = &cobra.Command{
 				logrus.Fatalf("error loading config [%s] (%v)", westworldConfigPath, err)
 			}
 		}
-		logrus.Infof("WestworldConfig = %s", WestworldConfig.Dump())
+		logrus.Infof(WestworldConfig.Dump())
 	},
 	PersistentPostRun: func(_ *cobra.Command, _ []string) {
 		if cpuProfile != nil {
