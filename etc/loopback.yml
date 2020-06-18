@@ -5,4 +5,4 @@
 portal_start_sz:      65536
 
 # we allow jumbo frames
-mss:                  65536
+max_segment_sz:       65536
