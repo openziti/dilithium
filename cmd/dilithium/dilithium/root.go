@@ -18,8 +18,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doMemoryProfile, "memory", false, "Enable memory profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
 	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, tls, quic, westworld2)")
-	RootCmd.PersistentFlags().StringVarP(&SelectedWestworld2Instrument, "instrument", "i", "nil", "Select westworld2 instrument (nil, logger, stats, trace)")
-	RootCmd.PersistentFlags().StringVarP(&westworldConfigPath, "config", "c", "", "Config file path for westworld2")
+	RootCmd.PersistentFlags().StringVarP(&westworldConfigPath, "westworld2", "w", "", "Config file path for westworld2")
 }
 
 var RootCmd = &cobra.Command{
@@ -28,18 +27,6 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(_ *cobra.Command, _ []string) {
 		if verbose {
 			logrus.SetLevel(logrus.DebugLevel)
-		}
-		switch SelectedWestworld2Instrument {
-		case "logger":
-			Westworld2Instrument = westworld2.NewLoggerInstrument()
-		case "stats":
-			Westworld2Instrument = westworld2.NewStatsInstrument()
-		case "trace":
-			Westworld2Instrument = westworld2.NewTraceInstrument()
-		case "nil":
-			Westworld2Instrument = nil
-		default:
-			logrus.Fatalf("unknown westworld2 logger instrument [%s]", SelectedWestworld2Instrument)
 		}
 		if doCpuProfile {
 			cpuProfile = profile.Start(profile.CPUProfile)
@@ -82,10 +69,10 @@ var RootCmd = &cobra.Command{
 }
 var verbose bool
 var SelectedProtocol string
-var SelectedWestworld2Instrument string
 var doCpuProfile bool
 var cpuProfile interface{ Stop() }
 var doMemoryProfile bool
 var memoryProfile interface{ Stop() }
 var doMutexProfile bool
 var mutexProfile interface{ Stop() }
+var westworldConfigPath string
