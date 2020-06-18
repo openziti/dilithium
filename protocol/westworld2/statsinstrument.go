@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync/atomic"
@@ -82,12 +83,21 @@ func (self *statsInstrument) configure(data map[interface{}]interface{}) error {
 func (self *statsInstrument) dumper() {
 	for {
 		time.Sleep(5 * time.Second)
-		logrus.Infof("stats {\n\trxMessages:%d\n\trxBytes:%d\n\trxDupeMessages:%d\n\trxDupeBytes:%d\n\t"+
-			"rxDupeAcks:%d\n\ttxMessages:%d\n\ttxBytes:%d\n\tretxMessages:%d\n\tretxBytes:%d\n\t"+
-			"unknownPeers:%d\n\treadErrors:%d\n\tunexpectedMt:%d\n\tallocations:%d\n}",
-			self.rxMessages, self.rxBytes, self.rxDupeMessages, self.rxDupeBytes, self.rxDupeAcks, self.txMessages,
-			self.txBytes, self.retxMessages, self.retxBytes, self.unknownPeers, self.readErrors, self.unexpectedMt,
-			self.allocations,
-		)
+		out := "stats{\n"
+		out += fmt.Sprintf("\t%-20s %d\n", "rxMessages", self.rxMessages)
+		out += fmt.Sprintf("\t%-20s %d\n", "rxBytes", self.rxBytes)
+		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeMessages", self.rxDupeMessages)
+		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeBytes", self.rxDupeBytes)
+		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeAcks", self.rxDupeAcks)
+		out += fmt.Sprintf("\t%-20s %d\n", "txMessages", self.txMessages)
+		out += fmt.Sprintf("\t%-20s %d\n", "txBytes", self.txBytes)
+		out += fmt.Sprintf("\t%-20s %d\n", "retxMessages", self.retxMessages)
+		out += fmt.Sprintf("\t%-20s %d\n", "retxBytes", self.retxBytes)
+		out += fmt.Sprintf("\t%-20s %d\n", "unknownPeers", self.unknownPeers)
+		out += fmt.Sprintf("\t%-20s %d\n", "readErrors", self.readErrors)
+		out += fmt.Sprintf("\t%-20s %d\n", "unexpectedMt", self.unexpectedMt)
+		out += fmt.Sprintf("\t%-20s %d\n", "allocations", self.allocations)
+		out += "}"
+		logrus.Infof(out)
 	}
 }
