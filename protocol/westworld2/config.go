@@ -87,6 +87,35 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'accept_q_len' value")
 		}
 	}
+	if v, found := data["instrument"]; found {
+		if submap, ok := v.(map[interface{}]interface{}); ok {
+			var data map[interface{}]interface{}
+			if v, found := submap["config"]; found {
+				if config, ok := v.(map[interface{}]interface{}); ok {
+					data = config
+				} else {
+					return errors.New("invalid 'instrument/config' value")
+				}
+			}
+			if v, found := submap["name"]; found {
+				if name, ok := v.(string); ok {
+					i, err := NewInstrument(name, data)
+					if err != nil {
+						return errors.Wrap(err, "error creating instrument")
+					}
+					self.i = i
+ 				} else {
+ 					return errors.New("invalid 'instrument/name' value")
+				}
+			} else {
+				return errors.New("missing 'instrument/name'")
+			}
+			if self.i != nil {
+			}
+		} else {
+			return errors.New("invalid 'instrument' value")
+		}
+	}
 	return nil
 }
 

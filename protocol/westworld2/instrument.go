@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"github.com/pkg/errors"
 	"net"
 )
 
@@ -16,4 +17,20 @@ type Instrument interface {
 	duplicateRx(peer *net.UDPAddr, wm *wireMessage)
 	duplicateAck(peer *net.UDPAddr, ack int32)
 	allocate(ctx string)
+	configure(data map[interface{}]interface{}) error
+}
+
+func NewInstrument(name string, _ map[interface{}]interface{}) (i Instrument, err error) {
+	switch name {
+	case "logger":
+		return NewLoggerInstrument(), nil
+	case "nil":
+		return nil, nil
+	case "stats":
+		return NewStatsInstrument(), nil
+	case "trace":
+		return NewTraceInstrument(), nil
+	default:
+		return nil, errors.Errorf("unknown instrument '%s'", name)
+	}
 }

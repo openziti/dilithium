@@ -110,6 +110,10 @@ func (self *traceInstrument) allocate(ctx string) {
 	self.append(fmt.Sprintf("&& %-10d %-64s", time.Since(self.last).Milliseconds(), decode))
 }
 
+func (self *traceInstrument) configure(data map[interface{}]interface{}) error {
+	return nil
+}
+
 func (self *traceInstrument) mt(mt messageType) string {
 	switch mt {
 	case HELLO:

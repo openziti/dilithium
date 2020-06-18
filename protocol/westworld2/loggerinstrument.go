@@ -55,6 +55,10 @@ func (self *loggerInstrument) allocate(ctx string) {
 	logrus.WithField("context", ctx).Warn("allocate")
 }
 
+func (self *loggerInstrument) configure(data map[interface{}]interface{}) error {
+	return nil
+}
+
 func (self *loggerInstrument) symbol(mt messageType) rune {
 	switch mt {
 	case HELLO:
