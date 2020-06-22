@@ -122,8 +122,28 @@ func (self *txPortal) ack(sequence int32) {
 }
 
 func (self *txPortal) rtt(ts int64) {
-	rtt := time.Unix(0, ts)
-	logrus.Infof("rtt = [%d ms]", time.Since(rtt).Milliseconds())
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	logrus.Infof("ts in = [%d]", ts)
+	rttMs := int(time.Since(time.Unix(0, ts)).Milliseconds())
+	self.rttw = append(self.rttw, rttMs)
+	if len(self.rttw) > 8 {
+		self.rttw = self.rttw[1:]
+	}
+	i := 0
+	accum := 0
+	for ; i < len(self.rttw); i++ {
+		accum += self.rttw[i]
+	}
+	if i > 0 {
+		self.retxMs = accum / i
+		self.retxMs += int(float32(self.retxMs) * 0.1)
+	}
+	if self.retxMs < 5 {
+		self.retxMs = 5
+	}
+	logrus.Infof("smoothed retxMs = [%d]", self.retxMs)
 }
 
 func (self *txPortal) runMonitor() {
