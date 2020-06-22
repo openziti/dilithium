@@ -158,7 +158,7 @@ const (
 
 func (self messageFlag) string() string {
 	out := ""
-	if self | RTT == 1 {
+	if self|RTT == 1 {
 		out += " RTT"
 	}
 	return strings.TrimSpace(out)

@@ -105,8 +105,8 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 						return errors.Wrap(err, "error creating instrument")
 					}
 					self.i = i
- 				} else {
- 					return errors.New("invalid 'instrument/name' value")
+				} else {
+					return errors.New("invalid 'instrument/name' value")
 				}
 			} else {
 				return errors.New("missing 'instrument/name'")
