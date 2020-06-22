@@ -65,3 +65,11 @@ func makeData(sz int, variations int) (data []byte, szs []int16) {
 	}
 	return
 }
+
+func TestReadWriteInt64(t *testing.T) {
+	buf := make([]byte, 8)
+	now := time.Now().UnixNano()
+	WriteInt64(buf, now)
+	later := ReadInt64(buf)
+	assert.Equal(t, now, later)
+}
