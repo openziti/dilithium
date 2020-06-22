@@ -103,6 +103,20 @@ func (self *wireMessage) rewriteAck(seqFor int32) {
 	WriteInt32(self.buffer.data[5:9], self.ack)
 }
 
+func (self *wireMessage) writeRtt(ts int64) {
+	WriteInt64(self.buffer.data[11+len(self.data):11+len(self.data)+8], ts)
+	self.buffer.sz = uint16(11 + len(self.data) + 8)
+}
+
+func (self *wireMessage) readRtt() (ts int64, err error) {
+	dataLen := ReadUint16(self.buffer.data[9:11])
+	if 11+dataLen+8 > self.buffer.sz {
+		return 0, errors.Errorf("short buffer [%d > %d]", 11+dataLen+8, self.buffer.sz)
+	}
+	ts = ReadInt64(self.buffer.data[11+len(self.data) : 11+len(self.data)+8])
+	return ts, nil
+}
+
 func (self *wireMessage) encode() *wireMessage {
 	WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
