@@ -19,6 +19,9 @@ type txPortal struct {
 	capacity int
 	ready    *sync.Cond
 	monitor  *retxMonitor
+	lastRtt  time.Time
+	rttw     []int
+	retxMs   int
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	pool     *pool
@@ -43,6 +46,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal
 		tree:     btree.NewWith(config.treeLen, utils.Int32Comparator),
 		capacity: config.portalStartSz,
 		monitor:  &retxMonitor{},
+		retxMs:   config.retxTimeoutMs,
 		conn:     conn,
 		peer:     peer,
 		pool:     newPool("txPortal", config),
@@ -72,8 +76,23 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		self.capacity -= sz
 		self.addMonitor(wm)
 
-		if err = writeWireMessage(wm, self.conn, self.peer, self.config.i); err != nil {
-			return 0, errors.Wrap(err, "tx")
+		if time.Since(self.lastRtt).Milliseconds() > 1000 {
+			rttWm, err := wm.clone()
+			if err != nil {
+				return n, err
+			}
+			rttWm.writeRtt(time.Now().UnixNano())
+			if err = writeWireMessage(rttWm, self.conn, self.peer, self.config.i); err != nil {
+				rttWm.buffer.unref()
+				return 0, errors.Wrap(err, "rttTx")
+			}
+			rttWm.buffer.unref()
+			self.lastRtt = time.Now()
+
+		} else {
+			if err = writeWireMessage(wm, self.conn, self.peer, self.config.i); err != nil {
+				return 0, errors.Wrap(err, "tx")
+			}
 		}
 
 		n += sz
@@ -102,6 +121,11 @@ func (self *txPortal) ack(sequence int32) {
 	}
 }
 
+func (self *txPortal) rtt(ts int64) {
+	rtt := time.Unix(0, ts)
+	logrus.Infof("rtt = [%d ms]", time.Since(rtt).Milliseconds())
+}
+
 func (self *txPortal) runMonitor() {
 	logrus.Info("started")
 	defer logrus.Warn("exited")
@@ -128,7 +152,7 @@ func (self *txPortal) runMonitor() {
 			if err := writeWireMessage(self.monitor.head.wm, self.conn, self.peer, self.config.i); err != nil {
 				logrus.Errorf("retx (%v)", err)
 			}
-			self.monitor.head.deadline = time.Now().Add(time.Duration(self.config.retxTimeoutMs) * time.Millisecond)
+			self.monitor.head.deadline = time.Now().Add(time.Duration(self.retxMs) * time.Millisecond)
 			sort.Slice(self.monitor.waiting, func(i, j int) bool {
 				return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 			})
@@ -139,7 +163,7 @@ func (self *txPortal) runMonitor() {
 
 func (self *txPortal) addMonitor(wm *wireMessage) {
 	wm.buffer.ref()
-	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration(self.config.retxTimeoutMs) * time.Millisecond), wm})
+	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration(self.retxMs) * time.Millisecond), wm})
 	self.monitor.ready.Signal()
 }
 

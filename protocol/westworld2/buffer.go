@@ -29,3 +29,10 @@ func (self *buffer) unref() {
 		self.pool.put(self)
 	}
 }
+
+func (self *buffer) clone() *buffer {
+	clone := self.pool.get()
+	copy(clone.data, self.data)
+	clone.sz = self.sz
+	return clone
+}

@@ -55,6 +55,11 @@ func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i I
 	return nil
 }
 
+func (self *wireMessage) clone() (*wireMessage, error) {
+	clone := self.buffer.clone()
+	return decode(clone)
+}
+
 func newHello(seq int32, pool *pool) *wireMessage {
 	wm := &wireMessage{
 		seq:    seq,

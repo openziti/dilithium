@@ -83,6 +83,15 @@ func (self *rxPortal) run() {
 		}
 
 		ack := newAck(wm.seq, self.ackPool)
+		if wm.mf & RTT == 1 {
+			ts, err := wm.readRtt()
+			if err == nil {
+				ack.writeRtt(ts)
+				logrus.Infof("acking with rtt [%d]", ts)
+			} else {
+				logrus.Errorf("error reading rtt (%v)", err)
+			}
+		}
 		if err := writeWireMessage(ack, self.conn, self.peer, self.config.i); err != nil {
 			logrus.Errorf("error sending ack (%v)", err)
 		}
