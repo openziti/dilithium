@@ -14,13 +14,37 @@ func TestRewriteAck(t *testing.T) {
 
 	wm := newData(99, data, testPool)
 	assert.Equal(t, int32(-1), wm.ack)
-	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff}, wm.buffer.data[5:9])
+	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff}, wm.buffer.data[6:10])
 
 	wm.rewriteAck(8)
 	assert.Equal(t, int32(8), wm.ack)
-	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x08}, wm.buffer.data[5:9])
+	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x08}, wm.buffer.data[6:10])
 
 	wm.buffer.unref()
+}
+
+func TestReadWriteRtt(t *testing.T) {
+	tp := newPool("tp", nil)
+	data, _ := makeData(16*1024, 0)
+
+	wm := newData(101, data, tp)
+	assert.Equal(t, wm.data, data)
+
+	rtt := time.Now().UnixNano()
+	wm.writeRtt(rtt)
+	assert.Equal(t, RTT, wm.mf)
+
+	wm2, err := decode(wm.buffer)
+	assert.Nil(t, err)
+	assert.Equal(t, wm.seq, wm2.seq)
+	assert.Equal(t, wm.mt, wm2.mt)
+	assert.Equal(t, wm.mf, wm2.mf)
+	assert.Equal(t, wm.ack, wm2.ack)
+	assert.Equal(t, wm.data, wm2.data)
+
+	rtt2, err := wm2.readRtt()
+	assert.Nil(t, err)
+	assert.Equal(t, rtt, rtt2)
 }
 
 func TestMillionsOfMessages(t *testing.T) {
@@ -40,6 +64,7 @@ func TestMillionsOfMessages(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, int32(i), wmout.seq)
 		assert.Equal(t, DATA, wmout.mt)
+		assert.Equal(t, messageFlag(0), wmout.mf)
 		assert.Equal(t, int32(-1), wmout.ack)
 		assert.Equal(t, sz, int16(len(wmout.data)))
 		assert.Equal(t, data[:sz], wmout.data)

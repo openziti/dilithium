@@ -38,7 +38,7 @@ func readWireMessage(conn *net.UDPConn, pool *pool, i Instrument) (wm *wireMessa
 }
 
 func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i Instrument) error {
-	if wm.buffer.sz < 11 {
+	if wm.buffer.sz < headerSz {
 		logrus.Fatalf("truncated buffer!")
 	}
 
@@ -77,12 +77,12 @@ func newHelloAck(seq, ack int32, pool *pool) *wireMessage {
 
 func newData(seq int32, data []byte, pool *pool) *wireMessage {
 	buffer := pool.get()
-	n := copy(buffer.data[11:], data)
+	n := copy(buffer.data[headerSz:], data)
 	wm := &wireMessage{
 		seq:    seq,
 		mt:     DATA,
 		ack:    -1,
-		data:   buffer.data[11 : 11+n],
+		data:   buffer.data[headerSz : headerSz+n],
 		buffer: buffer,
 	}
 	return wm.encode()
@@ -100,42 +100,46 @@ func newAck(seqFor int32, pool *pool) *wireMessage {
 
 func (self *wireMessage) rewriteAck(seqFor int32) {
 	self.ack = seqFor
-	WriteInt32(self.buffer.data[5:9], self.ack)
+	WriteInt32(self.buffer.data[6:10], self.ack)
 }
 
 func (self *wireMessage) writeRtt(ts int64) {
-	WriteInt64(self.buffer.data[11+len(self.data):11+len(self.data)+8], ts)
-	self.buffer.sz = uint16(11 + len(self.data) + 8)
+	WriteInt64(self.buffer.data[headerSz+len(self.data):headerSz+len(self.data)+8], ts)
+	self.buffer.sz = uint16(headerSz + len(self.data) + 8)
+	self.mf |= RTT
+	self.buffer.data[5] = byte(self.mf)
 }
 
 func (self *wireMessage) readRtt() (ts int64, err error) {
-	dataLen := ReadUint16(self.buffer.data[9:11])
+	dataLen := ReadUint16(self.buffer.data[10:headerSz])
 	if 11+dataLen+8 > self.buffer.sz {
 		return 0, errors.Errorf("short buffer [%d > %d]", 11+dataLen+8, self.buffer.sz)
 	}
-	ts = ReadInt64(self.buffer.data[11+len(self.data) : 11+len(self.data)+8])
+	ts = ReadInt64(self.buffer.data[headerSz+len(self.data) : headerSz+len(self.data)+8])
 	return ts, nil
 }
 
 func (self *wireMessage) encode() *wireMessage {
 	WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
-	WriteInt32(self.buffer.data[5:9], self.ack)
-	WriteUint16(self.buffer.data[9:11], uint16(len(self.data)))
-	self.buffer.sz = uint16(11 + len(self.data))
+	self.buffer.data[5] = byte(self.mf)
+	WriteInt32(self.buffer.data[6:10], self.ack)
+	WriteUint16(self.buffer.data[10:headerSz], uint16(len(self.data)))
+	self.buffer.sz = uint16(headerSz + len(self.data))
 	return self
 }
 
 func decode(buffer *buffer) (*wireMessage, error) {
-	dataLen := ReadUint16(buffer.data[9:11])
+	dataLen := ReadUint16(buffer.data[10:headerSz])
 	if 11+dataLen > buffer.sz {
 		return nil, errors.Errorf("short buffer [%d != %d]", 11+dataLen, buffer.sz)
 	}
 	wm := &wireMessage{
 		seq:    ReadInt32(buffer.data[0:4]),
 		mt:     messageType(buffer.data[4]),
-		ack:    ReadInt32(buffer.data[5:9]),
-		data:   buffer.data[11 : 11+dataLen],
+		mf:     messageFlag(buffer.data[5]),
+		ack:    ReadInt32(buffer.data[6:10]),
+		data:   buffer.data[headerSz : headerSz+dataLen],
 		buffer: buffer,
 	}
 	return wm, nil
@@ -226,3 +230,7 @@ func WriteUint16(buf []byte, v uint16) {
 	buf[0] = byte(v >> 8)
 	buf[1] = byte(v)
 }
+
+const (
+	headerSz = 12
+)
