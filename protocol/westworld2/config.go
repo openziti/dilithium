@@ -10,7 +10,8 @@ type Config struct {
 	poolBufferSz   int
 	portalStartSz  int
 	maxSegmentSz   int
-	retxTimeoutMs  int
+	startRetxMs    int
+	rttRetxOverMs  int
 	treeLen        int
 	readsQLen      int
 	listenerRxQLen int
@@ -23,7 +24,8 @@ func NewDefaultConfig() *Config {
 		poolBufferSz:   64 * 1024,
 		portalStartSz:  3 * 1024,
 		maxSegmentSz:   1500,
-		retxTimeoutMs:  100,
+		startRetxMs:    100,
+		rttRetxOverMs:  10,
 		treeLen:        1024,
 		readsQLen:      1024,
 		listenerRxQLen: 1024,
@@ -53,11 +55,18 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'max_segment_sz' value")
 		}
 	}
-	if v, found := data["retx_timeout_ms"]; found {
+	if v, found := data["start_retx_ms"]; found {
 		if i, ok := v.(int); ok {
-			self.retxTimeoutMs = i
+			self.startRetxMs = i
 		} else {
-			return errors.New("invalid 'retx_timeout_ms' value")
+			return errors.New("invalid 'start_retx_ms' value")
+		}
+	}
+	if v, found := data["rtt_retx_over_ms"]; found {
+		if i, ok := v.(int); ok {
+			self.rttRetxOverMs = i
+		} else {
+			return errors.New("invalid 'rtt_retx_over_ms' value")
 		}
 	}
 	if v, found := data["tree_len"]; found {
@@ -125,7 +134,8 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-20s %d\n", "pool_buffer_sz", self.poolBufferSz)
 	out += fmt.Sprintf("\t%-20s %d\n", "portal_start_sz", self.portalStartSz)
 	out += fmt.Sprintf("\t%-20s %d\n", "max_segment_sz", self.maxSegmentSz)
-	out += fmt.Sprintf("\t%-20s %d\n", "retx_timeout_ms", self.retxTimeoutMs)
+	out += fmt.Sprintf("\t%-20s %d\n", "start_retx_ms", self.startRetxMs)
+	out += fmt.Sprintf("\t%-20s %d\n", "rtt_retx_over_ms", self.rttRetxOverMs)
 	out += fmt.Sprintf("\t%-20s %d\n", "tree_len", self.treeLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "reads_q_len", self.readsQLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "listener_rx_q_len", self.listenerRxQLen)
