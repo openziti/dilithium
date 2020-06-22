@@ -40,7 +40,7 @@ func (self *loggerInstrument) connectError(peer *net.UDPAddr, err error) {
 }
 
 func (self *loggerInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
-	logrus.Errorf("unexpected message type [%s], peer [%s]", mtString(mt), peer)
+	logrus.Errorf("unexpected message type [%s], peer [%s]", mt.string(), peer)
 }
 
 func (self *loggerInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {

@@ -4,11 +4,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
+	"strings"
 )
 
 type wireMessage struct {
 	seq    int32
 	mt     messageType
+	mf     messageFlag
 	ack    int32
 	data   []byte
 	buffer *buffer
@@ -134,18 +136,32 @@ const (
 	CLOSE
 )
 
-func mtString(mt messageType) string {
-	if mt == HELLO {
+func (self messageType) string() string {
+	if self == HELLO {
 		return "HELLO"
-	} else if mt == ACK {
+	} else if self == ACK {
 		return "ACK"
-	} else if mt == DATA {
+	} else if self == DATA {
 		return "DATA"
-	} else if mt == CLOSE {
+	} else if self == CLOSE {
 		return "CLOSE"
 	} else {
 		return "UNKNOWN"
 	}
+}
+
+type messageFlag uint8
+
+const (
+	RTT messageFlag = 1
+)
+
+func (self messageFlag) string() string {
+	out := ""
+	if self | RTT == 1 {
+		out += " RTT"
+	}
+	return strings.TrimSpace(out)
 }
 
 func ReadInt32(buf []byte) (v int32) {
