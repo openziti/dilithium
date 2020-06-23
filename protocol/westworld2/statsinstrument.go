@@ -18,6 +18,9 @@ type statsInstrument struct {
 	txBytes        int64
 	retxMessages   int32
 	retxBytes      int64
+	retxLowMs      int32
+	retxCurrMs     int32
+	retxHighMs     int32
 	unknownPeers   int32
 	readErrors     int32
 	unexpectedMt   int32
@@ -25,7 +28,11 @@ type statsInstrument struct {
 }
 
 func NewStatsInstrument() Instrument {
-	si := &statsInstrument{}
+	si := &statsInstrument{
+		retxLowMs:  -1,
+		retxCurrMs: -1,
+		retxHighMs: -1,
+	}
 	go si.dumper()
 	return si
 }
@@ -72,6 +79,22 @@ func (self *statsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
 	atomic.AddInt32(&self.rxDupeAcks, 1)
 }
 
+func (self *statsInstrument) newRextMs(_ *net.UDPAddr, retxMs int) {
+	if !atomic.CompareAndSwapInt32(&self.retxLowMs, int32(-1), int32(retxMs)) {
+		old := atomic.LoadInt32(&self.retxLowMs)
+		if old > int32(retxMs) {
+			atomic.CompareAndSwapInt32(&self.retxLowMs, old, int32(retxMs))
+		}
+	}
+	atomic.StoreInt32(&self.retxCurrMs, int32(retxMs))
+	if !atomic.CompareAndSwapInt32(&self.retxHighMs, int32(-1), int32(retxMs)) {
+		old := atomic.LoadInt32(&self.retxHighMs)
+		if old < int32(retxMs) {
+			atomic.CompareAndSwapInt32(&self.retxHighMs, old, int32(retxMs))
+		}
+	}
+}
+
 func (self *statsInstrument) allocate(_ string) {
 	atomic.AddInt32(&self.allocations, 1)
 }
@@ -93,6 +116,9 @@ func (self *statsInstrument) dumper() {
 		out += fmt.Sprintf("\t%-20s %d\n", "txBytes", self.txBytes)
 		out += fmt.Sprintf("\t%-20s %d\n", "retxMessages", self.retxMessages)
 		out += fmt.Sprintf("\t%-20s %d\n", "retxBytes", self.retxBytes)
+		out += fmt.Sprintf("\t%-20s %d\n", "retxLowMs", self.retxLowMs)
+		out += fmt.Sprintf("\t%-20s %d\n", "retxCurrMs", self.retxCurrMs)
+		out += fmt.Sprintf("\t%-20s %d\n", "retxHighMs", self.retxHighMs)
 		out += fmt.Sprintf("\t%-20s %d\n", "unknownPeers", self.unknownPeers)
 		out += fmt.Sprintf("\t%-20s %d\n", "readErrors", self.readErrors)
 		out += fmt.Sprintf("\t%-20s %d\n", "unexpectedMt", self.unexpectedMt)

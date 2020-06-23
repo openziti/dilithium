@@ -51,6 +51,10 @@ func (self *loggerInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
 	logrus.Warnf("~ <- [@%d] <- [%s]", ack, peer)
 }
 
+func (self *loggerInstrument) newRextMs(peer *net.UDPAddr, rextMs int) {
+	logrus.Infof("!+[%d ms]  <- [%s]", rextMs, peer)
+}
+
 func (self *loggerInstrument) allocate(ctx string) {
 	logrus.WithField("context", ctx).Warn("allocate")
 }

@@ -16,6 +16,7 @@ type Instrument interface {
 	unexpectedMessageType(peer *net.UDPAddr, mt messageType)
 	duplicateRx(peer *net.UDPAddr, wm *wireMessage)
 	duplicateAck(peer *net.UDPAddr, ack int32)
+	newRextMs(peer *net.UDPAddr, rextMs int)
 	allocate(ctx string)
 	configure(data map[interface{}]interface{}) error
 }

@@ -141,7 +141,10 @@ func (self *txPortal) rtt(ts int64) {
 	if self.retxMs < 5 {
 		self.retxMs = 5
 	}
-	logrus.Infof("smoothed retxMs = [%d]", self.retxMs)
+
+	if self.config.i != nil {
+		self.config.i.newRextMs(self.peer, self.retxMs)
+	}
 }
 
 func (self *txPortal) runMonitor() {
