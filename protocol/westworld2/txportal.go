@@ -125,7 +125,6 @@ func (self *txPortal) rtt(ts int64) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	logrus.Infof("ts in = [%d]", ts)
 	rttMs := int(time.Since(time.Unix(0, ts)).Milliseconds())
 	self.rttw = append(self.rttw, rttMs)
 	if len(self.rttw) > 8 {

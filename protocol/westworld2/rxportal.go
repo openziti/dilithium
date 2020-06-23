@@ -87,7 +87,6 @@ func (self *rxPortal) run() {
 			ts, err := wm.readRtt()
 			if err == nil {
 				ack.writeRtt(ts)
-				logrus.Infof("acking with rtt [%d]", ts)
 			} else {
 				logrus.Errorf("error reading rtt (%v)", err)
 			}
