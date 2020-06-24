@@ -111,10 +111,13 @@ func (self *txPortal) ack(sequence int32) {
 		self.cancelMonitor(wm)
 		self.tree.Remove(sequence)
 		self.capacity += len(wm.data)
+		self.capacity += self.config.increaseSz
 		wm.buffer.unref()
 		self.ready.Signal()
 
 	} else {
+		self.capacity = int(float64(self.capacity) * self.config.throttleFraction)
+
 		if self.config.i != nil {
 			self.config.i.duplicateAck(self.peer, sequence)
 		}
