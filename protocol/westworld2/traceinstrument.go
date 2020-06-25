@@ -69,6 +69,9 @@ func (self *traceInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
+func (self *traceInstrument) portalCapacitySz(_ *net.UDPAddr, _ int) {
+}
+
 func (self *traceInstrument) unknownPeer(peer *net.UDPAddr) {
 	logrus.Errorf("unknown peer [%s]", peer)
 }

@@ -27,6 +27,9 @@ func (self *loggerInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage
 	logrus.Warnf("!> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
+func (self *loggerInstrument) portalCapacitySz(_ *net.UDPAddr, _ int) {
+}
+
 func (self *loggerInstrument) unknownPeer(peer *net.UDPAddr) {
 	logrus.Errorf("unknown peer [%s]", peer)
 }

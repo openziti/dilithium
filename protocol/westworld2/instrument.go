@@ -10,6 +10,7 @@ type Instrument interface {
 	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
+	portalCapacitySz(peer *net.UDPAddr, capacity int)
 	unknownPeer(peer *net.UDPAddr)
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)

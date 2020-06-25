@@ -9,6 +9,7 @@ import (
 )
 
 type statsInstrument struct {
+	capacity       int32
 	rxMessages     int32
 	rxBytes        int64
 	rxDupeMessages int32
@@ -53,6 +54,10 @@ func (self *statsInstrument) wireMessageTx(_ *net.UDPAddr, wm *wireMessage) {
 func (self *statsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.retxMessages, 1)
 	atomic.AddInt64(&self.retxBytes, int64(len(wm.data)))
+}
+
+func (self *statsInstrument) portalCapacitySz(_ *net.UDPAddr, capacity int) {
+	atomic.StoreInt32(&self.capacity, int32(capacity))
 }
 
 func (self *statsInstrument) unknownPeer(_ *net.UDPAddr) {
@@ -107,6 +112,7 @@ func (self *statsInstrument) dumper() {
 	for {
 		time.Sleep(5 * time.Second)
 		out := "stats{\n"
+		out += fmt.Sprintf("\t%-20s %d\n", "capacity", self.capacity)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxMessages", self.rxMessages)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxBytes", self.rxBytes)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeMessages", self.rxDupeMessages)
