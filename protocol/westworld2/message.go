@@ -80,19 +80,6 @@ func newHelloAck(seq, ack int32, pool *pool) *wireMessage {
 	return wm.encode()
 }
 
-func newData(seq int32, data []byte, pool *pool) *wireMessage {
-	buffer := pool.get()
-	n := copy(buffer.data[headerSz:], data)
-	wm := &wireMessage{
-		seq:    seq,
-		mt:     DATA,
-		ack:    -1,
-		data:   buffer.data[headerSz : headerSz+n],
-		buffer: buffer,
-	}
-	return wm.encode()
-}
-
 func newAck(seqFor int32, pool *pool) *wireMessage {
 	wm := &wireMessage{
 		seq:    -1,
@@ -106,6 +93,29 @@ func newAck(seqFor int32, pool *pool) *wireMessage {
 func (self *wireMessage) rewriteAck(seqFor int32) {
 	self.ack = seqFor
 	WriteInt32(self.buffer.data[6:10], self.ack)
+}
+
+func newData(seq int32, data []byte, pool *pool) *wireMessage {
+	buffer := pool.get()
+	n := copy(buffer.data[headerSz:], data)
+	wm := &wireMessage{
+		seq:    seq,
+		mt:     DATA,
+		ack:    -1,
+		data:   buffer.data[headerSz : headerSz+n],
+		buffer: buffer,
+	}
+	return wm.encode()
+}
+
+func newClose(seq int32, pool *pool) *wireMessage {
+	wm := &wireMessage{
+		seq:    seq,
+		mt:     CLOSE,
+		ack:    -1,
+		buffer: pool.get(),
+	}
+	return wm.encode()
 }
 
 func (self *wireMessage) writeRtt(ts int64) {
