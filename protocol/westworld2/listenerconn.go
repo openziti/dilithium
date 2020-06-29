@@ -42,7 +42,8 @@ func (self *listenerConn) Write(p []byte) (int, error) {
 }
 
 func (self *listenerConn) Close() error {
-	return nil
+	logrus.Warnf("close requested")
+	return self.txPortal.close(self.seq)
 }
 
 func (self *listenerConn) RemoteAddr() net.Addr {
@@ -79,7 +80,7 @@ func (self *listenerConn) rxer() {
 			return
 		}
 
-		if wm.mt == DATA {
+		if wm.mt == DATA || wm.mt == CLOSE {
 			if wm.ack != -1 {
 				self.txPortal.ack(wm.ack)
 			}

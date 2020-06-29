@@ -3,8 +3,8 @@ package westworld2
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io"
 	"net"
 	"sync"
 )
@@ -12,6 +12,7 @@ import (
 type rxPortal struct {
 	tree     *btree.Tree
 	accepted int32
+	closed   bool
 	rxs      chan *wireMessage
 	reads    chan *rxRead
 	readPool *sync.Pool
@@ -24,6 +25,7 @@ type rxPortal struct {
 type rxRead struct {
 	buf []byte
 	sz  int
+	eof bool
 }
 
 func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *rxPortal {
@@ -48,11 +50,16 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *rxPortal
 func (self *rxPortal) read(p []byte) (int, error) {
 	read, ok := <-self.reads
 	if !ok {
-		return 0, errors.New("closed")
+		return 0, io.EOF
 	}
-	n := copy(p, read.buf[:read.sz])
-	self.readPool.Put(read.buf)
-	return n, nil
+	if !read.eof {
+		n := copy(p, read.buf[:read.sz])
+		self.readPool.Put(read.buf)
+		return n, nil
+	} else {
+		logrus.Infof("close notified")
+		return 0, io.EOF
+	}
 }
 
 func (self *rxPortal) rx(wm *wireMessage) {
@@ -83,7 +90,7 @@ func (self *rxPortal) run() {
 		}
 
 		ack := newAck(wm.seq, self.ackPool)
-		if wm.mf & RTT == 1 {
+		if wm.mf&RTT == 1 {
 			ts, err := wm.readRtt()
 			if err == nil {
 				ack.writeRtt(ts)
@@ -104,7 +111,7 @@ func (self *rxPortal) run() {
 					wm := v.(*wireMessage)
 					buf := self.readPool.Get().([]byte)
 					n := copy(buf, wm.data)
-					self.reads <- &rxRead{buf, n}
+					self.reads <- &rxRead{buf, n, false}
 
 					self.tree.Remove(key)
 					wm.buffer.unref()
@@ -112,6 +119,10 @@ func (self *rxPortal) run() {
 					next++
 				}
 			}
+		}
+
+		if wm.mt == CLOSE {
+			self.reads <- &rxRead{nil, 0, true}
 		}
 	}
 }

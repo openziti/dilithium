@@ -40,7 +40,8 @@ func (self *dialerConn) Write(p []byte) (int, error) {
 }
 
 func (self *dialerConn) Close() error {
-	return nil
+	logrus.Infof("close requested")
+	return self.txPortal.close(self.seq)
 }
 
 func (self *dialerConn) RemoteAddr() net.Addr {
@@ -76,7 +77,7 @@ func (self *dialerConn) rxer() {
 			continue
 		}
 
-		if wm.mt == DATA {
+		if wm.mt == DATA || wm.mt == CLOSE {
 			if wm.ack != -1 {
 				self.txPortal.ack(wm.ack)
 			}
