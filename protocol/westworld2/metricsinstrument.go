@@ -21,7 +21,7 @@ type metricsInstrument struct {
 	txPortalSz       []*sample
 	duplicateRxBytes []*sample
 	duplicateAcks    []*sample
-	rextMs           []*sample
+	retxMs           []*sample
 	allocations      []*sample
 }
 
@@ -48,9 +48,14 @@ func (self *metricsInstrument) closed(_ *net.UDPAddr) {
 		outPath, err := ioutil.TempDir(self.prefix, "")
 		if err == nil {
 			logrus.Infof("writing metrics to prefix [%s]", outPath)
+			if err := self.writeSamples("retxBytes", outPath, self.retxBytes); err != nil {
+				logrus.Errorf("error writing retxBytes (%v)", err)
+			}
 			if err := self.writeSamples("txPortalSz", outPath, self.txPortalSz); err != nil {
 				logrus.Errorf("error writing txPortalSz (%v)", err)
-				return
+			}
+			if err := self.writeSamples("retxMs", outPath, self.retxMs); err != nil {
+				logrus.Errorf("error writing retxMs (%v)", err)
 			}
 		} else {
 			logrus.Errorf("error writing metrics (%v)", err)
@@ -110,7 +115,7 @@ func (self *metricsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
 
 func (self *metricsInstrument) newRextMs(_ *net.UDPAddr, rextMs int) {
 	self.lock.Lock()
-	self.rextMs = append(self.rextMs, &sample{time.Now(), int64(rextMs)})
+	self.retxMs = append(self.retxMs, &sample{time.Now(), int64(rextMs)})
 	self.lock.Unlock()
 }
 
@@ -137,8 +142,10 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 	for _, sample := range samples {
 		out += fmt.Sprintf("%s,%d\n", sample.ts, sample.v)
 	}
-	if err := ioutil.WriteFile(filepath.Join(outPath, fmt.Sprintf("%s.csv", name)), []byte(out), os.ModePerm); err != nil {
+	path := filepath.Join(outPath, fmt.Sprintf("%s.csv", name))
+	if err := ioutil.WriteFile(path, []byte(out), os.ModePerm); err != nil {
 		return errors.Wrap(err, "write metrics")
 	}
+	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
 	return nil
 }
