@@ -48,14 +48,29 @@ func (self *metricsInstrument) closed(_ *net.UDPAddr) {
 		outPath, err := ioutil.TempDir(self.prefix, "")
 		if err == nil {
 			logrus.Infof("writing metrics to prefix [%s]", outPath)
+			if err := self.writeSamples("txBytes", outPath, self.txBytes); err != nil {
+				logrus.Errorf("error writing txBytes (%v)", err)
+			}
 			if err := self.writeSamples("retxBytes", outPath, self.retxBytes); err != nil {
 				logrus.Errorf("error writing retxBytes (%v)", err)
+			}
+			if err := self.writeSamples("rxBytes", outPath, self.rxBytes); err != nil {
+				logrus.Errorf("error writing rxBytes (%v)", err)
 			}
 			if err := self.writeSamples("txPortalSz", outPath, self.txPortalSz); err != nil {
 				logrus.Errorf("error writing txPortalSz (%v)", err)
 			}
+			if err := self.writeSamples("duplicateRxBytes", outPath, self.duplicateRxBytes); err != nil {
+				logrus.Errorf("error writing duplicateRxBytes (%v)", err)
+			}
+			if err := self.writeSamples("duplicateAcks", outPath, self.duplicateAcks); err != nil {
+				logrus.Errorf("error writing duplicateAcks (%v)", err)
+			}
 			if err := self.writeSamples("retxMs", outPath, self.retxMs); err != nil {
 				logrus.Errorf("error writing retxMs (%v)", err)
+			}
+			if err := self.writeSamples("allocations", outPath, self.allocations); err != nil {
+				logrus.Errorf("error writing allocations (%v)", err)
 			}
 		} else {
 			logrus.Errorf("error writing metrics (%v)", err)
