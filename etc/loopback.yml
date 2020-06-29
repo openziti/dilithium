@@ -8,4 +8,5 @@ portal_start_sz:      73728
 max_segment_sz:       65536
 
 instrument:
-  name:               trace
+  name:               metrics
+  prefix:             /tmp/westworld2

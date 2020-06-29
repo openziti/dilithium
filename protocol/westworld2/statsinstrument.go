@@ -28,7 +28,7 @@ type statsInstrument struct {
 	allocations    int32
 }
 
-func NewStatsInstrument() Instrument {
+func newStatsInstrument() Instrument {
 	si := &statsInstrument{
 		retxLowMs:  -1,
 		retxCurrMs: -1,
@@ -105,10 +105,6 @@ func (self *statsInstrument) newRextMs(_ *net.UDPAddr, retxMs int) {
 
 func (self *statsInstrument) allocate(_ string) {
 	atomic.AddInt32(&self.allocations, 1)
-}
-
-func (self *statsInstrument) configure(data map[interface{}]interface{}) error {
-	return nil
 }
 
 func (self *statsInstrument) dumper() {

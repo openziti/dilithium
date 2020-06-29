@@ -7,7 +7,7 @@ import (
 
 type loggerInstrument struct{}
 
-func NewLoggerInstrument() Instrument {
+func newLoggerInstrument() Instrument {
 	return &loggerInstrument{}
 }
 
@@ -64,10 +64,6 @@ func (self *loggerInstrument) newRextMs(peer *net.UDPAddr, rextMs int) {
 
 func (self *loggerInstrument) allocate(ctx string) {
 	logrus.WithField("context", ctx).Warn("allocate")
-}
-
-func (self *loggerInstrument) configure(data map[interface{}]interface{}) error {
-	return nil
 }
 
 func (self *loggerInstrument) symbol(mt messageType) rune {

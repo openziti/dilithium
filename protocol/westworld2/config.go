@@ -117,17 +117,9 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 	}
 	if v, found := data["instrument"]; found {
 		if submap, ok := v.(map[string]interface{}); ok {
-			var data map[interface{}]interface{}
-			if v, found := submap["config"]; found {
-				if config, ok := v.(map[interface{}]interface{}); ok {
-					data = config
-				} else {
-					return errors.New("invalid 'instrument/config' value")
-				}
-			}
 			if v, found := submap["name"]; found {
 				if name, ok := v.(string); ok {
-					i, err := NewInstrument(name, data)
+					i, err := NewInstrument(name, submap)
 					if err != nil {
 						return errors.Wrap(err, "error creating instrument")
 					}
@@ -137,8 +129,6 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 				}
 			} else {
 				return errors.New("missing 'instrument/name'")
-			}
-			if self.i != nil {
 			}
 		} else {
 			return errors.Errorf("invalid 'instrument' value [%v]", reflect.TypeOf(v))

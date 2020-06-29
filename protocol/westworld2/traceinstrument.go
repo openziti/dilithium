@@ -14,7 +14,7 @@ type traceInstrument struct {
 	buffer []string
 }
 
-func NewTraceInstrument() Instrument {
+func newTraceInstrument() Instrument {
 	ti := &traceInstrument{
 		lock: new(sync.Mutex),
 		last: time.Now(),
@@ -118,10 +118,6 @@ func (self *traceInstrument) newRextMs(_ *net.UDPAddr, _ int) {
 func (self *traceInstrument) allocate(ctx string) {
 	decode := fmt.Sprintf("%-12s %s", "ALLOCATE", ctx)
 	self.append(fmt.Sprintf("&& %-10d %-64s", time.Since(self.last).Milliseconds(), decode))
-}
-
-func (self *traceInstrument) configure(data map[interface{}]interface{}) error {
-	return nil
 }
 
 func (self *traceInstrument) mt(mt messageType) string {

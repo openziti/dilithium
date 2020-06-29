@@ -20,19 +20,20 @@ type Instrument interface {
 	duplicateAck(peer *net.UDPAddr, ack int32)
 	newRextMs(peer *net.UDPAddr, rextMs int)
 	allocate(ctx string)
-	configure(data map[interface{}]interface{}) error
 }
 
-func NewInstrument(name string, _ map[interface{}]interface{}) (i Instrument, err error) {
+func NewInstrument(name string, config map[string]interface{}) (i Instrument, err error) {
 	switch name {
 	case "logger":
-		return NewLoggerInstrument(), nil
+		return newLoggerInstrument(), nil
+	case "metrics":
+		return newMetricsInstrument(config)
 	case "nil":
 		return nil, nil
 	case "stats":
-		return NewStatsInstrument(), nil
+		return newStatsInstrument(), nil
 	case "trace":
-		return NewTraceInstrument(), nil
+		return newTraceInstrument(), nil
 	default:
 		return nil, errors.Errorf("unknown instrument '%s'", name)
 	}
