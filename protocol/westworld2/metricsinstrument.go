@@ -135,7 +135,7 @@ func (self *metricsInstrument) configure(data map[string]interface{}) error {
 func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sample) error {
 	out := fmt.Sprintf("ts,%s\n", name)
 	for _, sample := range samples {
-		out += fmt.Sprintf("%d,%d\n", sample.ts.UnixNano(), sample.v)
+		out += fmt.Sprintf("%s,%d\n", sample.ts, sample.v)
 	}
 	if err := ioutil.WriteFile(filepath.Join(outPath, fmt.Sprintf("%s.csv", name)), []byte(out), os.ModePerm); err != nil {
 		return errors.Wrap(err, "write metrics")
