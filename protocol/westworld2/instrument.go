@@ -7,6 +7,7 @@ import (
 
 type Instrument interface {
 	connected(peer *net.UDPAddr)
+	closed(peer *net.UDPAddr)
 	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)

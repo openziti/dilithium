@@ -27,6 +27,10 @@ func (self *traceInstrument) connected(peer *net.UDPAddr) {
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CONNECTED", peer))
 }
 
+func (self *traceInstrument) closed(peer *net.UDPAddr) {
+	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CLOSED", peer))
+}
+
 func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	decode := fmt.Sprintf("%-12s", "RX "+self.mt(wm.mt))
 	if wm.seq != -1 {

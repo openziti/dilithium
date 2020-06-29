@@ -15,6 +15,10 @@ func (self *loggerInstrument) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }
 
+func (self *loggerInstrument) closed(peer *net.UDPAddr) {
+	logrus.Infof("closed, peer [%s]", peer)
+}
+
 func (self *loggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	logrus.Infof("<- [%c/#%d/@%d/:%d] <- [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }

@@ -195,6 +195,9 @@ func (self *txPortal) runMonitor() {
 		self.lock.Lock()
 		{
 			if self.closed {
+				if self.config.i != nil {
+					self.config.i.closed(self.peer)
+				}
 				return
 			}
 

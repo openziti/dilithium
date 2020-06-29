@@ -41,6 +41,9 @@ func NewStatsInstrument() Instrument {
 func (self *statsInstrument) connected(_ *net.UDPAddr) {
 }
 
+func (self *statsInstrument) closed(_ *net.UDPAddr) {
+}
+
 func (self *statsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.rxMessages, 1)
 	atomic.AddInt64(&self.rxBytes, int64(len(wm.data)))
