@@ -41,6 +41,15 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 }
 
 func (self *metricsInstrument) connected(_ *net.UDPAddr) {
+	self.txBytes = nil
+	self.retxBytes = nil
+	self.rxBytes = nil
+	self.txPortalSz = nil
+	self.duplicateRxBytes = nil
+	self.duplicateAcks = nil
+	self.retxMs = nil
+	self.allocations = nil
+	logrus.Infof("new connection, metrics collection reset")
 }
 
 func (self *metricsInstrument) closed(_ *net.UDPAddr) {
