@@ -114,13 +114,15 @@ func (self *txPortal) close(seq *util.Sequence) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	wm := newClose(seq.Next(), self.pool)
-	self.closeWait = wm.seq
-	self.tree.Put(wm.seq, wm)
-	self.addMonitor(wm)
+	if !self.closed {
+		wm := newClose(seq.Next(), self.pool)
+		self.closeWait = wm.seq
+		self.tree.Put(wm.seq, wm)
+		self.addMonitor(wm)
 
-	if err := writeWireMessage(wm, self.conn, self.peer, self.config.i); err != nil {
-		return errors.Wrap(err, "tx close")
+		if err := writeWireMessage(wm, self.conn, self.peer, self.config.i); err != nil {
+			return errors.Wrap(err, "tx close")
+		}
 	}
 
 	return nil

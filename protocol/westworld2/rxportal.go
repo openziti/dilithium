@@ -3,6 +3,7 @@ package westworld2
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
@@ -19,6 +20,8 @@ type rxPortal struct {
 	ackPool  *pool
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
+	txPortal *txPortal
+	seq      *util.Sequence
 	config   *Config
 }
 
@@ -28,7 +31,7 @@ type rxRead struct {
 	eof bool
 }
 
-func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, config *Config) *rxPortal {
 	rxp := &rxPortal{
 		tree:     btree.NewWith(config.treeLen, utils.Int32Comparator),
 		accepted: -1,
@@ -38,6 +41,8 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *rxPortal
 		ackPool:  newPool("ackPool", config),
 		conn:     conn,
 		peer:     peer,
+		txPortal: txPortal,
+		seq:      seq,
 		config:   config,
 	}
 	rxp.readPool.New = func() interface{} {
@@ -58,6 +63,7 @@ func (self *rxPortal) read(p []byte) (int, error) {
 		return n, nil
 	} else {
 		logrus.Infof("close notified")
+		close(self.reads)
 		return 0, io.EOF
 	}
 }
@@ -121,8 +127,10 @@ func (self *rxPortal) run() {
 			}
 		}
 
-		if wm.mt == CLOSE {
+		if wm.mt == CLOSE && !self.closed {
+			self.txPortal.close(self.seq)
 			self.reads <- &rxRead{nil, 0, true}
+			self.closed = true
 		}
 	}
 }

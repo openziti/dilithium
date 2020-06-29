@@ -27,7 +27,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *dialer
 		config: config,
 	}
 	dc.txPortal = newTxPortal(conn, peer, config)
-	dc.rxPortal = newRxPortal(conn, peer, config)
+	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, config)
 	return dc
 }
 

@@ -29,7 +29,7 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *list
 		config:  config,
 	}
 	lc.txPortal = newTxPortal(conn, peer, config)
-	lc.rxPortal = newRxPortal(conn, peer, config)
+	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, config)
 	return lc
 }
 
