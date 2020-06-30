@@ -3,7 +3,6 @@ package influx
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
@@ -45,7 +44,7 @@ func influx(_ *cobra.Command, args []string) {
 		authToken = fmt.Sprintf("%s:%s", influxDbUsername, influxDbPassword)
 	}
 	client := influxdb2.NewClient(influxDbUrl, authToken)
-	writeApi := client.WriteApiBlocking("", influxDbDatabase)
+	writeApi := client.WriteApi("", influxDbDatabase)
 	for _, dataset := range datasets {
 		peer0Data, err := readDataset(filepath.Join(peer0Root, fmt.Sprintf("%s.csv", dataset)))
 		if err != nil {
@@ -55,30 +54,27 @@ func influx(_ *cobra.Command, args []string) {
 		if err != nil {
 			logrus.Fatalf("error reading peer 1 dataset [%s] (%v)", dataset, err)
 		}
+		logrus.Infof("dataset [%s] loaded", dataset)
 
 		for ts, v := range peer0Data {
 			t := time.Unix(0, ts)
-			p := influxdb2.NewPoint(fmt.Sprintf("peer0_%s", dataset),
-				map[string]string{"unit": "bytes"},
-				map[string]interface{}{"max": v},
+			p := influxdb2.NewPoint(dataset,
+				nil,
+				map[string]interface{}{"v": v},
 				t,
-			)
-			if err := writeApi.WritePoint(context.Background(), p); err != nil {
-				logrus.Fatalf("error writing point for peer 0 dataset [%s] (%v)", dataset, err)
-			}
+			).AddTag("peer", "0")
+			writeApi.WritePoint(p)
 		}
 		logrus.Infof("wrote [%d] points for peer 0 dataset [%s]", len(peer0Data), dataset)
 
 		for ts, v := range peer1Data {
 			t := time.Unix(0, ts)
-			p := influxdb2.NewPoint(fmt.Sprintf("peer1_%s", dataset),
-				map[string]string{"unit": "bytes"},
-				map[string]interface{}{"max": v},
+			p := influxdb2.NewPoint(dataset,
+				nil,
+				map[string]interface{}{"v": v},
 				t,
-			)
-			if err := writeApi.WritePoint(context.Background(), p); err != nil {
-				logrus.Fatalf("error writing point for peer 1 dataset [%s] (%v)", dataset, err)
-			}
+			).AddTag("peer", "1")
+			writeApi.WritePoint(p)
 		}
 		logrus.Infof("wrote [%d] points for peer 1 dataset [%s]", len(peer1Data), dataset)
 	}
