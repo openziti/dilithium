@@ -1,4 +1,4 @@
-# Start with a 1.2 megabyte window. No slow start, just go for it.
+# Start with a ~1.2 megabyte window. No slow start, just go for it. Let txPortal sizing sort it out.
 #
 portal_start_sz:      1280000
 
@@ -6,17 +6,18 @@ portal_start_sz:      1280000
 #
 max_segment_sz:       64000
 
-# Increase the txPortal 96 bytes per transmitted packet. Medium aggressive.
+# Increase the txPortal 64 bytes per transmitted packet. Medium aggressive.
 #
-increase_sz:          96
+increase_sz:          64
 
-# Add 15 milliseconds to the computed RTT. Be just slightly lazy doing retransmission.
+# Add 25 milliseconds to the computed RTT. Be just slightly lazy doing retransmission.
 #
-rtt_retx_over_ms:     15
+rtt_retx_over_ms:     25
 
-# Retransmission events throttle the txPortal down to 65% of its current size.
+# Retransmission and duplicate ack events throttle the txPortal down to 99.9% of its current size. 
+# Don't back down.
 #
-throttle_fraction:    0.65
+throttle_fraction:    0.999
 
 # Metrics instrumentation for importing into the westworld2 analyzer.
 #
