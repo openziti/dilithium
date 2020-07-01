@@ -225,6 +225,11 @@ func (self *txPortal) runMonitor() {
 				sort.Slice(self.monitor.waiting, func(i, j int) bool {
 					return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 				})
+
+				self.capacity = int(float64(self.capacity) * self.config.throttleFraction)
+				if self.config.i != nil {
+					self.config.i.portalCapacitySz(self.peer, self.capacity)
+				}
 			}
 		}
 		self.lock.Unlock()
