@@ -226,7 +226,7 @@ func (self *txPortal) runMonitor() {
 					return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 				})
 
-				self.capacity = int(float64(self.capacity) * self.config.dupAckThrottleFraction)
+				self.capacity = int(float64(self.capacity) * self.config.retxThrottleFraction)
 				if self.config.i != nil {
 					self.config.i.portalCapacitySz(self.peer, self.capacity)
 				}

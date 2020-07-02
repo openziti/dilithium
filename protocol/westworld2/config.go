@@ -18,6 +18,7 @@ type Config struct {
 	acceptQLen             int
 	increaseSz             int
 	dupAckThrottleFraction float64
+	retxThrottleFraction   float64
 	i                      Instrument
 }
 
@@ -32,8 +33,9 @@ func NewDefaultConfig() *Config {
 		readsQLen:              1024,
 		listenerRxQLen:         1024,
 		acceptQLen:             1024,
-		increaseSz:             1024,
+		increaseSz:             128,
 		dupAckThrottleFraction: 0.95,
+		retxThrottleFraction:   0.95,
 	}
 }
 
@@ -112,7 +114,14 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 		if f, ok := v.(float64); ok {
 			self.dupAckThrottleFraction = f
 		} else {
-			return errors.New("invalid 'dup_ack_throttle_fraction' value",)
+			return errors.New("invalid 'dup_ack_throttle_fraction' value")
+		}
+	}
+	if v, found := data["retx_throttle_fraction"]; found {
+		if f, ok := v.(float64); ok {
+			self.retxThrottleFraction = f
+		} else {
+			return errors.New("invalid 'retx_throttle_fraction' value")
 		}
 	}
 	if v, found := data["instrument"]; found {
@@ -150,6 +159,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-20s %d\n", "accept_q_len", self.acceptQLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "increase_sz", self.increaseSz)
 	out += fmt.Sprintf("\t%-20s %.4f\n", "dup_ack_throttle_fraction", self.dupAckThrottleFraction)
+	out += fmt.Sprintf("\t%-20s %.4f\n", "retx_throttle_fraction", self.retxThrottleFraction)
 	out += fmt.Sprintf("\t%-20s %v\n", "instrument", reflect.TypeOf(self.i))
 	out += "}"
 	return out
