@@ -221,7 +221,7 @@ func (self *txPortal) runMonitor() {
 				if err := writeWireMessage(self.monitor.head.wm, self.conn, self.peer, self.config.i); err != nil {
 					logrus.Errorf("retx (%v)", err)
 				}
-				self.monitor.head.deadline = time.Now().Add(time.Duration(self.retxMs+self.config.rttRetxOverMs) * time.Millisecond)
+				self.monitor.head.deadline = time.Now().Add(time.Duration(self.retxMs+self.config.retxAddMs) * time.Millisecond)
 				sort.Slice(self.monitor.waiting, func(i, j int) bool {
 					return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 				})
@@ -238,7 +238,7 @@ func (self *txPortal) runMonitor() {
 
 func (self *txPortal) addMonitor(wm *wireMessage) {
 	wm.buffer.ref()
-	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration(self.retxMs+self.config.rttRetxOverMs) * time.Millisecond), wm})
+	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration(self.retxMs+self.config.retxAddMs) * time.Millisecond), wm})
 	self.monitor.ready.Signal()
 }
 

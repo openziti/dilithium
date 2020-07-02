@@ -12,7 +12,7 @@ increase_sz:                  64
 
 # Add 25 milliseconds to the computed RTT. Be just slightly lazy doing retransmission.
 #
-rtt_retx_over_ms:             25
+retx_add_ms:                  25
 
 # Retransmission and duplicate ack events throttle the txPortal down to 99.9% of its current size. 
 # Don't back down.
