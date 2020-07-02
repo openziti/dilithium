@@ -10,7 +10,7 @@ type Config struct {
 	poolBufferSz           int
 	txPortalStartSz        int
 	maxSegmentSz           int
-	startRetxMs            int
+	retxStartMs            int
 	rttRetxOverMs          int
 	treeLen                int
 	readsQLen              int
@@ -27,7 +27,7 @@ func NewDefaultConfig() *Config {
 		poolBufferSz:           64 * 1024,
 		txPortalStartSz:        3 * 1024,
 		maxSegmentSz:           1500,
-		startRetxMs:            100,
+		retxStartMs:            100,
 		rttRetxOverMs:          10,
 		treeLen:                1024,
 		readsQLen:              1024,
@@ -61,11 +61,11 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'max_segment_sz' value")
 		}
 	}
-	if v, found := data["start_retx_ms"]; found {
+	if v, found := data["retx_start_ms"]; found {
 		if i, ok := v.(int); ok {
-			self.startRetxMs = i
+			self.retxStartMs = i
 		} else {
-			return errors.New("invalid 'start_retx_ms' value")
+			return errors.New("invalid 'retx_start_ms' value")
 		}
 	}
 	if v, found := data["rtt_retx_over_ms"]; found {
@@ -151,7 +151,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
-	out += fmt.Sprintf("\t%-30s %d\n", "start_retx_ms", self.startRetxMs)
+	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "rtt_retx_over_ms", self.rttRetxOverMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "tree_len", self.treeLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "reads_q_len", self.readsQLen)

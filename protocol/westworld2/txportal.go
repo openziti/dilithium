@@ -50,7 +50,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal
 		monitor:   &retxMonitor{},
 		closeWait: -1,
 		closed:    false,
-		retxMs:    config.startRetxMs,
+		retxMs:    config.retxStartMs,
 		conn:      conn,
 		peer:      peer,
 		pool:      newPool("txPortal", config),
