@@ -148,19 +148,19 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 
 func (self *Config) Dump() string {
 	out := "westworld2.Config{\n"
-	out += fmt.Sprintf("\t%-20s %d\n", "pool_buffer_sz", self.poolBufferSz)
-	out += fmt.Sprintf("\t%-20s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
-	out += fmt.Sprintf("\t%-20s %d\n", "max_segment_sz", self.maxSegmentSz)
-	out += fmt.Sprintf("\t%-20s %d\n", "start_retx_ms", self.startRetxMs)
-	out += fmt.Sprintf("\t%-20s %d\n", "rtt_retx_over_ms", self.rttRetxOverMs)
-	out += fmt.Sprintf("\t%-20s %d\n", "tree_len", self.treeLen)
-	out += fmt.Sprintf("\t%-20s %d\n", "reads_q_len", self.readsQLen)
-	out += fmt.Sprintf("\t%-20s %d\n", "listener_rx_q_len", self.listenerRxQLen)
-	out += fmt.Sprintf("\t%-20s %d\n", "accept_q_len", self.acceptQLen)
-	out += fmt.Sprintf("\t%-20s %d\n", "increase_sz", self.increaseSz)
-	out += fmt.Sprintf("\t%-20s %.4f\n", "dup_ack_throttle_fraction", self.dupAckThrottleFraction)
-	out += fmt.Sprintf("\t%-20s %.4f\n", "retx_throttle_fraction", self.retxThrottleFraction)
-	out += fmt.Sprintf("\t%-20s %v\n", "instrument", reflect.TypeOf(self.i))
+	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "start_retx_ms", self.startRetxMs)
+	out += fmt.Sprintf("\t%-30s %d\n", "rtt_retx_over_ms", self.rttRetxOverMs)
+	out += fmt.Sprintf("\t%-30s %d\n", "tree_len", self.treeLen)
+	out += fmt.Sprintf("\t%-30s %d\n", "reads_q_len", self.readsQLen)
+	out += fmt.Sprintf("\t%-30s %d\n", "listener_rx_q_len", self.listenerRxQLen)
+	out += fmt.Sprintf("\t%-30s %d\n", "accept_q_len", self.acceptQLen)
+	out += fmt.Sprintf("\t%-30s %d\n", "increase_sz", self.increaseSz)
+	out += fmt.Sprintf("\t%-30s %.4f\n", "dup_ack_throttle_fraction", self.dupAckThrottleFraction)
+	out += fmt.Sprintf("\t%-30s %.4f\n", "retx_throttle_fraction", self.retxThrottleFraction)
+	out += fmt.Sprintf("\t%-30s %v\n", "instrument", reflect.TypeOf(self.i))
 	out += "}"
 	return out
 }
