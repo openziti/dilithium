@@ -162,13 +162,23 @@ func (self *metricsInstrument) configure(data map[string]interface{}) error {
 }
 
 func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sample) error {
-	out := ""
-	for _, sample := range samples {
-		out += fmt.Sprintf("%d,%d\n", sample.ts.UnixNano(), sample.v)
-	}
 	path := filepath.Join(outPath, fmt.Sprintf("%s.csv", name))
-	if err := ioutil.WriteFile(path, []byte(out), os.ModePerm); err != nil {
-		return errors.Wrap(err, "write metrics")
+	oF, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = oF.Close()
+	}()
+	for _, sample := range samples {
+		line := fmt.Sprintf("%d,%d\n", sample.ts.UnixNano(), sample.v)
+		n, err := oF.Write([]byte(line))
+		if err != nil {
+			return err
+		}
+		if n != len(line) {
+			return errors.New("short write")
+		}
 	}
 	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
 	return nil
