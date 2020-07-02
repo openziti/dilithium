@@ -7,46 +7,39 @@ import (
 )
 
 type Config struct {
-	poolBufferSz           int
 	txPortalStartSz        int
 	maxSegmentSz           int
 	retxStartMs            int
 	retxAddMs              int
+	increaseSz             int
+	dupAckThrottleFraction float64
+	retxThrottleFraction   float64
+	poolBufferSz           int
 	treeLen                int
 	readsQLen              int
 	listenerRxQLen         int
 	acceptQLen             int
-	increaseSz             int
-	dupAckThrottleFraction float64
-	retxThrottleFraction   float64
 	i                      Instrument
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		poolBufferSz:           64 * 1024,
 		txPortalStartSz:        3 * 1024,
 		maxSegmentSz:           1500,
 		retxStartMs:            100,
 		retxAddMs:              10,
+		increaseSz:             128,
+		dupAckThrottleFraction: 0.95,
+		retxThrottleFraction:   0.95,
+		poolBufferSz:           64 * 1024,
 		treeLen:                1024,
 		readsQLen:              1024,
 		listenerRxQLen:         1024,
 		acceptQLen:             1024,
-		increaseSz:             128,
-		dupAckThrottleFraction: 0.95,
-		retxThrottleFraction:   0.95,
 	}
 }
 
 func (self *Config) Load(data map[interface{}]interface{}) error {
-	if v, found := data["pool_buffer_sz"]; found {
-		if i, ok := v.(int); ok {
-			self.poolBufferSz = i
-		} else {
-			return errors.New("invalid 'pool_buffer_sz' value")
-		}
-	}
 	if v, found := data["tx_portal_start_sz"]; found {
 		if i, ok := v.(int); ok {
 			self.txPortalStartSz = i
@@ -75,6 +68,34 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'retx_add_ms' value")
 		}
 	}
+	if v, found := data["increase_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.increaseSz = i
+		} else {
+			return errors.New("invalid 'increase_sz' value")
+		}
+	}
+	if v, found := data["dup_ack_throttle_fraction"]; found {
+		if f, ok := v.(float64); ok {
+			self.dupAckThrottleFraction = f
+		} else {
+			return errors.New("invalid 'dup_ack_throttle_fraction' value")
+		}
+	}
+	if v, found := data["retx_throttle_fraction"]; found {
+		if f, ok := v.(float64); ok {
+			self.retxThrottleFraction = f
+		} else {
+			return errors.New("invalid 'retx_throttle_fraction' value")
+		}
+	}
+	if v, found := data["pool_buffer_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.poolBufferSz = i
+		} else {
+			return errors.New("invalid 'pool_buffer_sz' value")
+		}
+	}
 	if v, found := data["tree_len"]; found {
 		if i, ok := v.(int); ok {
 			self.treeLen = i
@@ -101,27 +122,6 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			self.acceptQLen = i
 		} else {
 			return errors.New("invalid 'accept_q_len' value")
-		}
-	}
-	if v, found := data["increase_sz"]; found {
-		if i, ok := v.(int); ok {
-			self.increaseSz = i
-		} else {
-			return errors.New("invalid 'increase_sz' value")
-		}
-	}
-	if v, found := data["dup_ack_throttle_fraction"]; found {
-		if f, ok := v.(float64); ok {
-			self.dupAckThrottleFraction = f
-		} else {
-			return errors.New("invalid 'dup_ack_throttle_fraction' value")
-		}
-	}
-	if v, found := data["retx_throttle_fraction"]; found {
-		if f, ok := v.(float64); ok {
-			self.retxThrottleFraction = f
-		} else {
-			return errors.New("invalid 'retx_throttle_fraction' value")
 		}
 	}
 	if v, found := data["instrument"]; found {
