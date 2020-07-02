@@ -151,7 +151,7 @@ func (self *txPortal) ack(sequence int32) {
 		self.ready.Signal()
 
 	} else {
-		self.capacity = int(float64(self.capacity) * self.config.dupAckThrottleFraction)
+		self.capacity = int(float64(self.capacity) * self.config.txPortalDupAckFrac)
 		if self.config.i != nil {
 			self.config.i.portalCapacitySz(self.peer, self.capacity)
 			self.config.i.duplicateAck(self.peer, sequence)
@@ -226,7 +226,7 @@ func (self *txPortal) runMonitor() {
 					return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 				})
 
-				self.capacity = int(float64(self.capacity) * self.config.retxThrottleFraction)
+				self.capacity = int(float64(self.capacity) * self.config.txPortalRetxFrac)
 				if self.config.i != nil {
 					self.config.i.portalCapacitySz(self.peer, self.capacity)
 				}

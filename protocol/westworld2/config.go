@@ -7,35 +7,35 @@ import (
 )
 
 type Config struct {
-	txPortalStartSz        int
-	txPortalIncreaseSz     int
-	maxSegmentSz           int
-	retxStartMs            int
-	retxAddMs              int
-	dupAckThrottleFraction float64
-	retxThrottleFraction   float64
-	poolBufferSz           int
-	treeLen                int
-	readsQLen              int
-	listenerRxQLen         int
-	acceptQLen             int
-	i                      Instrument
+	txPortalStartSz    int
+	txPortalIncreaseSz int
+	txPortalDupAckFrac float64
+	txPortalRetxFrac   float64
+	retxStartMs        int
+	retxAddMs          int
+	maxSegmentSz       int
+	poolBufferSz       int
+	treeLen            int
+	readsQLen          int
+	listenerRxQLen     int
+	acceptQLen         int
+	i                  Instrument
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		txPortalStartSz:        3 * 1024,
-		txPortalIncreaseSz:     128,
-		maxSegmentSz:           1500,
-		retxStartMs:            100,
-		retxAddMs:              10,
-		dupAckThrottleFraction: 0.95,
-		retxThrottleFraction:   0.95,
-		poolBufferSz:           64 * 1024,
-		treeLen:                1024,
-		readsQLen:              1024,
-		listenerRxQLen:         1024,
-		acceptQLen:             1024,
+		txPortalStartSz:    3 * 1024,
+		txPortalIncreaseSz: 128,
+		txPortalDupAckFrac: 0.95,
+		txPortalRetxFrac:   0.95,
+		retxStartMs:        100,
+		retxAddMs:          10,
+		maxSegmentSz:       1500,
+		poolBufferSz:       64 * 1024,
+		treeLen:            1024,
+		readsQLen:          1024,
+		listenerRxQLen:     1024,
+		acceptQLen:         1024,
 	}
 }
 
@@ -54,11 +54,18 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'tx_portal_increase_sz' value")
 		}
 	}
-	if v, found := data["max_segment_sz"]; found {
-		if i, ok := v.(int); ok {
-			self.maxSegmentSz = i
+	if v, found := data["tx_portal_dup_ack_frac"]; found {
+		if f, ok := v.(float64); ok {
+			self.txPortalDupAckFrac = f
 		} else {
-			return errors.New("invalid 'max_segment_sz' value")
+			return errors.New("invalid 'tx_portal_dup_ack_frac' value")
+		}
+	}
+	if v, found := data["tx_portal_retx_frac"]; found {
+		if f, ok := v.(float64); ok {
+			self.txPortalRetxFrac = f
+		} else {
+			return errors.New("invalid 'tx_portal_retx_frac' value")
 		}
 	}
 	if v, found := data["retx_start_ms"]; found {
@@ -75,18 +82,11 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'retx_add_ms' value")
 		}
 	}
-	if v, found := data["dup_ack_throttle_fraction"]; found {
-		if f, ok := v.(float64); ok {
-			self.dupAckThrottleFraction = f
+	if v, found := data["max_segment_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.maxSegmentSz = i
 		} else {
-			return errors.New("invalid 'dup_ack_throttle_fraction' value")
-		}
-	}
-	if v, found := data["retx_throttle_fraction"]; found {
-		if f, ok := v.(float64); ok {
-			self.retxThrottleFraction = f
-		} else {
-			return errors.New("invalid 'retx_throttle_fraction' value")
+			return errors.New("invalid 'max_segment_sz' value")
 		}
 	}
 	if v, found := data["pool_buffer_sz"]; found {
@@ -148,18 +148,18 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 
 func (self *Config) Dump() string {
 	out := "westworld2.Config{\n"
-	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
-	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_increase_sz", self.txPortalIncreaseSz)
+	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_dup_ack_frac", self.txPortalDupAckFrac)
+	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_retx_frac", self.txPortalRetxFrac)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_add_ms", self.retxAddMs)
+	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tree_len", self.treeLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "reads_q_len", self.readsQLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "listener_rx_q_len", self.listenerRxQLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "accept_q_len", self.acceptQLen)
-	out += fmt.Sprintf("\t%-30s %d\n", "increase_sz", self.txPortalIncreaseSz)
-	out += fmt.Sprintf("\t%-30s %.4f\n", "dup_ack_throttle_fraction", self.dupAckThrottleFraction)
-	out += fmt.Sprintf("\t%-30s %.4f\n", "retx_throttle_fraction", self.retxThrottleFraction)
 	out += fmt.Sprintf("\t%-30s %v\n", "instrument", reflect.TypeOf(self.i))
 	out += "}"
 	return out
