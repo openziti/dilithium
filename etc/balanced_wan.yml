@@ -1,6 +1,6 @@
 # Start with a ~1.2 megabyte window. No slow start, just go for it. Let txPortal sizing sort it out.
 #
-portal_start_sz:              1280000
+tx_portal_start_sz:              1280000
 
 # Use jumbo packets. Balances the westworld2 overhead.
 #

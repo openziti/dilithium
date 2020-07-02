@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	poolBufferSz           int
-	portalStartSz          int
+	txPortalStartSz        int
 	maxSegmentSz           int
 	startRetxMs            int
 	rttRetxOverMs          int
@@ -25,7 +25,7 @@ type Config struct {
 func NewDefaultConfig() *Config {
 	return &Config{
 		poolBufferSz:           64 * 1024,
-		portalStartSz:          3 * 1024,
+		txPortalStartSz:        3 * 1024,
 		maxSegmentSz:           1500,
 		startRetxMs:            100,
 		rttRetxOverMs:          10,
@@ -47,11 +47,11 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'pool_buffer_sz' value")
 		}
 	}
-	if v, found := data["portal_start_sz"]; found {
+	if v, found := data["tx_portal_start_sz"]; found {
 		if i, ok := v.(int); ok {
-			self.portalStartSz = i
+			self.txPortalStartSz = i
 		} else {
-			return errors.New("invalid 'portal_start_sz' value")
+			return errors.New("invalid 'tx_portal_start_sz' value")
 		}
 	}
 	if v, found := data["max_segment_sz"]; found {
@@ -149,7 +149,7 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 func (self *Config) Dump() string {
 	out := "westworld2.Config{\n"
 	out += fmt.Sprintf("\t%-20s %d\n", "pool_buffer_sz", self.poolBufferSz)
-	out += fmt.Sprintf("\t%-20s %d\n", "portal_start_sz", self.portalStartSz)
+	out += fmt.Sprintf("\t%-20s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
 	out += fmt.Sprintf("\t%-20s %d\n", "max_segment_sz", self.maxSegmentSz)
 	out += fmt.Sprintf("\t%-20s %d\n", "start_retx_ms", self.startRetxMs)
 	out += fmt.Sprintf("\t%-20s %d\n", "rtt_retx_over_ms", self.rttRetxOverMs)

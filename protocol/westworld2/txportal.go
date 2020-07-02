@@ -46,7 +46,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal
 	txp := &txPortal{
 		lock:      new(sync.Mutex),
 		tree:      btree.NewWith(config.treeLen, utils.Int32Comparator),
-		capacity:  config.portalStartSz,
+		capacity:  config.txPortalStartSz,
 		monitor:   &retxMonitor{},
 		closeWait: -1,
 		closed:    false,
