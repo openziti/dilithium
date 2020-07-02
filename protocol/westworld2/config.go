@@ -8,10 +8,10 @@ import (
 
 type Config struct {
 	txPortalStartSz        int
+	txPortalIncreaseSz     int
 	maxSegmentSz           int
 	retxStartMs            int
 	retxAddMs              int
-	increaseSz             int
 	dupAckThrottleFraction float64
 	retxThrottleFraction   float64
 	poolBufferSz           int
@@ -25,10 +25,10 @@ type Config struct {
 func NewDefaultConfig() *Config {
 	return &Config{
 		txPortalStartSz:        3 * 1024,
+		txPortalIncreaseSz:     128,
 		maxSegmentSz:           1500,
 		retxStartMs:            100,
 		retxAddMs:              10,
-		increaseSz:             128,
 		dupAckThrottleFraction: 0.95,
 		retxThrottleFraction:   0.95,
 		poolBufferSz:           64 * 1024,
@@ -45,6 +45,13 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			self.txPortalStartSz = i
 		} else {
 			return errors.New("invalid 'tx_portal_start_sz' value")
+		}
+	}
+	if v, found := data["tx_portal_increase_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.txPortalIncreaseSz = i
+		} else {
+			return errors.New("invalid 'tx_portal_increase_sz' value")
 		}
 	}
 	if v, found := data["max_segment_sz"]; found {
@@ -66,13 +73,6 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			self.retxAddMs = i
 		} else {
 			return errors.New("invalid 'retx_add_ms' value")
-		}
-	}
-	if v, found := data["increase_sz"]; found {
-		if i, ok := v.(int); ok {
-			self.increaseSz = i
-		} else {
-			return errors.New("invalid 'increase_sz' value")
 		}
 	}
 	if v, found := data["dup_ack_throttle_fraction"]; found {
@@ -157,7 +157,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "reads_q_len", self.readsQLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "listener_rx_q_len", self.listenerRxQLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "accept_q_len", self.acceptQLen)
-	out += fmt.Sprintf("\t%-30s %d\n", "increase_sz", self.increaseSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "increase_sz", self.txPortalIncreaseSz)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "dup_ack_throttle_fraction", self.dupAckThrottleFraction)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "retx_throttle_fraction", self.retxThrottleFraction)
 	out += fmt.Sprintf("\t%-30s %v\n", "instrument", reflect.TypeOf(self.i))

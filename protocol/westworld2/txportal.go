@@ -139,7 +139,7 @@ func (self *txPortal) ack(sequence int32) {
 		self.capacity += len(wm.data)
 		wm.buffer.unref()
 
-		self.capacity += self.config.increaseSz
+		self.capacity += self.config.txPortalIncreaseSz
 		if self.config.i != nil {
 			self.config.i.portalCapacitySz(self.peer, self.capacity)
 		}

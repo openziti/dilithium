@@ -1,14 +1,14 @@
 # Start with a ~1.2 megabyte window. No slow start, just go for it. Let txPortal sizing sort it out.
 #
-tx_portal_start_sz:              1280000
+tx_portal_start_sz:           1280000
+
+# Increase the txPortal 64 bytes per transmitted packet. Medium aggressive.
+#
+tx_portal_increase_sz:        64
 
 # Use jumbo packets. Balances the westworld2 overhead.
 #
 max_segment_sz:               64000
-
-# Increase the txPortal 64 bytes per transmitted packet. Medium aggressive.
-#
-increase_sz:                  64
 
 # Add 25 milliseconds to the computed RTT. Be just slightly lazy doing retransmission.
 #
