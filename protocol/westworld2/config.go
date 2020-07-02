@@ -7,33 +7,33 @@ import (
 )
 
 type Config struct {
-	poolBufferSz     int
-	portalStartSz    int
-	maxSegmentSz     int
-	startRetxMs      int
-	rttRetxOverMs    int
-	treeLen          int
-	readsQLen        int
-	listenerRxQLen   int
-	acceptQLen       int
-	increaseSz       int
-	throttleFraction float64
-	i                Instrument
+	poolBufferSz           int
+	portalStartSz          int
+	maxSegmentSz           int
+	startRetxMs            int
+	rttRetxOverMs          int
+	treeLen                int
+	readsQLen              int
+	listenerRxQLen         int
+	acceptQLen             int
+	increaseSz             int
+	dupAckThrottleFraction float64
+	i                      Instrument
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		poolBufferSz:     64 * 1024,
-		portalStartSz:    3 * 1024,
-		maxSegmentSz:     1500,
-		startRetxMs:      100,
-		rttRetxOverMs:    10,
-		treeLen:          1024,
-		readsQLen:        1024,
-		listenerRxQLen:   1024,
-		acceptQLen:       1024,
-		increaseSz:       1024,
-		throttleFraction: 0.95,
+		poolBufferSz:           64 * 1024,
+		portalStartSz:          3 * 1024,
+		maxSegmentSz:           1500,
+		startRetxMs:            100,
+		rttRetxOverMs:          10,
+		treeLen:                1024,
+		readsQLen:              1024,
+		listenerRxQLen:         1024,
+		acceptQLen:             1024,
+		increaseSz:             1024,
+		dupAckThrottleFraction: 0.95,
 	}
 }
 
@@ -108,11 +108,11 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'increase_sz' value")
 		}
 	}
-	if v, found := data["throttle_fraction"]; found {
+	if v, found := data["dup_ack_throttle_fraction"]; found {
 		if f, ok := v.(float64); ok {
-			self.throttleFraction = f
+			self.dupAckThrottleFraction = f
 		} else {
-			return errors.New("invalid 'throttle_fraction' value",)
+			return errors.New("invalid 'dup_ack_throttle_fraction' value",)
 		}
 	}
 	if v, found := data["instrument"]; found {
@@ -149,7 +149,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-20s %d\n", "listener_rx_q_len", self.listenerRxQLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "accept_q_len", self.acceptQLen)
 	out += fmt.Sprintf("\t%-20s %d\n", "increase_sz", self.increaseSz)
-	out += fmt.Sprintf("\t%-20s %.4f\n", "throttle_fraction", self.throttleFraction)
+	out += fmt.Sprintf("\t%-20s %.4f\n", "dup_ack_throttle_fraction", self.dupAckThrottleFraction)
 	out += fmt.Sprintf("\t%-20s %v\n", "instrument", reflect.TypeOf(self.i))
 	out += "}"
 	return out
