@@ -80,6 +80,12 @@ func (self *rxPortal) run() {
 	logrus.Info("started")
 	defer logrus.Warn("exited")
 
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Errorf("recovered (%v)", r)
+		}
+	}()
+
 	for {
 		wm, ok := <-self.rxs
 		if !ok {
