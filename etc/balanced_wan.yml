@@ -9,12 +9,12 @@ tx_portal_increase_sz:        64
 # Retransmission and duplicate ack events throttle the txPortal down to 99.9% of its current size.
 # Don't back down.
 #
-tx_portal_dup_ack_frac:    0.95
-tx_portal_retx_frac:       0.95
+tx_portal_dup_ack_frac:    0.999
+tx_portal_retx_frac:       0.999
 
 # Add 25 milliseconds to the computed RTT. Be just slightly lazy doing retransmission.
 #
-retx_add_ms:                 30 
+retx_add_ms:                 25
 
 # Use jumbo packets. Balances the westworld2 overhead.
 #
