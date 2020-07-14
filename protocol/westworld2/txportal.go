@@ -136,10 +136,11 @@ func (self *txPortal) ack(sequence int32) {
 		wm := v.(*wireMessage)
 		self.cancelMonitor(wm)
 		self.tree.Remove(sequence)
-		self.capacity += len(wm.data)
+		sz := len(wm.data)
+		self.capacity += sz
 		wm.buffer.unref()
 
-		self.portalSuccessfulAck()
+		self.portalSuccessfulAck(sz)
 
 		if wm.seq == self.closeWait {
 			self.closed = true
@@ -249,8 +250,8 @@ func (self *txPortal) cancelMonitor(wm *wireMessage) {
 	}
 }
 
-func (self *txPortal) portalSuccessfulAck() {
-	self.updatePortalSz(self.capacity + self.config.txPortalIncreaseSz)
+func (self *txPortal) portalSuccessfulAck(sz int) {
+	self.updatePortalSz(self.capacity + int(float64(sz) * self.config.txPortalIncreaseFrac))
 }
 
 func (self *txPortal) portalDuplicateAck(sequence int32) {

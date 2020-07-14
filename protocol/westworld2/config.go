@@ -7,39 +7,39 @@ import (
 )
 
 type Config struct {
-	txPortalStartSz    int
-	txPortalMinSz      int
-	txPortalMaxSz      int
-	txPortalIncreaseSz int
-	txPortalDupAckFrac float64
-	txPortalRetxFrac   float64
-	retxStartMs        int
-	retxAddMs          int
-	maxSegmentSz       int
-	poolBufferSz       int
-	treeLen            int
-	readsQLen          int
-	listenerRxQLen     int
-	acceptQLen         int
-	i                  Instrument
+	txPortalStartSz      int
+	txPortalMinSz        int
+	txPortalMaxSz        int
+	txPortalIncreaseFrac float64
+	txPortalDupAckFrac   float64
+	txPortalRetxFrac     float64
+	retxStartMs          int
+	retxAddMs            int
+	maxSegmentSz         int
+	poolBufferSz         int
+	treeLen              int
+	readsQLen            int
+	listenerRxQLen       int
+	acceptQLen           int
+	i                    Instrument
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		txPortalStartSz:    3 * 1024,
-		txPortalMinSz:      2048,
-		txPortalMaxSz:      1024 * 1024,
-		txPortalIncreaseSz: 128,
-		txPortalDupAckFrac: 0.95,
-		txPortalRetxFrac:   0.95,
-		retxStartMs:        100,
-		retxAddMs:          10,
-		maxSegmentSz:       1500,
-		poolBufferSz:       64 * 1024,
-		treeLen:            1024,
-		readsQLen:          1024,
-		listenerRxQLen:     1024,
-		acceptQLen:         1024,
+		txPortalStartSz:      3 * 1024,
+		txPortalMinSz:        2048,
+		txPortalMaxSz:        1024 * 1024,
+		txPortalIncreaseFrac: 0.1,
+		txPortalDupAckFrac:   0.95,
+		txPortalRetxFrac:     0.95,
+		retxStartMs:          100,
+		retxAddMs:            10,
+		maxSegmentSz:         1500,
+		poolBufferSz:         64 * 1024,
+		treeLen:              1024,
+		readsQLen:            1024,
+		listenerRxQLen:       1024,
+		acceptQLen:           1024,
 	}
 }
 
@@ -65,11 +65,11 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'tx_portal_max_sz' value")
 		}
 	}
-	if v, found := data["tx_portal_increase_sz"]; found {
-		if i, ok := v.(int); ok {
-			self.txPortalIncreaseSz = i
+	if v, found := data["tx_portal_increase_frac"]; found {
+		if f, ok := v.(float64); ok {
+			self.txPortalIncreaseFrac = f
 		} else {
-			return errors.New("invalid 'tx_portal_increase_sz' value")
+			return errors.New("invalid 'tx_portal_increase_frac' value")
 		}
 	}
 	if v, found := data["tx_portal_dup_ack_frac"]; found {
@@ -169,7 +169,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_min_sz", self.txPortalMinSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_max_sz", self.txPortalMaxSz)
-	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_increase_sz", self.txPortalIncreaseSz)
+	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_increase_frac", self.txPortalIncreaseFrac)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_dup_ack_frac", self.txPortalDupAckFrac)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_retx_frac", self.txPortalRetxFrac)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)

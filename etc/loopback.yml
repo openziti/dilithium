@@ -1,6 +1,3 @@
-# loopback speedboat
-#
-
 # we start with a 72k window
 tx_portal_start_sz:      73728
 
