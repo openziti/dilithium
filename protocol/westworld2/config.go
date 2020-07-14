@@ -8,6 +8,8 @@ import (
 
 type Config struct {
 	txPortalStartSz    int
+	txPortalMinSz      int
+	txPortalMaxSz      int
 	txPortalIncreaseSz int
 	txPortalDupAckFrac float64
 	txPortalRetxFrac   float64
@@ -25,6 +27,8 @@ type Config struct {
 func NewDefaultConfig() *Config {
 	return &Config{
 		txPortalStartSz:    3 * 1024,
+		txPortalMinSz:      2048,
+		txPortalMaxSz:      1024 * 1024,
 		txPortalIncreaseSz: 128,
 		txPortalDupAckFrac: 0.95,
 		txPortalRetxFrac:   0.95,
@@ -45,6 +49,20 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			self.txPortalStartSz = i
 		} else {
 			return errors.New("invalid 'tx_portal_start_sz' value")
+		}
+	}
+	if v, found := data["tx_portal_min_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.txPortalMinSz = i
+		} else {
+			return errors.New("invalid 'tx_portal_min_sz' value")
+		}
+	}
+	if v, found := data["tx_portal_max_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.txPortalMaxSz = i
+		} else {
+			return errors.New("invalid 'tx_portal_max_sz' value")
 		}
 	}
 	if v, found := data["tx_portal_increase_sz"]; found {
@@ -149,6 +167,8 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 func (self *Config) Dump() string {
 	out := "westworld2.Config{\n"
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_min_sz", self.txPortalMinSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_max_sz", self.txPortalMaxSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_increase_sz", self.txPortalIncreaseSz)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_dup_ack_frac", self.txPortalDupAckFrac)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_retx_frac", self.txPortalRetxFrac)

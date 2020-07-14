@@ -1,0 +1,16 @@
+tx_portal_start_sz:           16384
+tx_portal_min_sz:             16384
+
+tx_portal_increase_sz:        224
+
+tx_portal_dup_ack_frac:       0.99875
+tx_portal_retx_frac:          0.99999
+
+retx_start_ms:                200
+retx_add_ms:                  15
+
+max_segment_sz:               1500
+
+instrument:
+  name:                       metrics
+  prefix:                     logs

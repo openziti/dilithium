@@ -139,10 +139,7 @@ func (self *txPortal) ack(sequence int32) {
 		self.capacity += len(wm.data)
 		wm.buffer.unref()
 
-		self.capacity += self.config.txPortalIncreaseSz
-		if self.config.i != nil {
-			self.config.i.portalCapacitySz(self.peer, self.capacity)
-		}
+		self.portalSuccessfulAck()
 
 		if wm.seq == self.closeWait {
 			self.closed = true
@@ -151,11 +148,7 @@ func (self *txPortal) ack(sequence int32) {
 		self.ready.Signal()
 
 	} else {
-		self.capacity = int(float64(self.capacity) * self.config.txPortalDupAckFrac)
-		if self.config.i != nil {
-			self.config.i.portalCapacitySz(self.peer, self.capacity)
-			self.config.i.duplicateAck(self.peer, sequence)
-		}
+		self.portalDuplicateAck(sequence)
 	}
 }
 
@@ -226,10 +219,7 @@ func (self *txPortal) runMonitor() {
 					return self.monitor.waiting[i].deadline.Before(self.monitor.waiting[j].deadline)
 				})
 
-				self.capacity = int(float64(self.capacity) * self.config.txPortalRetxFrac)
-				if self.config.i != nil {
-					self.config.i.portalCapacitySz(self.peer, self.capacity)
-				}
+				self.portalRetx()
 			}
 		}
 		self.lock.Unlock()
@@ -256,5 +246,33 @@ func (self *txPortal) cancelMonitor(wm *wireMessage) {
 	}
 	if self.monitor.head != nil && self.monitor.head.wm == wm {
 		self.monitor.cancelled = true
+	}
+}
+
+func (self *txPortal) portalSuccessfulAck() {
+	self.updatePortalSz(self.capacity + self.config.txPortalIncreaseSz)
+}
+
+func (self *txPortal) portalDuplicateAck(sequence int32) {
+	self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalDupAckFrac))
+	if self.config.i != nil {
+		self.config.i.duplicateAck(self.peer, sequence)
+	}
+}
+
+func (self *txPortal) portalRetx() {
+	self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalRetxFrac))
+}
+
+func (self *txPortal) updatePortalSz(newCapacity int) {
+	self.capacity = newCapacity
+	if self.capacity < self.config.txPortalMinSz {
+		self.capacity = self.config.txPortalMinSz
+	}
+	if self.capacity > self.config.txPortalMaxSz {
+		self.capacity = self.config.txPortalMaxSz
+	}
+	if self.config.i != nil {
+		self.config.i.portalCapacitySz(self.peer, self.capacity)
 	}
 }
