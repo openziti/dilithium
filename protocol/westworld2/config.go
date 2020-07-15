@@ -11,7 +11,9 @@ type Config struct {
 	txPortalMinSz        int
 	txPortalMaxSz        int
 	txPortalIncreaseFrac float64
+	txPortalDupAckCount  int
 	txPortalDupAckFrac   float64
+	txPortalRetxCount    int
 	txPortalRetxFrac     float64
 	retxStartMs          int
 	retxAddMs            int
@@ -30,7 +32,9 @@ func NewDefaultConfig() *Config {
 		txPortalMinSz:        2048,
 		txPortalMaxSz:        1024 * 1024,
 		txPortalIncreaseFrac: 0.1,
+		txPortalDupAckCount:  1,
 		txPortalDupAckFrac:   0.95,
+		txPortalRetxCount:    1,
 		txPortalRetxFrac:     0.95,
 		retxStartMs:          100,
 		retxAddMs:            10,
@@ -72,11 +76,25 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'tx_portal_increase_frac' value")
 		}
 	}
+	if v, found := data["tx_portal_dup_ack_count"]; found {
+		if i, ok := v.(int); ok {
+			self.txPortalDupAckCount = i
+		} else {
+			return errors.New("invalid 'tx_portal_dup_ack_count' value")
+		}
+	}
 	if v, found := data["tx_portal_dup_ack_frac"]; found {
 		if f, ok := v.(float64); ok {
 			self.txPortalDupAckFrac = f
 		} else {
 			return errors.New("invalid 'tx_portal_dup_ack_frac' value")
+		}
+	}
+	if v, found := data["tx_portal_retx_count"]; found {
+		if i, ok := v.(int); ok {
+			self.txPortalRetxCount = i
+		} else {
+			return errors.New("invalid 'tx_portal_retx_count' value")
 		}
 	}
 	if v, found := data["tx_portal_retx_frac"]; found {
@@ -170,7 +188,9 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_min_sz", self.txPortalMinSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_max_sz", self.txPortalMaxSz)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_increase_frac", self.txPortalIncreaseFrac)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_dup_ack_count", self.txPortalDupAckCount)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_dup_ack_frac", self.txPortalDupAckFrac)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_retx_count", self.txPortalRetxCount)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_retx_frac", self.txPortalRetxFrac)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_add_ms", self.retxAddMs)

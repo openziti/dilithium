@@ -17,6 +17,8 @@ type txPortal struct {
 	lock      *sync.Mutex
 	tree      *btree.Tree
 	capacity  int
+	dupackCt  int
+	retxCt    int
 	ready     *sync.Cond
 	monitor   *retxMonitor
 	closeWait int32
@@ -251,18 +253,26 @@ func (self *txPortal) cancelMonitor(wm *wireMessage) {
 }
 
 func (self *txPortal) portalSuccessfulAck(sz int) {
-	self.updatePortalSz(self.capacity + int(float64(sz) * self.config.txPortalIncreaseFrac))
+	self.updatePortalSz(self.capacity + int(float64(sz)*self.config.txPortalIncreaseFrac))
 }
 
 func (self *txPortal) portalDuplicateAck(sequence int32) {
-	self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalDupAckFrac))
+	self.dupackCt++
+	if self.dupackCt == self.config.txPortalDupAckCount {
+		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalDupAckFrac))
+		self.dupackCt = 0
+	}
 	if self.config.i != nil {
 		self.config.i.duplicateAck(self.peer, sequence)
 	}
 }
 
 func (self *txPortal) portalRetx() {
-	self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalRetxFrac))
+	self.retxCt++
+	if self.retxCt == self.config.txPortalRetxCount {
+		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalRetxFrac))
+		self.retxCt = 0
+	}
 }
 
 func (self *txPortal) updatePortalSz(newCapacity int) {
