@@ -18,6 +18,8 @@ type Config struct {
 	txPortalRetxFrac     float64
 	retxStartMs          int
 	retxAddMs            int
+	rttProbeMs			 int
+	rttProbeAvg          int
 	maxSegmentSz         int
 	poolBufferSz         int
 	treeLen              int
@@ -40,6 +42,8 @@ func NewDefaultConfig() *Config {
 		txPortalRetxFrac:     0.95,
 		retxStartMs:          100,
 		retxAddMs:            10,
+		rttProbeMs:			  1000,
+		rttProbeAvg:		  8,
 		maxSegmentSz:         1500,
 		poolBufferSz:         64 * 1024,
 		treeLen:              1024,
@@ -127,6 +131,20 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'retx_add_ms' value")
 		}
 	}
+	if v, found := data["rtt_probe_ms"]; found {
+		if i, ok := v.(int); ok {
+			self.rttProbeMs = i
+		} else {
+			return errors.New("invalid 'rtt_probe_ms' value")
+		}
+	}
+	if v, found := data["rtt_probe_avg"]; found {
+		if i, ok := v.(int); ok {
+			self.rttProbeAvg = i
+		} else {
+			return errors.New("invalid 'rtt_probe_avg' value")
+		}
+	}
 	if v, found := data["max_segment_sz"]; found {
 		if i, ok := v.(int); ok {
 			self.maxSegmentSz = i
@@ -204,6 +222,8 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_retx_frac", self.txPortalRetxFrac)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_add_ms", self.retxAddMs)
+	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_ms", self.rttProbeMs)
+	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_avg", self.rttProbeAvg)
 	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tree_len", self.treeLen)

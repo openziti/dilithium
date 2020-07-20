@@ -88,7 +88,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		self.capacity -= sz
 		self.addMonitor(wm)
 
-		if time.Since(self.lastRtt).Milliseconds() > 1000 {
+		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
 			rttWm, err := wm.clone()
 			if err != nil {
 				return n, err
@@ -163,7 +163,7 @@ func (self *txPortal) rtt(ts int64) {
 
 	rttMs := int(time.Since(time.Unix(0, ts)).Milliseconds())
 	self.rttw = append(self.rttw, rttMs)
-	if len(self.rttw) > 8 {
+	if len(self.rttw) > self.config.rttProbeAvg {
 		self.rttw = self.rttw[1:]
 	}
 	i := 0
