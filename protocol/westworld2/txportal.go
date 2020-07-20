@@ -289,7 +289,7 @@ func (self *txPortal) updatePortalSz(newCapacity int) {
 	if self.capacity < self.config.txPortalMinSz {
 		self.capacity = self.config.txPortalMinSz
 	}
-	if self.capacity > self.config.txPortalMaxSz {
+	if self.config.txPortalMaxSz > 0 && self.capacity > self.config.txPortalMaxSz {
 		self.capacity = self.config.txPortalMaxSz
 	}
 	if self.config.i != nil {
