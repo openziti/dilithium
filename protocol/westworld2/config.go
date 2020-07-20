@@ -18,12 +18,12 @@ type Config struct {
 	txPortalRetxFrac     float64
 	retxStartMs          int
 	retxAddMs            int
-	rttProbeMs			 int
-	rttProbeAvg          int
+	rttProbeMs           int
+	rttProbeAvgCt        int
 	maxSegmentSz         int
 	poolBufferSz         int
-	rxBufferSz			 int
-	txBufferSz			 int
+	rxBufferSz           int
+	txBufferSz           int
 	treeLen              int
 	readsQLen            int
 	listenerRxQLen       int
@@ -44,12 +44,12 @@ func NewDefaultConfig() *Config {
 		txPortalRetxFrac:     0.95,
 		retxStartMs:          100,
 		retxAddMs:            10,
-		rttProbeMs:			  1000,
-		rttProbeAvg:		  8,
+		rttProbeMs:           1000,
+		rttProbeAvgCt:        8,
 		maxSegmentSz:         1500,
 		poolBufferSz:         64 * 1024,
-		rxBufferSz:			  64 * 1024,
-		txBufferSz:			  64 * 1024,
+		rxBufferSz:           64 * 1024,
+		txBufferSz:           64 * 1024,
 		treeLen:              1024,
 		readsQLen:            1024,
 		listenerRxQLen:       1024,
@@ -142,11 +142,11 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'rtt_probe_ms' value")
 		}
 	}
-	if v, found := data["rtt_probe_avg"]; found {
+	if v, found := data["rtt_probe_avg_ct"]; found {
 		if i, ok := v.(int); ok {
-			self.rttProbeAvg = i
+			self.rttProbeAvgCt = i
 		} else {
-			return errors.New("invalid 'rtt_probe_avg' value")
+			return errors.New("invalid 'rtt_probe_avg_ct' value")
 		}
 	}
 	if v, found := data["max_segment_sz"]; found {
@@ -241,7 +241,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_add_ms", self.retxAddMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_ms", self.rttProbeMs)
-	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_avg", self.rttProbeAvg)
+	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_avg_ct", self.rttProbeAvgCt)
 	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "rx_buffer_sz", self.rxBufferSz)

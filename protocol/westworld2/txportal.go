@@ -163,7 +163,7 @@ func (self *txPortal) rtt(ts int64) {
 
 	rttMs := int(time.Since(time.Unix(0, ts)).Milliseconds())
 	self.rttw = append(self.rttw, rttMs)
-	if len(self.rttw) > self.config.rttProbeAvg {
+	if len(self.rttw) > self.config.rttProbeAvgCt {
 		self.rttw = self.rttw[1:]
 	}
 	i := 0
