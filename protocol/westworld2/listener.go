@@ -23,10 +23,10 @@ func Listen(addr *net.UDPAddr, config *Config) (net.Listener, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "listen")
 	}
-	if err := conn.SetReadBuffer(config.poolBufferSz); err != nil {
+	if err := conn.SetReadBuffer(config.rxBufferSz); err != nil {
 		return nil, errors.Wrap(err, "rx buffer")
 	}
-	if err := conn.SetWriteBuffer(config.poolBufferSz); err != nil {
+	if err := conn.SetWriteBuffer(config.txBufferSz); err != nil {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
 	l := &listener{

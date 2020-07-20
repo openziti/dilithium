@@ -11,10 +11,10 @@ func Dial(addr *net.UDPAddr, config *Config) (conn net.Conn, err error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "listen")
 	}
-	if err := lConn.SetReadBuffer(config.poolBufferSz); err != nil {
+	if err := lConn.SetReadBuffer(config.rxBufferSz); err != nil {
 		return nil, errors.Wrap(err, "rx buffer")
 	}
-	if err := lConn.SetWriteBuffer(config.poolBufferSz); err != nil {
+	if err := lConn.SetWriteBuffer(config.txBufferSz); err != nil {
 		return nil, errors.Wrap(err, "tx buffer")
 	}
 

@@ -22,6 +22,8 @@ type Config struct {
 	rttProbeAvg          int
 	maxSegmentSz         int
 	poolBufferSz         int
+	rxBufferSz			 int
+	txBufferSz			 int
 	treeLen              int
 	readsQLen            int
 	listenerRxQLen       int
@@ -46,6 +48,8 @@ func NewDefaultConfig() *Config {
 		rttProbeAvg:		  8,
 		maxSegmentSz:         1500,
 		poolBufferSz:         64 * 1024,
+		rxBufferSz:			  64 * 1024,
+		txBufferSz:			  64 * 1024,
 		treeLen:              1024,
 		readsQLen:            1024,
 		listenerRxQLen:       1024,
@@ -159,6 +163,20 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'pool_buffer_sz' value")
 		}
 	}
+	if v, found := data["rx_buffer_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.rxBufferSz = i
+		} else {
+			return errors.New("invalid 'rx_buffer_sz' value")
+		}
+	}
+	if v, found := data["tx_buffer_sz"]; found {
+		if i, ok := v.(int); ok {
+			self.txBufferSz = i
+		} else {
+			return errors.New("invalid 'tx_buffer_sz' value")
+		}
+	}
 	if v, found := data["tree_len"]; found {
 		if i, ok := v.(int); ok {
 			self.treeLen = i
@@ -226,6 +244,8 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_avg", self.rttProbeAvg)
 	out += fmt.Sprintf("\t%-30s %d\n", "max_segment_sz", self.maxSegmentSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "pool_buffer_sz", self.poolBufferSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "rx_buffer_sz", self.rxBufferSz)
+	out += fmt.Sprintf("\t%-30s %d\n", "tx_buffer_sz", self.txBufferSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tree_len", self.treeLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "reads_q_len", self.readsQLen)
 	out += fmt.Sprintf("\t%-30s %d\n", "listener_rx_q_len", self.listenerRxQLen)
