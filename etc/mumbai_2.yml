@@ -17,12 +17,9 @@ tx_portal_start_sz:           131072
 #
 tx_portal_min_sz:             16384
 
-# Don't constrain the maximum portal size.
+# 1 gigabyte of portal should be plenty.
 #
-# If the protocol wants more portal, let it have it. On memory-constrained systems, you probably don't want to give this
-# protocol this much memory latitude.
-#
-tx_portal_max_sz:             -1
+tx_portal_max_sz:             1073741824
 
 # Increase the portal size after 2 successfully-acked packets.
 #
