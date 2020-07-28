@@ -90,6 +90,14 @@ func (self *listenerConn) rxer() {
 			if wm.ack != -1 {
 				self.txPortal.ack(wm.ack)
 			}
+			if wm.mf & RTT == 1 {
+				ts, err := wm.readRtt()
+				if err == nil {
+					self.txPortal.rtt(ts)
+				} else {
+					logrus.Errorf("error reading rtt (%v)", err)
+				}
+			}
 			wm.buffer.unref()
 
 		} else {
