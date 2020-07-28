@@ -136,6 +136,7 @@ func (self *rxPortal) run() {
 		if wm.mt == CLOSE && !self.closed {
 			self.txPortal.close(self.seq)
 			self.reads <- &rxRead{nil, 0, true}
+			close(self.rxs)
 			self.closed = true
 		}
 	}
