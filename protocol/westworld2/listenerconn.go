@@ -1,9 +1,12 @@
 package westworld2
 
 import (
+	"crypto/rand"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"math"
+	"math/big"
 	"net"
 	"time"
 )
@@ -19,18 +22,22 @@ type listenerConn struct {
 	config   *Config
 }
 
-func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *listenerConn {
+func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*listenerConn, error) {
+	sSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
+	if err != nil {
+		return nil, errors.Wrap(err, "random sequence")
+	}
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,
 		rxQueue: make(chan *wireMessage, config.listenerRxQLen),
-		seq:     util.NewSequence(0),
+		seq:     util.NewSequence(int32(sSeq.Int64())),
 		pool:    newPool("listenerConn", config),
 		config:  config,
 	}
 	lc.txPortal = newTxPortal(conn, peer, config)
 	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, config)
-	return lc
+	return lc, nil
 }
 
 func (self *listenerConn) Read(p []byte) (int, error) {

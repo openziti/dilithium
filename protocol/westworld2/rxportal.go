@@ -4,8 +4,10 @@ import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
+	"math"
 	"net"
 	"sync"
 )
@@ -68,8 +70,14 @@ func (self *rxPortal) read(p []byte) (int, error) {
 	}
 }
 
-func (self *rxPortal) rx(wm *wireMessage) {
+func (self *rxPortal) rx(wm *wireMessage) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Wrap(err, "send on closed rxs")
+		}
+	}()
 	self.rxs <- wm
+	return err
 }
 
 func (self *rxPortal) setAccepted(accepted int32) {
@@ -92,7 +100,7 @@ func (self *rxPortal) run() {
 			return
 		}
 
-		if wm.seq > self.accepted {
+		if wm.seq > self.accepted || (self.accepted == math.MaxInt32 && wm.seq == 0) {
 			self.tree.Put(wm.seq, wm)
 		} else {
 			if self.config.i != nil {
@@ -116,7 +124,13 @@ func (self *rxPortal) run() {
 		ack.buffer.unref()
 
 		if self.tree.Size() > 0 {
-			next := self.accepted + 1
+			var next int32
+			if self.accepted < math.MaxInt32 {
+				next = self.accepted + 1
+			} else {
+				next = 0
+			}
+
 			for _, key := range self.tree.Keys() {
 				if key.(int32) == next {
 					v, _ := self.tree.Get(key)
@@ -128,7 +142,11 @@ func (self *rxPortal) run() {
 					self.tree.Remove(key)
 					wm.buffer.unref()
 					self.accepted = next
-					next++
+					if next < math.MaxInt32 {
+						next++
+					} else {
+						next = 0
+					}
 				}
 			}
 		}
@@ -136,8 +154,8 @@ func (self *rxPortal) run() {
 		if wm.mt == CLOSE && !self.closed {
 			self.txPortal.close(self.seq)
 			self.reads <- &rxRead{nil, 0, true}
-			close(self.rxs)
 			self.closed = true
+			close(self.rxs)
 		}
 	}
 }

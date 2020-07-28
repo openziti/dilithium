@@ -87,7 +87,13 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
-	conn := newListenerConn(self.conn, peer, self.config)
+	conn, err := newListenerConn(self.conn, peer, self.config)
+	if err != nil {
+		if self.config.i != nil {
+			self.config.i.connectError(peer, err)
+		}
+		return
+	}
 
 	self.lock.Lock()
 	self.peers.Put(peer, conn)

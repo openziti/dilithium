@@ -1,9 +1,12 @@
 package westworld2
 
 import (
+	"crypto/rand"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"math"
+	"math/big"
 	"net"
 	"time"
 )
@@ -18,17 +21,21 @@ type dialerConn struct {
 	config   *Config
 }
 
-func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *dialerConn {
+func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*dialerConn, error) {
+	sSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
+	if err != nil {
+		return nil, errors.Wrap(err, "random sequence")
+	}
 	dc := &dialerConn{
 		conn:   conn,
 		peer:   peer,
-		seq:    util.NewSequence(0),
+		seq:    util.NewSequence(int32(sSeq.Int64())),
 		pool:   newPool("dialerConn", config),
 		config: config,
 	}
 	dc.txPortal = newTxPortal(conn, peer, config)
 	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, config)
-	return dc
+	return dc, nil
 }
 
 func (self *dialerConn) Read(p []byte) (int, error) {
@@ -81,13 +88,16 @@ func (self *dialerConn) rxer() {
 			if wm.ack != -1 {
 				self.txPortal.ack(wm.ack)
 			}
-			self.rxPortal.rx(wm)
+			if err := self.rxPortal.rx(wm); err != nil {
+				logrus.Errorf("error writing (%v)", err)
+				return
+			}
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
 				self.txPortal.ack(wm.ack)
 			}
-			if wm.mf & RTT == 1 {
+			if wm.mf&RTT == 1 {
 				ts, err := wm.readRtt()
 				if err == nil {
 					self.txPortal.rtt(ts)
