@@ -58,6 +58,27 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 }
 
 func (self *rxPortal) read(p []byte) (int, error) {
+preread:
+	for {
+		select {
+		case read, ok := <-self.reads:
+			if !ok {
+				return 0, io.EOF
+			}
+			if !read.eof {
+				n, err := self.readBuffer.Write(read.buf[:read.sz])
+				if err != nil {
+					return 0, errors.Wrap(err, "buffer")
+				}
+				if n != read.sz {
+					return 0, errors.Wrap(err, "short buffer")
+				}
+			}
+
+		default:
+			break preread
+		}
+	}
 	if self.readBuffer.Len() > 0 {
 		return self.readBuffer.Read(p)
 	} else {
