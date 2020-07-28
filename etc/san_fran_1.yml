@@ -1,6 +1,7 @@
-# Westworld2 "Mumbai 2" Profile
+# Westworld2 "San Francisco 1" Profile
 #
-# This is a Westworld2 tuning designed for maximum performance on long-distance geo-scale WAN links.
+# This is a Westworld2 tuning designed for maximum performance on domestic (US) WAN links. These links seem to take
+# advantage of (and benefit from) jumbo frame transmission.
 #
 
 # Start with 256k portal.
