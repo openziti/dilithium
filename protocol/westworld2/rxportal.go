@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"bytes"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/util"
@@ -13,18 +14,19 @@ import (
 )
 
 type rxPortal struct {
-	tree     *btree.Tree
-	accepted int32
-	closed   bool
-	rxs      chan *wireMessage
-	reads    chan *rxRead
-	readPool *sync.Pool
-	ackPool  *pool
-	conn     *net.UDPConn
-	peer     *net.UDPAddr
-	txPortal *txPortal
-	seq      *util.Sequence
-	config   *Config
+	tree       *btree.Tree
+	accepted   int32
+	closed     bool
+	rxs        chan *wireMessage
+	reads      chan *rxRead
+	readBuffer *bytes.Buffer
+	readPool   *sync.Pool
+	ackPool    *pool
+	conn       *net.UDPConn
+	peer       *net.UDPAddr
+	txPortal   *txPortal
+	seq        *util.Sequence
+	config     *Config
 }
 
 type rxRead struct {
@@ -35,17 +37,18 @@ type rxRead struct {
 
 func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, config *Config) *rxPortal {
 	rxp := &rxPortal{
-		tree:     btree.NewWith(config.treeLen, utils.Int32Comparator),
-		accepted: -1,
-		rxs:      make(chan *wireMessage),
-		reads:    make(chan *rxRead, config.readsQLen),
-		readPool: new(sync.Pool),
-		ackPool:  newPool("ackPool", config),
-		conn:     conn,
-		peer:     peer,
-		txPortal: txPortal,
-		seq:      seq,
-		config:   config,
+		tree:       btree.NewWith(config.treeLen, utils.Int32Comparator),
+		accepted:   -1,
+		rxs:        make(chan *wireMessage),
+		reads:      make(chan *rxRead, config.readsQLen),
+		readBuffer: new(bytes.Buffer),
+		readPool:   new(sync.Pool),
+		ackPool:    newPool("ackPool", config),
+		conn:       conn,
+		peer:       peer,
+		txPortal:   txPortal,
+		seq:        seq,
+		config:     config,
 	}
 	rxp.readPool.New = func() interface{} {
 		return make([]byte, config.poolBufferSz)
@@ -55,18 +58,30 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 }
 
 func (self *rxPortal) read(p []byte) (int, error) {
-	read, ok := <-self.reads
-	if !ok {
-		return 0, io.EOF
-	}
-	if !read.eof {
-		n := copy(p, read.buf[:read.sz])
-		self.readPool.Put(read.buf)
-		return n, nil
+	if self.readBuffer.Len() > 0 {
+		return self.readBuffer.Read(p)
 	} else {
-		logrus.Infof("close notified")
-		close(self.reads)
-		return 0, io.EOF
+		read, ok := <-self.reads
+		if !ok {
+			return 0, io.EOF
+		}
+		if !read.eof {
+			n, err := self.readBuffer.Write(read.buf[:read.sz])
+			if err != nil {
+				return 0, errors.Wrap(err, "buffer")
+			}
+			if n != read.sz {
+				return 0, errors.Wrap(err, "short buffer")
+			}
+			self.readPool.Put(read.buf)
+
+			return self.readBuffer.Read(p)
+
+		} else {
+			logrus.Infof("close notified")
+			close(self.reads)
+			return 0, io.EOF
+		}
 	}
 }
 
