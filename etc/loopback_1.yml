@@ -1,0 +1,78 @@
+# Westworld2 "Loopback 1" Profile
+#
+# This is a Westworld2 tuning designed for maximum performance on long-distance geo-scale WAN links.
+#
+
+# Start with 4mb portal.
+#
+tx_portal_start_sz:           4194304
+
+# Set the portal size floor to 16k.
+#
+# We probably don't want to handle portal sizes any lower than this. It might even be smart to increase this by an order
+# of magnitude for any reasonably performant internet link.
+#
+tx_portal_min_sz:             16384
+
+# 8 gigabytes.
+#
+tx_portal_max_sz:             8589934592
+
+# Increase the portal size after 2 successfully-acked packets.
+#
+tx_portal_increase_ct:        1
+
+# Increase the portal by 2x.
+#
+tx_portal_increase_frac:      3.0
+
+# Decrease the portal size after 256 duplicate acks.
+#
+tx_portal_dup_ack_ct:         256
+
+# Change the portal size by this fraction when the duplicate ack threshold is reached.
+#
+# So, every 256 duplicate acks, we reduce the portal size to 99.95% of its current size.
+#
+tx_portal_dup_ack_frac:       0.9995
+
+# Decrease the portal size after 128 retransmission events.
+#
+tx_portal_retx_ct:            128
+
+# After every 128 retransmission events, we reduce the portal size to 99.95% of its current size.
+#
+tx_portal_retx_frac:          0.9999
+
+# When the connection is first established, we haven't yet done an RTT probe. So, just guess that the RTT is probably
+# something like 200ms.
+#
+retx_start_ms:                5
+
+# Add 25 milliseconds to whatever the RTT probe finds the RTT to be. We don't want to be over-eager in doing
+# retransmission.
+#
+retx_add_ms:                  -2
+
+# We don't need to probe very often on loopback.
+#
+rtt_probe_ms:                 150
+
+# Smooth the probed RTT value over the last 5 samples.
+#
+rtt_probe_avg_ct:             5
+
+# ~64k "jumbo" frames.
+#
+max_segment_sz:               63500
+
+# RX and TX buffer sizes for the underlying socket. 8mb.
+#
+rx_buffer_sz:                 8388608
+tx_buffer_sz:                 8388608
+
+# Capture metrics and output them to the `logs/` directory.
+#
+instrument:
+  name:                       metrics
+  prefix:                     logs
