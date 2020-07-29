@@ -206,7 +206,21 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 		}
 	}
 	if v, found := data["instrument"]; found {
-		if submap, ok := v.(map[string]interface{}); ok {
+		submap, oks := v.(map[string]interface{})
+		if !oks {
+			if subi, oki := v.(map[interface{}]interface{}); oki {
+				submap = make(map[string]interface{})
+				oks = true
+				for k, v := range subi {
+					if s, ok := k.(string); ok {
+						submap[s] = v
+					} else {
+						oks = false
+					}
+				}
+			}
+		}
+		if oks {
 			if v, found := submap["name"]; found {
 				if name, ok := v.(string); ok {
 					i, err := NewInstrument(name, submap)
