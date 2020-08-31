@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -92,7 +93,7 @@ func newAck(seqFor int32, pool *pool) *wireMessage {
 
 func (self *wireMessage) rewriteAck(seqFor int32) {
 	self.ack = seqFor
-	WriteInt32(self.buffer.data[6:10], self.ack)
+	util.WriteInt32(self.buffer.data[6:10], self.ack)
 }
 
 func newData(seq int32, data []byte, pool *pool) *wireMessage {
@@ -119,41 +120,41 @@ func newClose(seq int32, pool *pool) *wireMessage {
 }
 
 func (self *wireMessage) writeRtt(ts int64) {
-	WriteInt64(self.buffer.data[headerSz+len(self.data):headerSz+len(self.data)+8], ts)
+	util.WriteInt64(self.buffer.data[headerSz+len(self.data):headerSz+len(self.data)+8], ts)
 	self.buffer.sz = uint16(headerSz + len(self.data) + 8)
 	self.mf |= RTT
 	self.buffer.data[5] = byte(self.mf)
 }
 
 func (self *wireMessage) readRtt() (ts int64, err error) {
-	dataLen := ReadUint16(self.buffer.data[10:headerSz])
+	dataLen := util.ReadUint16(self.buffer.data[10:headerSz])
 	if 11+dataLen+8 > self.buffer.sz {
 		return 0, errors.Errorf("short buffer [%d > %d]", 11+dataLen+8, self.buffer.sz)
 	}
-	ts = ReadInt64(self.buffer.data[headerSz+len(self.data) : headerSz+len(self.data)+8])
+	ts = util.ReadInt64(self.buffer.data[headerSz+len(self.data) : headerSz+len(self.data)+8])
 	return ts, nil
 }
 
 func (self *wireMessage) encode() *wireMessage {
-	WriteInt32(self.buffer.data[0:4], self.seq)
+	util.WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
 	self.buffer.data[5] = byte(self.mf)
-	WriteInt32(self.buffer.data[6:10], self.ack)
-	WriteUint16(self.buffer.data[10:headerSz], uint16(len(self.data)))
+	util.WriteInt32(self.buffer.data[6:10], self.ack)
+	util.WriteUint16(self.buffer.data[10:headerSz], uint16(len(self.data)))
 	self.buffer.sz = uint16(headerSz + len(self.data))
 	return self
 }
 
 func decode(buffer *buffer) (*wireMessage, error) {
-	dataLen := ReadUint16(buffer.data[10:headerSz])
+	dataLen := util.ReadUint16(buffer.data[10:headerSz])
 	if 11+dataLen > buffer.sz {
 		return nil, errors.Errorf("short buffer [%d != %d]", 11+dataLen, buffer.sz)
 	}
 	wm := &wireMessage{
-		seq:    ReadInt32(buffer.data[0:4]),
+		seq:    util.ReadInt32(buffer.data[0:4]),
 		mt:     messageType(buffer.data[4]),
 		mf:     messageFlag(buffer.data[5]),
-		ack:    ReadInt32(buffer.data[6:10]),
+		ack:    util.ReadInt32(buffer.data[6:10]),
 		data:   buffer.data[headerSz : headerSz+dataLen],
 		buffer: buffer,
 	}
@@ -195,55 +196,6 @@ func (self messageFlag) string() string {
 		out += " RTT"
 	}
 	return strings.TrimSpace(out)
-}
-
-func ReadInt64(buf []byte) (v int64) {
-	v |= int64(buf[0]) << 56
-	v |= int64(buf[1]) << 48
-	v |= int64(buf[2]) << 40
-	v |= int64(buf[3]) << 32
-	v |= int64(buf[4]) << 24
-	v |= int64(buf[5]) << 16
-	v |= int64(buf[6]) << 8
-	v |= int64(buf[7])
-	return
-}
-
-func WriteInt64(buf []byte, v int64) {
-	buf[0] = byte(v >> 56)
-	buf[1] = byte(v >> 48)
-	buf[2] = byte(v >> 40)
-	buf[3] = byte(v >> 32)
-	buf[4] = byte(v >> 24)
-	buf[5] = byte(v >> 16)
-	buf[6] = byte(v >> 8)
-	buf[7] = byte(v)
-}
-
-func ReadInt32(buf []byte) (v int32) {
-	v |= int32(buf[0]) << 24
-	v |= int32(buf[1]) << 16
-	v |= int32(buf[2]) << 8
-	v |= int32(buf[3])
-	return
-}
-
-func WriteInt32(buf []byte, v int32) {
-	buf[0] = byte(v >> 24)
-	buf[1] = byte(v >> 16)
-	buf[2] = byte(v >> 8)
-	buf[3] = byte(v)
-}
-
-func ReadUint16(buf []byte) (v uint16) {
-	v |= uint16(buf[0]) << 8
-	v |= uint16(buf[1])
-	return
-}
-
-func WriteUint16(buf []byte, v uint16) {
-	buf[0] = byte(v >> 8)
-	buf[1] = byte(v)
 }
 
 const (
