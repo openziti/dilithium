@@ -3,18 +3,23 @@ module github.com/michaelquigley/dilithium
 go 1.14
 
 require (
+	github.com/deepmap/oapi-codegen v1.3.12 // indirect
 	github.com/emirpasic/gods v1.12.0
-	github.com/google/uuid v1.1.1
-	github.com/influxdata/influxdb-client-go v1.3.0
-	github.com/labstack/gommon v0.3.0
-	github.com/lucas-clemente/quic-go v0.17.1
-	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/michaelquigley/pfxlog v0.0.0-20190813191113-2be43bd0dccc
+	github.com/influxdata/influxdb-client-go v1.4.0
+	github.com/lucas-clemente/quic-go v0.18.0
+	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
+	github.com/michaelquigley/pfxlog v0.0.0-20200810152857-445c0d2683db
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/profile v1.5.0
-	github.com/sirupsen/logrus v1.5.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.6.1
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a // indirect
+	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
+	golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a // indirect
+	golang.org/x/text v0.3.3 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 )
