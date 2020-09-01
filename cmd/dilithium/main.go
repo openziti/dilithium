@@ -4,6 +4,7 @@ import (
 	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
 	_ "github.com/michaelquigley/dilithium/cmd/dilithium/echo"
 	_ "github.com/michaelquigley/dilithium/cmd/dilithium/influx"
+	_ "github.com/michaelquigley/dilithium/cmd/dilithium/loop"
 	_ "github.com/michaelquigley/dilithium/cmd/dilithium/tunnel"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/sirupsen/logrus"

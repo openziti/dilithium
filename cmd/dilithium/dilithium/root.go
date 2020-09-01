@@ -19,6 +19,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
 	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, tls, quic, westworld2)")
 	RootCmd.PersistentFlags().StringVarP(&westworldConfigPath, "westworld2", "w", "", "Config file path for westworld2")
+	RootCmd.PersistentFlags().BoolVarP(&westworldConfigDump, "dump", "d", false, "Dump the westworld2 config")
 }
 
 var RootCmd = &cobra.Command{
@@ -53,7 +54,9 @@ var RootCmd = &cobra.Command{
 				logrus.Fatalf("error loading config [%s] (%v)", westworldConfigPath, err)
 			}
 		}
-		logrus.Infof(WestworldConfig.Dump())
+		if westworldConfigDump {
+			logrus.Infof(WestworldConfig.Dump())
+		}
 	},
 	PersistentPostRun: func(_ *cobra.Command, _ []string) {
 		if cpuProfile != nil {
@@ -76,3 +79,4 @@ var memoryProfile interface{ Stop() }
 var doMutexProfile bool
 var mutexProfile interface{ Stop() }
 var westworldConfigPath string
+var westworldConfigDump bool
