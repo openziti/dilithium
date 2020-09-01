@@ -4,6 +4,7 @@ import "sync/atomic"
 
 type buffer struct {
 	data []byte
+	uz   uint32
 	sz   uint32
 	pool *pool
 	refs int32
@@ -12,6 +13,7 @@ type buffer struct {
 func newBuffer(pool *pool) *buffer {
 	return &buffer{
 		data: make([]byte, pool.sz),
+		sz:   pool.sz,
 		pool: pool,
 		refs: 0,
 	}
@@ -23,7 +25,7 @@ func (self *buffer) ref() {
 
 func (self *buffer) unref() {
 	if atomic.AddInt32(&self.refs, -1) < 1 {
-		self.sz = 0
+		self.uz = 0
 		self.pool.put(self)
 	}
 }

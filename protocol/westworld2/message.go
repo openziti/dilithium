@@ -148,7 +148,7 @@ func (self *wireMessage) encode() *wireMessage {
 func decode(buffer *buffer) (*wireMessage, error) {
 	dataLen := util.ReadUint16(buffer.data[10:headerSz])
 	if 11+dataLen > buffer.sz {
-		return nil, errors.Errorf("short buffer [%d != %d]", 11+dataLen, buffer.sz)
+		return nil, errors.Errorf("short buffer [%d != %d]", buffer.sz, 11+dataLen)
 	}
 	wm := &wireMessage{
 		seq:    util.ReadInt32(buffer.data[0:4]),
