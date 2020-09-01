@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
@@ -94,7 +95,7 @@ func makeData(sz int, variations int) (data []byte, szs []int16) {
 func TestReadWriteInt64(t *testing.T) {
 	buf := make([]byte, 8)
 	now := time.Now().UnixNano()
-	WriteInt64(buf, now)
-	later := ReadInt64(buf)
+	util.WriteInt64(buf, now)
+	later := util.ReadInt64(buf)
 	assert.Equal(t, now, later)
 }
