@@ -1,7 +1,6 @@
 package loop
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -17,5 +16,5 @@ var loopServerCmd = &cobra.Command{
 }
 
 func loopServer(_ *cobra.Command, args []string) {
-	logrus.Infof("start sender: %t", startSender)
+	//
 }
