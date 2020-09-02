@@ -7,24 +7,26 @@ import (
 	"net"
 )
 
-type sender struct {
-	ds   *dataSet
-	pool *pool
+type Sender struct {
+	ds   *DataSet
+	pool *Pool
 	conn net.Conn
 	seq  util.Sequence
 	ct   int
+	Done chan struct{}
 }
 
-func newSender(ds *dataSet, pool *pool, conn net.Conn, ct int) *sender {
-	return &sender{
+func NewSender(ds *DataSet, pool *Pool, conn net.Conn, ct int) *Sender {
+	return &Sender{
 		ds:   ds,
 		pool: pool,
 		conn: conn,
 		ct:   ct,
+		Done: make(chan struct{}),
 	}
 }
 
-func (self *sender) run() {
+func (self *Sender) Run() {
 	logrus.Info("starting")
 	defer logrus.Info("exiting")
 
@@ -39,9 +41,10 @@ func (self *sender) run() {
 	if err := self.sendEnd(); err != nil {
 		logrus.Errorf("error sending end (%v)", err)
 	}
+	close(self.Done)
 }
 
-func (self *sender) sendStart() error {
+func (self *Sender) sendStart() error {
 	h := &header{uint32(self.seq.Next()), START, 0, self.pool.get()}
 	if err := writeHeader(h, self.conn); err != nil {
 		return err
@@ -49,11 +52,11 @@ func (self *sender) sendStart() error {
 	return nil
 }
 
-func (self *sender) sendData() error {
+func (self *Sender) sendData() error {
+	count := 0
 	for i := 0; i < self.ct; i++ {
-		logrus.Infof("sending data, count #%d", i)
-		for j, block := range self.ds.blocks {
-			logrus.Infof("sending block, count #%d", j)
+		for _, block := range self.ds.blocks {
+			logrus.Infof("sending block #%d", count)
 			h := &header{uint32(self.seq.Next()), DATA, block.buffer.uz, self.pool.get()}
 			if err := writeHeader(h, self.conn); err != nil {
 				return err
@@ -65,12 +68,13 @@ func (self *sender) sendData() error {
 			if n != int(block.buffer.uz) {
 				return errors.Errorf("short data write [%d != %d]", n, block.buffer.uz)
 			}
+			count++
 		}
 	}
 	return nil
 }
 
-func (self *sender) sendEnd() error {
+func (self *Sender) sendEnd() error {
 	h := &header{uint32(self.seq.Next()), END, 0, self.pool.get()}
 	if err := writeHeader(h, self.conn); err != nil {
 		return err

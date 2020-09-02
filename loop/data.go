@@ -55,14 +55,14 @@ func decodeDataBlock(b *buffer) (*dataBlock, error) {
 	}, nil
 }
 
-type dataSet struct {
+type DataSet struct {
 	blocks []*dataBlock
-	pool   *pool
+	pool   *Pool
 }
 
-func newDataSet(sz int) (*dataSet, error) {
-	ds := &dataSet{
-		pool: newPool(uint32(4 + 64 + sz)),
+func NewDataSet(sz int) (*DataSet, error) {
+	ds := &DataSet{
+		pool: NewPool(uint32(4 + 64 + sz)),
 	}
 
 	rand.Seed(time.Now().UnixNano())

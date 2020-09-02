@@ -6,11 +6,11 @@ type buffer struct {
 	data []byte
 	uz   uint32
 	sz   uint32
-	pool *pool
+	pool *Pool
 	refs int32
 }
 
-func newBuffer(pool *pool) *buffer {
+func newBuffer(pool *Pool) *buffer {
 	return &buffer{
 		data: make([]byte, pool.sz),
 		sz:   pool.sz,

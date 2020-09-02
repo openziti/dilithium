@@ -2,29 +2,30 @@ package loop
 
 import "sync"
 
-type pool struct {
+type Pool struct {
 	store *sync.Pool
 	sz    uint32
 }
 
-func newPool(sz uint32) *pool {
-	p := &pool{
+func NewPool(sz uint32) *Pool {
+	p := &Pool{
 		store: new(sync.Pool),
 		sz:    sz,
 	}
+	p.store.New = p.allocate
 	return p
 }
 
-func (self *pool) get() *buffer {
+func (self *Pool) get() *buffer {
 	buf := self.store.Get().(*buffer)
 	buf.ref()
 	return buf
 }
 
-func (self *pool) put(buffer *buffer) {
+func (self *Pool) put(buffer *buffer) {
 	self.store.Put(buffer)
 }
 
-func (self *pool) allocate() interface{} {
+func (self *Pool) allocate() interface{} {
 	return newBuffer(self)
 }

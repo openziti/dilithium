@@ -48,22 +48,22 @@ func decode(buffer *buffer) (*header, error) {
 	return h, nil
 }
 
-func readHeader(conn net.Conn, pool *pool) (h *header, data *buffer, err error) {
+func readHeader(conn net.Conn, pool *Pool) (h *header, err error) {
 	hBuffer := pool.get()
 	hData := hBuffer.data[0:14]
 	n, err := io.ReadFull(conn, hData)
 	if n != headerSz {
 		hBuffer.unref()
-		return nil, nil, errors.Errorf("weird read [%d != %d]", n, headerSz)
+		return nil, errors.Errorf("weird read [%d != %d]", n, headerSz)
 	}
 	if err != nil {
 		hBuffer.unref()
-		return nil, nil, errors.Wrap(err, "error reading header")
+		return nil, errors.Wrap(err, "error reading header")
 	}
 	inH, err := decode(hBuffer)
 	if err != nil {
 		hBuffer.unref()
-		return nil, nil, errors.Wrap(err, "error decoding header buffer")
+		return nil, errors.Wrap(err, "error decoding header buffer")
 	}
 	h = inH
 	return
