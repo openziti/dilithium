@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"math/rand"
 	"time"
 )
@@ -15,8 +16,17 @@ type dataBlock struct {
 }
 
 func newDataBlock(b *buffer) (*dataBlock, error) {
+	start := time.Now()
+	last := start
 	for i := 4 + 64; i < int(b.sz); i++ {
 		b.data[i] = byte(rand.Intn(255))
+		if time.Since(start).Milliseconds() > 5000 {
+			logrus.Infof("generating random playload (%0.2f%%)", (float32(i) / float32(b.sz)) * 100.0)
+			start = time.Now()
+		}
+	}
+	if time.Since(last).Milliseconds() > 5000 {
+		logrus.Infof("hashing payload...")
 	}
 	hash := sha512.Sum512(b.data[4+64:])
 	copy(b.data[4:], hash[:])
