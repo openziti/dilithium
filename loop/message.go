@@ -4,7 +4,6 @@ import (
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"io"
-	"net"
 )
 
 type header struct {
@@ -48,10 +47,10 @@ func decode(buffer *buffer) (*header, error) {
 	return h, nil
 }
 
-func readHeader(conn net.Conn, pool *Pool) (h *header, err error) {
+func readHeader(r io.Reader, pool *Pool) (h *header, err error) {
 	hBuffer := pool.get()
-	hData := hBuffer.data[0:14]
-	n, err := io.ReadFull(conn, hData)
+	hData := hBuffer.data[0:headerSz]
+	n, err := io.ReadFull(r, hData)
 	if n != headerSz {
 		hBuffer.unref()
 		return nil, errors.Errorf("weird read [%d != %d]", n, headerSz)
@@ -60,6 +59,7 @@ func readHeader(conn net.Conn, pool *Pool) (h *header, err error) {
 		hBuffer.unref()
 		return nil, errors.Wrap(err, "error reading header")
 	}
+	hBuffer.uz = uint32(n)
 	inH, err := decode(hBuffer)
 	if err != nil {
 		hBuffer.unref()
@@ -69,11 +69,11 @@ func readHeader(conn net.Conn, pool *Pool) (h *header, err error) {
 	return
 }
 
-func writeHeader(h *header, conn net.Conn) error {
+func writeHeader(h *header, w io.Writer) error {
 	if err := h.encode(); err != nil {
 		return errors.Wrap(err, "error encoding buffer")
 	}
-	n, err := conn.Write(h.buffer.data[:h.buffer.uz])
+	n, err := w.Write(h.buffer.data[:h.buffer.uz])
 	if uint32(n) != h.buffer.uz {
 		return errors.Errorf("short header write [%d != %d]", n, h.buffer.uz)
 	}
