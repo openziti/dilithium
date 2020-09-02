@@ -63,4 +63,6 @@ func loopServer(_ *cobra.Command, args []string) {
 	if tx != nil {
 		<- tx.Done
 	}
+
+	logrus.Infof("%d allocations", pool.Allocations)
 }

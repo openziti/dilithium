@@ -69,15 +69,18 @@ func (self *Receiver) receiveData() error {
 				return errors.Errorf("short read [%d != %d]", n, h.sz)
 			}
 			buffer.unref()
+			h.buffer.unref()
 			count++
 
 		} else if h.mt == END {
 			if h.sz != 0 {
 				return errors.Errorf("non-empty end message")
 			}
+			h.buffer.unref()
 			return nil
 
 		} else {
+			h.buffer.unref()
 			return errors.Errorf("unexpected message type (%d)", h.mt)
 		}
 	}

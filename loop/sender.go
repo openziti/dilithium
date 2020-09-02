@@ -49,6 +49,7 @@ func (self *Sender) sendStart() error {
 	if err := writeHeader(h, self.conn); err != nil {
 		return err
 	}
+	h.buffer.unref()
 	return nil
 }
 
@@ -57,10 +58,13 @@ func (self *Sender) sendData() error {
 	for i := 0; i < self.ct; i++ {
 		for _, block := range self.ds.blocks {
 			logrus.Infof("sending block #%d", count)
+
 			h := &header{uint32(self.seq.Next()), DATA, block.buffer.uz, self.pool.get()}
 			if err := writeHeader(h, self.conn); err != nil {
 				return err
 			}
+			h.buffer.unref()
+
 			n, err := self.conn.Write(block.buffer.data[:block.buffer.uz])
 			if err != nil {
 				return err
@@ -68,6 +72,7 @@ func (self *Sender) sendData() error {
 			if n != int(block.buffer.uz) {
 				return errors.Errorf("short data write [%d != %d]", n, block.buffer.uz)
 			}
+
 			count++
 		}
 	}
@@ -79,5 +84,6 @@ func (self *Sender) sendEnd() error {
 	if err := writeHeader(h, self.conn); err != nil {
 		return err
 	}
+	h.buffer.unref()
 	return nil
 }

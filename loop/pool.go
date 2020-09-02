@@ -1,10 +1,14 @@
 package loop
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 type Pool struct {
-	store *sync.Pool
-	sz    uint32
+	store       *sync.Pool
+	sz          uint32
+	Allocations int32
 }
 
 func NewPool(sz uint32) *Pool {
@@ -27,5 +31,6 @@ func (self *Pool) put(buffer *buffer) {
 }
 
 func (self *Pool) allocate() interface{} {
+	atomic.AddInt32(&self.Allocations, 1)
 	return newBuffer(self)
 }
