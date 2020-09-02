@@ -36,6 +36,9 @@ func (self *sender) run() {
 		logrus.Errorf("error sending data (%v)", err)
 		return
 	}
+	if err := self.sendEnd(); err != nil {
+		logrus.Errorf("error sending end (%v)", err)
+	}
 }
 
 func (self *sender) sendStart() error {
@@ -51,6 +54,10 @@ func (self *sender) sendData() error {
 		logrus.Infof("sending data, count #%d", i)
 		for j, block := range self.ds.blocks {
 			logrus.Infof("sending block, count #%d", j)
+			h := &header{uint32(self.seq.Next()), DATA, block.buffer.uz, self.pool.get()}
+			if err := writeHeader(h, self.conn); err != nil {
+				return err
+			}
 			n, err := self.conn.Write(block.buffer.data[:block.buffer.uz])
 			if err != nil {
 				return err
@@ -59,6 +66,14 @@ func (self *sender) sendData() error {
 				return errors.Errorf("short data write [%d != %d]", n, block.buffer.uz)
 			}
 		}
+	}
+	return nil
+}
+
+func (self *sender) sendEnd() error {
+	h := &header{uint32(self.seq.Next()), END, 0, self.pool.get()}
+	if err := writeHeader(h, self.conn); err != nil {
+		return err
 	}
 	return nil
 }
