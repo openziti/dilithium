@@ -8,7 +8,7 @@ import (
 func init() {
 	loopCmd.PersistentFlags().BoolVarP(&startSender, "sender", "s", false, "Start a sender on connect")
 	loopCmd.PersistentFlags().BoolVarP(&startReceiver, "receiver", "r", false, "Start a receiver on connect")
-	loopCmd.PersistentFlags().IntVarP(&size, "size", "z", 1024*1024, "Size of the data set (in bytes)")
+	loopCmd.PersistentFlags().Int64VarP(&size, "size", "z", 1024*1024, "Size of the data set (in bytes)")
 	loopCmd.PersistentFlags().IntVarP(&count, "count", "c", 1024, "Send count for data set")
 	dilithium.RootCmd.AddCommand(loopCmd)
 }
@@ -19,5 +19,5 @@ var loopCmd = &cobra.Command{
 }
 var startSender bool
 var startReceiver bool
-var size int
+var size int64
 var count int

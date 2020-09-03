@@ -1,6 +1,7 @@
 package loop
 
 import (
+	"crypto/sha512"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -8,22 +9,34 @@ import (
 )
 
 type Receiver struct {
-	pool *Pool
-	conn net.Conn
-	Done chan struct{}
+	pool       *Pool
+	conn       net.Conn
+	blocks     chan *buffer
+	blocksDone chan struct{}
+	Done       chan struct{}
 }
 
 func NewReceiver(pool *Pool, conn net.Conn) *Receiver {
 	return &Receiver{
-		pool: pool,
-		conn: conn,
-		Done: make(chan struct{}),
+		pool:       pool,
+		conn:       conn,
+		blocks:     make(chan *buffer, 4096),
+		blocksDone: make(chan struct{}),
+		Done:       make(chan struct{}),
 	}
 }
 
 func (self *Receiver) Run() {
 	logrus.Info("starting")
 	defer logrus.Info("exiting")
+
+	go self.hasher()
+	defer func() {
+		logrus.Infof("closing hasher")
+		close(self.blocks)
+		<- self.blocksDone
+		close(self.Done)
+	}()
 
 	if err := self.receiveStart(); err != nil {
 		logrus.Errorf("error receiving start (%v)", err)
@@ -33,7 +46,6 @@ func (self *Receiver) Run() {
 		logrus.Errorf("error receiving data (%v)", err)
 		return
 	}
-	close(self.Done)
 }
 
 func (self *Receiver) receiveStart() error {
@@ -59,7 +71,7 @@ func (self *Receiver) receiveData() error {
 			return err
 		}
 		if h.mt == DATA {
-			logrus.Infof("reading block #%d", count)
+			logrus.Infof("reading block #%d [sz: %d]", count, h.sz)
 			buffer := self.pool.get()
 			n, err := io.ReadFull(self.conn, buffer.data[0:h.sz])
 			if err != nil {
@@ -68,8 +80,11 @@ func (self *Receiver) receiveData() error {
 			if n != int(h.sz) {
 				return errors.Errorf("short read [%d != %d]", n, h.sz)
 			}
-			buffer.unref()
+			buffer.uz = int64(n)
 			h.buffer.unref()
+
+			self.blocks <- buffer
+
 			count++
 
 		} else if h.mt == END {
@@ -83,5 +98,39 @@ func (self *Receiver) receiveData() error {
 			h.buffer.unref()
 			return errors.Errorf("unexpected message type (%d)", h.mt)
 		}
+	}
+}
+
+func (self *Receiver) hasher() {
+	logrus.Infof("started")
+	defer logrus.Infof("exited")
+	defer func() { close(self.blocksDone) }()
+
+	for {
+		block, ok := <-self.blocks
+		if !ok {
+			return
+		}
+
+		inHash, data, err := decodeDataBlock(block)
+		if err != nil {
+			logrus.Errorf("error decoding data block (%v)", err)
+		}
+
+		logrus.Infof("hashing data block of [%d] bytes", len(data))
+
+		outHash := sha512.Sum512(data)
+		if len(outHash) != len(inHash) {
+			logrus.Errorf("hash length mismatch [%d != %d]", len(outHash), len(inHash))
+		}
+		for i := 0; i < len(outHash); i++ {
+			if outHash[i] != inHash[i] {
+				logrus.Errorf("hash mismatch at [#%d]", i)
+				return
+			}
+		}
+		logrus.Infof("hashing complete")
+
+		block.unref()
 	}
 }

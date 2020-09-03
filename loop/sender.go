@@ -57,20 +57,20 @@ func (self *Sender) sendData() error {
 	count := 0
 	for i := 0; i < self.ct; i++ {
 		for _, block := range self.ds.blocks {
-			logrus.Infof("sending block #%d", count)
+			logrus.Infof("sending block #%d [uz: %d, sz: %d]", count, block.uz, block.sz)
 
-			h := &header{uint32(self.seq.Next()), DATA, block.buffer.uz, self.pool.get()}
+			h := &header{uint32(self.seq.Next()), DATA, block.uz, self.pool.get()}
 			if err := writeHeader(h, self.conn); err != nil {
 				return err
 			}
 			h.buffer.unref()
 
-			n, err := self.conn.Write(block.buffer.data[:block.buffer.uz])
+			n, err := self.conn.Write(block.data)
 			if err != nil {
 				return err
 			}
-			if n != int(block.buffer.uz) {
-				return errors.Errorf("short data write [%d != %d]", n, block.buffer.uz)
+			if n != int(block.uz) {
+				return errors.Errorf("short data write [%d != %d]", n, block.uz)
 			}
 
 			count++

@@ -4,8 +4,8 @@ import "sync/atomic"
 
 type buffer struct {
 	data []byte
-	uz   uint32
-	sz   uint32
+	uz   int64
+	sz   int64
 	pool *Pool
 	refs int32
 }

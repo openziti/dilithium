@@ -23,21 +23,6 @@ func WriteInt64(buf []byte, v int64) {
 	buf[7] = byte(v)
 }
 
-func ReadUint32(buf []byte) (v uint32) {
-	v |= uint32(buf[0]) << 24
-	v |= uint32(buf[1]) << 16
-	v |= uint32(buf[2]) << 8
-	v |= uint32(buf[3])
-	return
-}
-
-func WriteUint32(buf []byte, v uint32) {
-	buf[0] = byte(v >> 24)
-	buf[1] = byte(v >> 16)
-	buf[2] = byte(v >> 8)
-	buf[3] = byte(v)
-}
-
 func ReadInt32(buf []byte) (v int32) {
 	v |= int32(buf[0]) << 24
 	v |= int32(buf[1]) << 16

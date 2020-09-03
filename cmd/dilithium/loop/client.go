@@ -19,10 +19,12 @@ var loopClientCmd = &cobra.Command{
 }
 
 func loopClient(_ *cobra.Command, args []string) {
+	pool := loop.NewPool(2+64+size)
+
 	var ds *loop.DataSet
 	if startSender {
 		var err error
-		ds, err = loop.NewDataSet(size)
+		ds, err = loop.NewDataSet(pool)
 		if err != nil {
 			logrus.Fatalf("error creating dataset (%v)", err)
 		}
@@ -37,8 +39,6 @@ func loopClient(_ *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("error dialing server (%v)", err)
 	}
-
-	pool := loop.NewPool(uint32(4+64+size))
 
 	var rx *loop.Receiver
 	if startReceiver {

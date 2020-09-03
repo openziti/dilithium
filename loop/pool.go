@@ -7,11 +7,11 @@ import (
 
 type Pool struct {
 	store       *sync.Pool
-	sz          uint32
+	sz          int64
 	Allocations int32
 }
 
-func NewPool(sz uint32) *Pool {
+func NewPool(sz int64) *Pool {
 	p := &Pool{
 		store: new(sync.Pool),
 		sz:    sz,
