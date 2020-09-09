@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
+	"time"
 )
 
 type Sender struct {
@@ -13,6 +14,7 @@ type Sender struct {
 	conn net.Conn
 	seq  util.Sequence
 	ct   int
+	rate *transferReporter
 	Done chan struct{}
 }
 
@@ -22,6 +24,7 @@ func NewSender(ds *DataSet, pool *Pool, conn net.Conn, ct int) *Sender {
 		pool: pool,
 		conn: conn,
 		ct:   ct,
+		rate: newTransferReporter(),
 		Done: make(chan struct{}),
 	}
 }
@@ -29,6 +32,8 @@ func NewSender(ds *DataSet, pool *Pool, conn net.Conn, ct int) *Sender {
 func (self *Sender) Run() {
 	logrus.Info("starting")
 	defer logrus.Info("exiting")
+
+	go self.rate.run()
 
 	if err := self.sendStart(); err != nil {
 		logrus.Errorf("error sending start (%v)", err)
@@ -41,6 +46,8 @@ func (self *Sender) Run() {
 	if err := self.sendEnd(); err != nil {
 		logrus.Errorf("error sending end (%v)", err)
 	}
+
+	close(self.rate.in)
 	close(self.Done)
 }
 
@@ -72,6 +79,8 @@ func (self *Sender) sendData() error {
 			if n != int(block.uz) {
 				return errors.Errorf("short data write [%d != %d]", n, block.uz)
 			}
+
+			self.rate.in <- &transferReport{time.Now(), int64(n)}
 
 			count++
 		}
