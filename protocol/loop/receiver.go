@@ -24,30 +24,34 @@ func NewReceiver(pool *Pool, conn net.Conn) *Receiver {
 		conn:       conn,
 		blocks:     make(chan *buffer, 4096),
 		blocksDone: make(chan struct{}),
-		rate:       newTransferReporter(),
+		rate:       newTransferReporter("rx"),
 		Done:       make(chan struct{}),
 	}
 }
 
-func (self *Receiver) Run() {
+func (self *Receiver) Run(hasher bool) {
 	logrus.Info("starting")
 	defer logrus.Info("exiting")
 
 	go self.rate.run()
 
-	go self.hasher()
-	defer func() {
-		logrus.Infof("closing hasher")
-		close(self.blocks)
-		<-self.blocksDone
-		close(self.Done)
-	}()
+	if(hasher) {
+		go self.hasher()
+		defer func() {
+			logrus.Infof("closing hasher")
+			close(self.blocks)
+			<-self.blocksDone
+			close(self.Done)
+		}()
+	} else {
+		defer close(self.Done)
+	}
 
 	if err := self.receiveStart(); err != nil {
 		logrus.Errorf("error receiving start (%v)", err)
 		return
 	}
-	if err := self.receiveData(); err != nil {
+	if err := self.receiveData(hasher); err != nil {
 		logrus.Errorf("error receiving data (%v)", err)
 		return
 	}
@@ -70,7 +74,7 @@ func (self *Receiver) receiveStart() error {
 	return nil
 }
 
-func (self *Receiver) receiveData() error {
+func (self *Receiver) receiveData(hasher bool) error {
 	count := 0
 	for {
 		h, err := readHeader(self.conn, self.pool)
@@ -91,7 +95,10 @@ func (self *Receiver) receiveData() error {
 			h.buffer.unref()
 
 			self.rate.in <- &transferReport{time.Now(), int64(n)}
-			self.blocks <- buffer
+
+			if(hasher) {
+				self.blocks <- buffer
+			}
 
 			count++
 

@@ -12,14 +12,16 @@ type transferReport struct {
 }
 
 type transferReporter struct {
+	name       string
 	in         chan *transferReport
 	pending    []*transferReport
 	lastReport time.Time
 }
 
-func newTransferReporter() *transferReporter {
+func newTransferReporter(name string) *transferReporter {
 	return &transferReporter{
-		in: make(chan *transferReport, 1024),
+		name: name,
+		in:   make(chan *transferReport, 1024),
 	}
 }
 
@@ -60,7 +62,7 @@ func (self *transferReporter) run() {
 			self.pending = self.pending[lastI+1:]
 			self.lastReport = now
 
-			logrus.Infof("%s/sec [:%d, %d pending]", util.BytesToSize(totalBytes), lastI, len(self.pending))
+			logrus.Infof("[%s] %s/sec [:%d, %d pending]", self.name, util.BytesToSize(totalBytes), lastI, len(self.pending))
 		}
 	}
 }

@@ -48,7 +48,7 @@ func loopServer(_ *cobra.Command, args []string) {
 	var rx *loop.Receiver
 	if startReceiver {
 		rx = loop.NewReceiver(pool, conn)
-		go rx.Run()
+		go rx.Run(startHasher)
 	}
 
 	var tx *loop.Sender

@@ -24,7 +24,7 @@ func NewSender(ds *DataSet, pool *Pool, conn net.Conn, ct int) *Sender {
 		pool: pool,
 		conn: conn,
 		ct:   ct,
-		rate: newTransferReporter(),
+		rate: newTransferReporter("tx"),
 		Done: make(chan struct{}),
 	}
 }
