@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
+	"time"
 )
 
 type Receiver struct {
@@ -13,6 +14,7 @@ type Receiver struct {
 	conn       net.Conn
 	blocks     chan *buffer
 	blocksDone chan struct{}
+	rate       *transferReporter
 	Done       chan struct{}
 }
 
@@ -22,6 +24,7 @@ func NewReceiver(pool *Pool, conn net.Conn) *Receiver {
 		conn:       conn,
 		blocks:     make(chan *buffer, 4096),
 		blocksDone: make(chan struct{}),
+		rate:       newTransferReporter(),
 		Done:       make(chan struct{}),
 	}
 }
@@ -30,11 +33,13 @@ func (self *Receiver) Run() {
 	logrus.Info("starting")
 	defer logrus.Info("exiting")
 
+	go self.rate.run()
+
 	go self.hasher()
 	defer func() {
 		logrus.Infof("closing hasher")
 		close(self.blocks)
-		<- self.blocksDone
+		<-self.blocksDone
 		close(self.Done)
 	}()
 
@@ -46,6 +51,8 @@ func (self *Receiver) Run() {
 		logrus.Errorf("error receiving data (%v)", err)
 		return
 	}
+
+	close(self.rate.in)
 }
 
 func (self *Receiver) receiveStart() error {
@@ -71,7 +78,7 @@ func (self *Receiver) receiveData() error {
 			return err
 		}
 		if h.mt == DATA {
-			logrus.Infof("reading block #%d [sz: %d]", count, h.sz)
+			//logrus.Infof("reading block #%d [sz: %d]", count, h.sz)
 			buffer := self.pool.get()
 			n, err := io.ReadFull(self.conn, buffer.data[0:h.sz])
 			if err != nil {
@@ -83,6 +90,7 @@ func (self *Receiver) receiveData() error {
 			buffer.uz = int64(n)
 			h.buffer.unref()
 
+			self.rate.in <- &transferReport{time.Now(), int64(n)}
 			self.blocks <- buffer
 
 			count++
@@ -117,7 +125,7 @@ func (self *Receiver) hasher() {
 			logrus.Errorf("error decoding data block (%v)", err)
 		}
 
-		logrus.Infof("hashing data block of [%d] bytes", len(data))
+		//logrus.Infof("hashing data block of [%d] bytes", len(data))
 
 		outHash := sha512.Sum512(data)
 		if len(outHash) != len(inHash) {
@@ -129,7 +137,7 @@ func (self *Receiver) hasher() {
 				return
 			}
 		}
-		logrus.Infof("hashing complete")
+		//logrus.Infof("hashing complete")
 
 		block.unref()
 	}
