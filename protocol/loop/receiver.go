@@ -57,6 +57,11 @@ func (self *Receiver) Run(hasher bool) {
 		return
 	}
 
+	logrus.Infof("[%d] header pool allocations", self.headerPool.Allocations)
+	if self.pool != nil {
+		logrus.Infof("[%d] data pool allocations", self.pool.Allocations)
+	}
+
 	close(self.rate.in)
 }
 

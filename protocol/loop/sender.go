@@ -47,6 +47,8 @@ func (self *Sender) Run() {
 		logrus.Errorf("error sending end (%v)", err)
 	}
 
+	logrus.Infof("[%d] header pool allocations", self.headerPool.Allocations)
+
 	close(self.rate.in)
 	close(self.Done)
 }
