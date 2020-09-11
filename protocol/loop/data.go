@@ -26,7 +26,7 @@ func encodeDataBlock(b *buffer) (*buffer, error) {
 	if time.Since(last).Milliseconds() > 5000 {
 		logrus.Infof("hashing payload...")
 	}
-	hash := sha512.Sum512(b.data[2+64:])
+	hash := sha512.Sum512(b.data[dataHeaderSz:])
 	copy(b.data[2:], hash[:])
 	util.WriteUint16(b.data, 64)
 	b.uz = b.sz
@@ -49,9 +49,9 @@ type DataSet struct {
 	pool   *Pool
 }
 
-func NewDataSet(pool *Pool) (*DataSet, error) {
+func NewDataSet(sz int64) (*DataSet, error) {
 	ds := &DataSet{
-		pool: pool,
+		pool: NewPool(dataHeaderSz + sz),
 	}
 
 	rand.Seed(time.Now().UnixNano())
@@ -63,3 +63,7 @@ func NewDataSet(pool *Pool) (*DataSet, error) {
 
 	return ds, nil
 }
+
+const hashSizeSz = 2
+const sha512Sz = 64
+const dataHeaderSz = hashSizeSz + sha512Sz

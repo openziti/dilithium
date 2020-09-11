@@ -10,6 +10,7 @@ import (
 )
 
 type Receiver struct {
+	headerPool *Pool
 	pool       *Pool
 	conn       net.Conn
 	blocks     chan *buffer
@@ -18,9 +19,9 @@ type Receiver struct {
 	Done       chan struct{}
 }
 
-func NewReceiver(pool *Pool, conn net.Conn) *Receiver {
+func NewReceiver(conn net.Conn) *Receiver {
 	return &Receiver{
-		pool:       pool,
+		headerPool: NewPool(headerSz + 1),
 		conn:       conn,
 		blocks:     make(chan *buffer, 4096),
 		blocksDone: make(chan struct{}),
@@ -35,7 +36,7 @@ func (self *Receiver) Run(hasher bool) {
 
 	go self.rate.run()
 
-	if(hasher) {
+	if hasher {
 		go self.hasher()
 		defer func() {
 			logrus.Infof("closing hasher")
@@ -60,7 +61,7 @@ func (self *Receiver) Run(hasher bool) {
 }
 
 func (self *Receiver) receiveStart() error {
-	h, err := readHeader(self.conn, self.pool)
+	h, err := readHeader(self.conn, self.headerPool)
 	if err != nil {
 		return err
 	}
@@ -77,12 +78,15 @@ func (self *Receiver) receiveStart() error {
 func (self *Receiver) receiveData(hasher bool) error {
 	count := 0
 	for {
-		h, err := readHeader(self.conn, self.pool)
+		h, err := readHeader(self.conn, self.headerPool)
 		if err != nil {
 			return err
 		}
 		if h.mt == DATA {
-			//logrus.Infof("reading block #%d [sz: %d]", count, h.sz)
+			if self.pool == nil {
+				self.pool = NewPool(h.sz)
+			}
+
 			buffer := self.pool.get()
 			n, err := io.ReadFull(self.conn, buffer.data[0:h.sz])
 			if err != nil {
@@ -96,7 +100,7 @@ func (self *Receiver) receiveData(hasher bool) error {
 
 			self.rate.in <- &transferReport{time.Now(), int64(n)}
 
-			if(hasher) {
+			if hasher {
 				self.blocks <- buffer
 			}
 
@@ -132,8 +136,6 @@ func (self *Receiver) hasher() {
 			logrus.Errorf("error decoding data block (%v)", err)
 		}
 
-		//logrus.Infof("hashing data block of [%d] bytes", len(data))
-
 		outHash := sha512.Sum512(data)
 		if len(outHash) != len(inHash) {
 			logrus.Errorf("hash length mismatch [%d != %d]", len(outHash), len(inHash))
@@ -144,7 +146,6 @@ func (self *Receiver) hasher() {
 				return
 			}
 		}
-		//logrus.Infof("hashing complete")
 
 		block.unref()
 	}

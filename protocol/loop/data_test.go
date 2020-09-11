@@ -7,9 +7,9 @@ import (
 )
 
 func TestDataBlockEncodeDecode(t *testing.T) {
-	pool := NewPool(1024 * 1024)
+	pool := NewPool(dataHeaderSz + (1024 * 1024))
 
-	ds, err := NewDataSet(pool)
+	ds, err := NewDataSet(1024*1024)
 	assert.NoError(t, err)
 	inBuffer := ds.blocks[0]
 

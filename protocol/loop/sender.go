@@ -9,23 +9,23 @@ import (
 )
 
 type Sender struct {
-	ds   *DataSet
-	pool *Pool
-	conn net.Conn
-	seq  util.Sequence
-	ct   int
-	rate *transferReporter
-	Done chan struct{}
+	headerPool *Pool
+	ds         *DataSet
+	conn       net.Conn
+	seq        util.Sequence
+	ct         int
+	rate       *transferReporter
+	Done       chan struct{}
 }
 
-func NewSender(ds *DataSet, pool *Pool, conn net.Conn, ct int) *Sender {
+func NewSender(ds *DataSet, conn net.Conn, ct int) *Sender {
 	return &Sender{
-		ds:   ds,
-		pool: pool,
-		conn: conn,
-		ct:   ct,
-		rate: newTransferReporter("tx"),
-		Done: make(chan struct{}),
+		headerPool: NewPool(headerSz + 1),
+		ds:         ds,
+		conn:       conn,
+		ct:         ct,
+		rate:       newTransferReporter("tx"),
+		Done:       make(chan struct{}),
 	}
 }
 
@@ -52,7 +52,7 @@ func (self *Sender) Run() {
 }
 
 func (self *Sender) sendStart() error {
-	h := &header{uint32(self.seq.Next()), START, 0, self.pool.get()}
+	h := &header{uint32(self.seq.Next()), START, 0, self.headerPool.get()}
 	if err := writeHeader(h, self.conn); err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (self *Sender) sendData() error {
 		for _, block := range self.ds.blocks {
 			//logrus.Infof("sending block #%d [uz: %d, sz: %d]", count, block.uz, block.sz)
 
-			h := &header{uint32(self.seq.Next()), DATA, block.uz, self.pool.get()}
+			h := &header{uint32(self.seq.Next()), DATA, block.uz, self.headerPool.get()}
 			if err := writeHeader(h, self.conn); err != nil {
 				return err
 			}
@@ -89,7 +89,7 @@ func (self *Sender) sendData() error {
 }
 
 func (self *Sender) sendEnd() error {
-	h := &header{uint32(self.seq.Next()), END, 0, self.pool.get()}
+	h := &header{uint32(self.seq.Next()), END, 0, self.headerPool.get()}
 	if err := writeHeader(h, self.conn); err != nil {
 		return err
 	}

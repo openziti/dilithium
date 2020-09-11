@@ -19,12 +19,10 @@ var loopServerCmd = &cobra.Command{
 }
 
 func loopServer(_ *cobra.Command, args []string) {
-	pool := loop.NewPool(2+64+size)
-
 	var ds *loop.DataSet
 	if startSender {
 		var err error
-		ds, err = loop.NewDataSet(pool)
+		ds, err = loop.NewDataSet(2+64+size)
 		if err != nil {
 			logrus.Fatalf("error creating dataset (%v)", err)
 		}
@@ -47,13 +45,13 @@ func loopServer(_ *cobra.Command, args []string) {
 
 	var rx *loop.Receiver
 	if startReceiver {
-		rx = loop.NewReceiver(pool, conn)
+		rx = loop.NewReceiver(conn)
 		go rx.Run(startHasher)
 	}
 
 	var tx *loop.Sender
 	if startSender {
-		tx = loop.NewSender(ds, pool, conn, count)
+		tx = loop.NewSender(ds, conn, count)
 		go tx.Run()
 	}
 
@@ -63,6 +61,4 @@ func loopServer(_ *cobra.Command, args []string) {
 	if tx != nil {
 		<- tx.Done
 	}
-
-	logrus.Infof("%d allocations", pool.Allocations)
 }
