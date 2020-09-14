@@ -116,6 +116,11 @@ func (self *Receiver) receiveData(hasher bool) error {
 				return errors.Errorf("non-empty end message")
 			}
 			h.buffer.unref()
+
+			if err := self.sendEnd(); err != nil {
+				return err
+			}
+
 			return nil
 
 		} else {
@@ -123,6 +128,15 @@ func (self *Receiver) receiveData(hasher bool) error {
 			return errors.Errorf("unexpected message type (%d)", h.mt)
 		}
 	}
+}
+
+func (self *Receiver) sendEnd() error {
+	h := &header{uint32(0), END, 0, self.headerPool.get()}
+	if err := writeHeader(h, self.conn); err != nil {
+		return err
+	}
+	h.buffer.unref()
+	return nil
 }
 
 func (self *Receiver) hasher() {

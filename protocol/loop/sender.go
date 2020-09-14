@@ -91,10 +91,24 @@ func (self *Sender) sendData() error {
 }
 
 func (self *Sender) sendEnd() error {
-	h := &header{uint32(self.seq.Next()), END, 0, self.headerPool.get()}
+	buffer := self.headerPool.get()
+	defer buffer.unref()
+
+	h := &header{uint32(self.seq.Next()), END, 0, buffer}
 	if err := writeHeader(h, self.conn); err != nil {
 		return err
 	}
-	h.buffer.unref()
+
+	var err error
+	h, err = readHeader(self.conn, self.headerPool)
+	if err != nil {
+		return err
+	}
+	defer h.buffer.unref()
+
+	if h.mt != END {
+		return errors.Errorf("unexpected message type (%d)", h.mt)
+	}
+
 	return nil
 }
