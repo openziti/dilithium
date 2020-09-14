@@ -87,7 +87,7 @@ func (self *statsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
 	atomic.AddInt32(&self.rxDupeAcks, 1)
 }
 
-func (self *statsInstrument) newRextMs(_ *net.UDPAddr, retxMs int) {
+func (self *statsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
 	if !atomic.CompareAndSwapInt32(&self.retxLowMs, int32(-1), int32(retxMs)) {
 		old := atomic.LoadInt32(&self.retxLowMs)
 		if old > int32(retxMs) {

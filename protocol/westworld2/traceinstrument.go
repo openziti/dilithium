@@ -112,7 +112,7 @@ func (self *traceInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
-func (self *traceInstrument) newRextMs(_ *net.UDPAddr, _ int) {
+func (self *traceInstrument) newRetxMs(_ *net.UDPAddr, _ int) {
 }
 
 func (self *traceInstrument) allocate(ctx string) {

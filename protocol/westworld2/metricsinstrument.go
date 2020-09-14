@@ -109,9 +109,9 @@ func (self *metricsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
 	self.lock.Unlock()
 }
 
-func (self *metricsInstrument) newRextMs(_ *net.UDPAddr, rextMs int) {
+func (self *metricsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
 	self.lock.Lock()
-	self.retxMs = append(self.retxMs, &sample{time.Now(), int64(rextMs)})
+	self.retxMs = append(self.retxMs, &sample{time.Now(), int64(retxMs)})
 	self.lock.Unlock()
 }
 

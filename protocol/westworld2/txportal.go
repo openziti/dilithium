@@ -179,7 +179,7 @@ func (self *txPortal) rtt(ts int64) {
 	}
 
 	if self.config.i != nil {
-		self.config.i.newRextMs(self.peer, self.retxMs)
+		self.config.i.newRetxMs(self.peer, self.retxMs)
 	}
 }
 
