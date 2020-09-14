@@ -85,16 +85,19 @@ func (self *metricsInstrument) portalCapacitySz(_ *net.UDPAddr, capacity int) {
 	self.lock.Unlock()
 }
 
-func (self *metricsInstrument) unknownPeer(_ *net.UDPAddr) {
+func (self *metricsInstrument) unknownPeer(peer *net.UDPAddr) {
+	logrus.Errorf("unknownPeer (%s)", peer)
 }
 
-func (self *metricsInstrument) readError(_ *net.UDPAddr, _ error) {
+func (self *metricsInstrument) readError(_ *net.UDPAddr, err error) {
+	logrus.Errorf("readError (%v)", err)
 }
 
 func (self *metricsInstrument) connectError(_ *net.UDPAddr, _ error) {
 }
 
-func (self *metricsInstrument) unexpectedMessageType(_ *net.UDPAddr, _ messageType) {
+func (self *metricsInstrument) unexpectedMessageType(_ *net.UDPAddr, mt messageType) {
+	logrus.Errorf("unexpectedMessageType (%s)", mt.string())
 }
 
 func (self *metricsInstrument) duplicateRx(_ *net.UDPAddr, wm *wireMessage) {

@@ -8,7 +8,7 @@
 # Starting with a larger portal size can increase the off-the-line speed, but this seems like a reasonable starting
 # point, based on testing with a handful of links.
 #
-tx_portal_start_sz:           131072
+tx_portal_start_sz:           16384
 
 # Set the portal size floor to 16k.
 #
@@ -19,17 +19,17 @@ tx_portal_min_sz:             16384
 
 # 1 gigabyte of portal should be plenty.
 #
-tx_portal_max_sz:             1073741824
+tx_portal_max_sz:             1048576
 
 # Increase the portal size after 2 successfully-acked packets.
 #
-tx_portal_increase_ct:        2
+tx_portal_increase_ct:        5
 
 # Increase the portal size by 1.5x the accumulated data segment length. Westworld2 keeps an accumulator of the total
 # length of the successfully-acked data segments. When we reach the threshold for a portal size increase, increase it
 # by this fraction.
 #
-tx_portal_increase_frac:      1.5
+tx_portal_increase_frac:      1.25
 
 # Decrease the portal size after 256 duplicate acks.
 #
@@ -72,12 +72,12 @@ rtt_probe_avg_ct:             8
 # This is just a guess, but it's somewhere between 1450 and 1471... setting this to 1472 tanks the performance, which is
 # indicative of packet fragmentation on long-distance links.
 #
-max_segment_sz:               1375
+max_segment_sz:               1400
 
 # RX and TX buffer sizes for the underlying socket. 4mb.
 #
-rx_buffer_sz:                 4194304
-tx_buffer_sz:                 4194304
+rx_buffer_sz:                 419430
+tx_buffer_sz:                 419430
 
 # Capture metrics and output them to the `logs/` directory.
 #
