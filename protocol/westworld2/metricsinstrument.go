@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -37,6 +39,7 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	if err := mi.configure(config); err != nil {
 		return nil, err
 	}
+	go mi.signalHandler()
 	return mi, nil
 }
 
@@ -53,39 +56,8 @@ func (self *metricsInstrument) connected(_ *net.UDPAddr) {
 }
 
 func (self *metricsInstrument) closed(_ *net.UDPAddr) {
-	if err := os.MkdirAll(self.prefix, os.ModePerm); err == nil {
-		outPath, err := ioutil.TempDir(self.prefix, "")
-		if err == nil {
-			logrus.Infof("writing metrics to prefix [%s]", outPath)
-			if err := self.writeSamples("txBytes", outPath, self.txBytes); err != nil {
-				logrus.Errorf("error writing txBytes (%v)", err)
-			}
-			if err := self.writeSamples("retxBytes", outPath, self.retxBytes); err != nil {
-				logrus.Errorf("error writing retxBytes (%v)", err)
-			}
-			if err := self.writeSamples("rxBytes", outPath, self.rxBytes); err != nil {
-				logrus.Errorf("error writing rxBytes (%v)", err)
-			}
-			if err := self.writeSamples("txPortalSz", outPath, self.txPortalSz); err != nil {
-				logrus.Errorf("error writing txPortalSz (%v)", err)
-			}
-			if err := self.writeSamples("duplicateRxBytes", outPath, self.duplicateRxBytes); err != nil {
-				logrus.Errorf("error writing duplicateRxBytes (%v)", err)
-			}
-			if err := self.writeSamples("duplicateAcks", outPath, self.duplicateAcks); err != nil {
-				logrus.Errorf("error writing duplicateAcks (%v)", err)
-			}
-			if err := self.writeSamples("retxMs", outPath, self.retxMs); err != nil {
-				logrus.Errorf("error writing retxMs (%v)", err)
-			}
-			if err := self.writeSamples("allocations", outPath, self.allocations); err != nil {
-				logrus.Errorf("error writing allocations (%v)", err)
-			}
-		} else {
-			logrus.Errorf("error writing metrics (%v)", err)
-		}
-	} else {
-		logrus.Errorf("unable to make output parent [%s] (%v)", self.prefix, err)
+	if err := self.writeAllSamples(); err != nil {
+		logrus.Errorf("error writing samples (%v)", err)
 	}
 }
 
@@ -161,6 +133,44 @@ func (self *metricsInstrument) configure(data map[string]interface{}) error {
 	return nil
 }
 
+func (self *metricsInstrument) writeAllSamples() error {
+	if err := os.MkdirAll(self.prefix, os.ModePerm); err == nil {
+		outPath, err := ioutil.TempDir(self.prefix, "")
+		if err == nil {
+			logrus.Infof("writing metrics to prefix [%s]", outPath)
+			if err := self.writeSamples("txBytes", outPath, self.txBytes); err != nil {
+				logrus.Errorf("error writing txBytes (%v)", err)
+			}
+			if err := self.writeSamples("retxBytes", outPath, self.retxBytes); err != nil {
+				logrus.Errorf("error writing retxBytes (%v)", err)
+			}
+			if err := self.writeSamples("rxBytes", outPath, self.rxBytes); err != nil {
+				logrus.Errorf("error writing rxBytes (%v)", err)
+			}
+			if err := self.writeSamples("txPortalSz", outPath, self.txPortalSz); err != nil {
+				logrus.Errorf("error writing txPortalSz (%v)", err)
+			}
+			if err := self.writeSamples("duplicateRxBytes", outPath, self.duplicateRxBytes); err != nil {
+				logrus.Errorf("error writing duplicateRxBytes (%v)", err)
+			}
+			if err := self.writeSamples("duplicateAcks", outPath, self.duplicateAcks); err != nil {
+				logrus.Errorf("error writing duplicateAcks (%v)", err)
+			}
+			if err := self.writeSamples("retxMs", outPath, self.retxMs); err != nil {
+				logrus.Errorf("error writing retxMs (%v)", err)
+			}
+			if err := self.writeSamples("allocations", outPath, self.allocations); err != nil {
+				logrus.Errorf("error writing allocations (%v)", err)
+			}
+		} else {
+			logrus.Errorf("error writing metrics (%v)", err)
+		}
+	} else {
+		logrus.Errorf("unable to make output parent [%s] (%v)", self.prefix, err)
+	}
+	return nil
+}
+
 func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sample) error {
 	path := filepath.Join(outPath, fmt.Sprintf("%s.csv", name))
 	oF, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
@@ -182,4 +192,18 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 	}
 	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
 	return nil
+}
+
+func (self *metricsInstrument) signalHandler() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGUSR2)
+
+	for {
+		s := <-c
+		if s == syscall.SIGUSR2 {
+			if err := self.writeAllSamples(); err != nil {
+				logrus.Errorf("error writing samples (%v)", err)
+			}
+		}
+	}
 }
