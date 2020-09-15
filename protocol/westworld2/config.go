@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	seqRandom            bool
 	txPortalStartSz      int
 	txPortalMinSz        int
 	txPortalMaxSz        int
@@ -33,6 +34,7 @@ type Config struct {
 
 func NewDefaultConfig() *Config {
 	return &Config{
+		seqRandom:            true,
 		txPortalStartSz:      3 * 1024,
 		txPortalMinSz:        2048,
 		txPortalMaxSz:        1024 * 1024,
@@ -58,6 +60,13 @@ func NewDefaultConfig() *Config {
 }
 
 func (self *Config) Load(data map[interface{}]interface{}) error {
+	if v, found := data["seq_random"]; found {
+		if b, ok := v.(bool); ok {
+			self.seqRandom = b
+		} else {
+			return errors.New("invalid 'seq_random' value")
+		}
+	}
 	if v, found := data["tx_portal_start_sz"]; found {
 		if i, ok := v.(int); ok {
 			self.txPortalStartSz = i
@@ -243,6 +252,7 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 
 func (self *Config) Dump() string {
 	out := "westworld2.Config{\n"
+	out += fmt.Sprintf("\t%-30s %t\n", "seq_random", self.seqRandom)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_start_sz", self.txPortalStartSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_min_sz", self.txPortalMinSz)
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_max_sz", self.txPortalMaxSz)

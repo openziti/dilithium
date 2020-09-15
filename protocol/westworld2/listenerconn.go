@@ -23,15 +23,19 @@ type listenerConn struct {
 }
 
 func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*listenerConn, error) {
-	sSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
-	if err != nil {
-		return nil, errors.Wrap(err, "random sequence")
+	sSeq := int64(0)
+	if config.seqRandom {
+		randSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
+		if err != nil {
+			return nil, errors.Wrap(err, "random sequence")
+		}
+		sSeq = randSeq.Int64()
 	}
 	lc := &listenerConn{
 		conn:    conn,
 		peer:    peer,
 		rxQueue: make(chan *wireMessage, config.listenerRxQLen),
-		seq:     util.NewSequence(int32(sSeq.Int64())),
+		seq:     util.NewSequence(int32(sSeq)),
 		pool:    newPool("listenerConn", config),
 		config:  config,
 	}

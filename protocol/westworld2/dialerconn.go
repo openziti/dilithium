@@ -22,14 +22,18 @@ type dialerConn struct {
 }
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*dialerConn, error) {
-	sSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
-	if err != nil {
-		return nil, errors.Wrap(err, "random sequence")
+	sSeq := int64(0)
+	if config.seqRandom {
+		randSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
+		if err != nil {
+			return nil, errors.Wrap(err, "random sequence")
+		}
+		sSeq = randSeq.Int64()
 	}
 	dc := &dialerConn{
 		conn:   conn,
 		peer:   peer,
-		seq:    util.NewSequence(int32(sSeq.Int64())),
+		seq:    util.NewSequence(int32(sSeq)),
 		pool:   newPool("dialerConn", config),
 		config: config,
 	}
