@@ -86,7 +86,6 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 
 		self.tree.Put(wm.seq, wm)
 		self.capacity -= sz
-		self.addMonitor(wm)
 
 		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
 			rttWm, err := wm.clone()
@@ -106,6 +105,8 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 				return 0, errors.Wrap(err, "tx")
 			}
 		}
+
+		self.addMonitor(wm)
 
 		n += sz
 		remaining -= sz
