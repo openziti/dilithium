@@ -3,7 +3,6 @@ package westworld2
 import (
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 )
@@ -40,7 +39,7 @@ func readWireMessage(conn *net.UDPConn, pool *pool, i Instrument) (wm *wireMessa
 
 func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i Instrument) error {
 	if wm.buffer.sz < headerSz {
-		logrus.Fatalf("truncated buffer!")
+		panic("truncated buffer!")
 	}
 
 	n, err := conn.WriteToUDP(wm.buffer.data[:wm.buffer.sz], peer)
