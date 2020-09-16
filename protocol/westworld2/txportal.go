@@ -32,6 +32,7 @@ type txPortal struct {
 	peer      *net.UDPAddr
 	pool      *pool
 	config    *Config
+	count     int
 }
 
 type retxMonitor struct {
@@ -40,8 +41,8 @@ type retxMonitor struct {
 }
 
 type retxSubject struct {
-	deadline  time.Time
-	wm        *wireMessage
+	deadline time.Time
+	wm       *wireMessage
 }
 
 func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal {
@@ -57,6 +58,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal
 		peer:      peer,
 		pool:      newPool("txPortal", config),
 		config:    config,
+		count:     0,
 	}
 	txp.ready = sync.NewCond(txp.lock)
 	txp.monitor.ready = sync.NewCond(txp.lock)
@@ -75,6 +77,11 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	remaining := len(p)
 	n = 0
 	for remaining > 0 {
+		self.count++
+		if self.count % treeReportCt == 0 {
+			logrus.Infof("tree.Size = %d", self.tree.Size())
+		}
+
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
 		wm := newData(seq.Next(), p[n:n+sz], self.pool)
 

@@ -278,3 +278,5 @@ func (self *Config) Dump() string {
 	out += "}"
 	return out
 }
+
+const treeReportCt = 10000

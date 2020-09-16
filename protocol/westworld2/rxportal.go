@@ -27,6 +27,7 @@ type rxPortal struct {
 	txPortal   *txPortal
 	seq        *util.Sequence
 	config     *Config
+	count      int
 }
 
 type rxRead struct {
@@ -49,6 +50,7 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		txPortal:   txPortal,
 		seq:        seq,
 		config:     config,
+		count:      0,
 	}
 	rxp.readPool.New = func() interface{} {
 		return make([]byte, config.poolBufferSz)
@@ -134,6 +136,11 @@ func (self *rxPortal) run() {
 		wm, ok := <-self.rxs
 		if !ok {
 			return
+		}
+
+		self.count++
+		if self.count % treeReportCt == 0 {
+			logrus.Infof("tree.Size = %d", self.tree.Size())
 		}
 
 		if wm.seq > self.accepted || (self.accepted == math.MaxInt32 && wm.seq == 0) {
