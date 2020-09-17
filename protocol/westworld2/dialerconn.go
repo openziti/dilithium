@@ -80,12 +80,15 @@ func (self *dialerConn) rxer() {
 	defer logrus.Warn("exited")
 
 	for {
-		wm, _, err := readWireMessage(self.conn, self.pool, self.config.i)
+		wm, peer, err := readWireMessage(self.conn, self.pool)
 		if err != nil {
 			if self.config.i != nil {
 				self.config.i.readError(self.peer, err)
 			}
 			continue
+		}
+		if self.config.i != nil {
+			self.config.i.wireMessageRx(peer, wm)
 		}
 
 		if wm.mt == DATA || wm.mt == CLOSE {
@@ -128,8 +131,11 @@ func (self *dialerConn) hello() error {
 	hello := newHello(helloSeq, self.pool)
 	defer hello.buffer.unref()
 
-	if err := writeWireMessage(hello, self.conn, self.peer, self.config.i); err != nil {
+	if err := writeWireMessage(hello, self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write hello")
+	}
+	if self.config.i != nil {
+		self.config.i.wireMessageTx(self.peer, hello)
 	}
 	/* */
 
@@ -140,9 +146,12 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "set read deadline")
 	}
 
-	helloAck, _, err := readWireMessage(self.conn, self.pool, self.config.i)
+	helloAck, peer, err := readWireMessage(self.conn, self.pool)
 	if err != nil {
 		return errors.Wrap(err, "read hello ack")
+	}
+	if self.config.i != nil {
+		self.config.i.wireMessageRx(peer, helloAck)
 	}
 	defer helloAck.buffer.unref()
 
@@ -166,8 +175,11 @@ func (self *dialerConn) hello() error {
 	ack := newAck(helloAck.seq, self.pool)
 	defer ack.buffer.unref()
 
-	if err := writeWireMessage(ack, self.conn, self.peer, self.config.i); err != nil {
+	if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write ack")
+	}
+	if self.config.i != nil {
+		self.config.i.wireMessageTx(self.peer, ack)
 	}
 	/* */
 

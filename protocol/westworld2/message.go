@@ -16,7 +16,7 @@ type wireMessage struct {
 	buffer *buffer
 }
 
-func readWireMessage(conn *net.UDPConn, pool *pool, i Instrument) (wm *wireMessage, peer *net.UDPAddr, err error) {
+func readWireMessage(conn *net.UDPConn, pool *pool) (wm *wireMessage, peer *net.UDPAddr, err error) {
 	buffer := pool.get()
 	var n int
 	n, peer, err = conn.ReadFromUDP(buffer.data)
@@ -30,14 +30,10 @@ func readWireMessage(conn *net.UDPConn, pool *pool, i Instrument) (wm *wireMessa
 		return nil, peer, errors.Wrap(err, "decode")
 	}
 
-	if i != nil {
-		i.wireMessageRx(peer, wm)
-	}
-
 	return
 }
 
-func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i Instrument) error {
+func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr) error {
 	if wm.buffer.sz < headerSz {
 		panic("truncated buffer!")
 	}
@@ -48,9 +44,6 @@ func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr, i I
 	}
 	if uint16(n) != wm.buffer.sz {
 		return errors.Errorf("short peer write [%d != %d]", n, wm.buffer.sz)
-	}
-	if i != nil {
-		i.wireMessageTx(peer, wm)
 	}
 	return nil
 }

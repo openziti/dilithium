@@ -161,8 +161,11 @@ func (self *rxPortal) run() {
 				logrus.Errorf("error reading rtt (%v)", err)
 			}
 		}
-		if err := writeWireMessage(ack, self.conn, self.peer, self.config.i); err != nil {
+		if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 			logrus.Errorf("error sending ack (%v)", err)
+		}
+		if self.config.i != nil {
+			self.config.i.wireMessageTx(self.peer, ack)
 		}
 		ack.buffer.unref()
 

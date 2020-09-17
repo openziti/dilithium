@@ -135,8 +135,11 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	helloAck := newHelloAck(helloAckSeq, hello.seq, self.pool)
 	defer helloAck.buffer.unref()
 
-	if err := writeWireMessage(helloAck, self.conn, self.peer, self.config.i); err != nil {
+	if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write hello ack")
+	}
+	if self.config.i != nil {
+		self.config.i.wireMessageTx(self.peer, helloAck)
 	}
 	/* */
 

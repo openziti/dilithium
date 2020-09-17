@@ -98,16 +98,22 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 				return n, err
 			}
 			rttWm.writeRtt(time.Now().UnixNano())
-			if err = writeWireMessage(rttWm, self.conn, self.peer, self.config.i); err != nil {
+			if err = writeWireMessage(rttWm, self.conn, self.peer); err != nil {
 				rttWm.buffer.unref()
 				return 0, errors.Wrap(err, "rttTx")
+			}
+			if self.config.i != nil {
+				self.config.i.wireMessageTx(self.peer, rttWm)
 			}
 			rttWm.buffer.unref()
 			self.lastRtt = time.Now()
 
 		} else {
-			if err = writeWireMessage(wm, self.conn, self.peer, self.config.i); err != nil {
+			if err = writeWireMessage(wm, self.conn, self.peer); err != nil {
 				return 0, errors.Wrap(err, "tx")
+			}
+			if self.config.i != nil {
+				self.config.i.wireMessageTx(self.peer, wm)
 			}
 		}
 
@@ -130,8 +136,11 @@ func (self *txPortal) close(seq *util.Sequence) error {
 		self.tree.Put(wm.seq, wm)
 		self.addMonitor(wm)
 
-		if err := writeWireMessage(wm, self.conn, self.peer, self.config.i); err != nil {
+		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			return errors.Wrap(err, "tx close")
+		}
+		if self.config.i != nil {
+			self.config.i.wireMessageTx(self.peer, wm)
 		}
 	}
 
@@ -227,8 +236,12 @@ func (self *txPortal) runMonitor() {
 						if self.config.i != nil {
 							self.config.i.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
 						}
-						if err := writeWireMessage(self.monitor.waiting[i].wm, self.conn, self.peer, self.config.i); err != nil {
+						if err := writeWireMessage(self.monitor.waiting[i].wm, self.conn, self.peer); err != nil {
 							logrus.Errorf("retx (%v)", err)
+						} else {
+							if self.config.i != nil {
+								self.config.i.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
+							}
 						}
 						self.portalRetx()
 

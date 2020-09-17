@@ -63,7 +63,10 @@ func (self *listener) run() {
 	defer logrus.Warn("exited")
 
 	for {
-		if wm, peer, err := readWireMessage(self.conn, self.pool, self.config.i); err == nil {
+		if wm, peer, err := readWireMessage(self.conn, self.pool); err == nil {
+			if self.config.i != nil {
+				self.config.i.wireMessageRx(peer, wm)
+			}
 			conn, found := self.peers.Get(peer)
 			if found {
 				conn.(*listenerConn).queue(wm)
