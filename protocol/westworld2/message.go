@@ -73,11 +73,14 @@ func newHelloAck(seq, ack int32, pool *pool) *wireMessage {
 	return wm.encode()
 }
 
-func newAck(seqFor int32, pool *pool) *wireMessage {
+func newAck(seqFor, rxPortalSz int32, pool *pool) *wireMessage {
+	buffer := pool.get()
+	util.WriteInt32(buffer.data[0:4], rxPortalSz)
 	wm := &wireMessage{
 		seq:    -1,
 		mt:     ACK,
 		ack:    seqFor,
+		data:   buffer.data[0:4],
 		buffer: pool.get(),
 	}
 	return wm.encode()

@@ -172,7 +172,7 @@ func (self *dialerConn) hello() error {
 	/*
 	 * Send Final Ack
 	 */
-	ack := newAck(helloAck.seq, self.pool)
+	ack := newAck(helloAck.seq, 0, self.pool)
 	defer ack.buffer.unref()
 
 	if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
