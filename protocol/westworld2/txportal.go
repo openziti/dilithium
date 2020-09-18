@@ -28,6 +28,7 @@ type txPortal struct {
 	lastRtt    time.Time
 	rttw       []int
 	retxMs     int
+	txPortalSz int32
 	rxPortalSz int32
 	conn       *net.UDPConn
 	peer       *net.UDPAddr
@@ -81,18 +82,18 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	for remaining > 0 {
 		self.count++
 		if self.count%treeReportCt == 0 {
-			logrus.Infof("tree.Size = %d, rxPortalSz = %d", self.tree.Size(), self.rxPortalSz)
+			logrus.Infof("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz)
 		}
 
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
 		wm := newData(seq.Next(), p[n:n+sz], self.pool)
 
-		for self.capacity < sz {
+		for self.capacity - int(self.txPortalSz) - int(self.rxPortalSz) < 0 {
 			self.ready.Wait()
 		}
 
 		self.tree.Put(wm.seq, wm)
-		self.capacity -= sz
+		self.txPortalSz += int32(sz)
 
 		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
 			rttWm, err := wm.clone()
@@ -162,7 +163,7 @@ func (self *txPortal) ack(sequence, rxPortalSz int32) {
 		self.cancelMonitor(wm)
 		self.tree.Remove(sequence)
 		sz := len(wm.data)
-		self.capacity += sz
+		self.txPortalSz -= int32(sz)
 		wm.buffer.unref()
 
 		self.portalSuccessfulAck(sz)
