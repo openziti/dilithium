@@ -78,7 +78,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	n = 0
 	for remaining > 0 {
 		self.count++
-		if self.count % treeReportCt == 0 {
+		if self.count%treeReportCt == 0 {
 			logrus.Infof("tree.Size = %d", self.tree.Size())
 		}
 
@@ -276,6 +276,8 @@ func (self *txPortal) cancelMonitor(wm *wireMessage) {
 	}
 	if i > -1 {
 		self.monitor.waiting = append(self.monitor.waiting[:i], self.monitor.waiting[i+1:]...)
+	} else {
+		panic("cancelled non-existent monitor")
 	}
 }
 
@@ -295,6 +297,7 @@ func (self *txPortal) portalDuplicateAck(sequence int32) {
 	if self.dupackCt == self.config.txPortalDupAckCt {
 		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalDupAckFrac))
 		self.dupackCt = 0
+		self.succAccum = 0
 	}
 	if self.config.i != nil {
 		self.config.i.duplicateAck(self.peer, sequence)
@@ -306,6 +309,7 @@ func (self *txPortal) portalRetx() {
 	if self.retxCt == self.config.txPortalRetxCt {
 		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalRetxFrac))
 		self.retxCt = 0
+		self.succAccum = 0
 	}
 }
 
