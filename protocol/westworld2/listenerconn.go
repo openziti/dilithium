@@ -93,13 +93,17 @@ func (self *listenerConn) rxer() {
 
 		if wm.mt == DATA || wm.mt == CLOSE {
 			if wm.ack != -1 {
-				self.txPortal.ack(wm.ack)
+				self.txPortal.ack(wm.ack, -1)
 			}
 			self.rxPortal.rx(wm)
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
-				self.txPortal.ack(wm.ack)
+				rxPortalSz := int32(-1)
+				if len(wm.data) == 4 {
+					rxPortalSz = util.ReadInt32(wm.data[0:4])
+				}
+				self.txPortal.ack(wm.ack, rxPortalSz)
 			}
 			if wm.mf & RTT == 1 {
 				ts, err := wm.readRtt()

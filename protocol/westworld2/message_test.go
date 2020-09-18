@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+func TestAckRxPortalSz(t *testing.T) {
+	testPool := newPool("test", nil)
+	wm := newAck(10, 123456, testPool)
+	assert.Equal(t, 4, len(wm.data))
+	assert.Equal(t, int(headerSz+4), int(wm.buffer.sz))
+}
+
 func TestRewriteAck(t *testing.T) {
 	testPool := newPool("test", nil)
 	data, _ := makeData(16*1024, 0)

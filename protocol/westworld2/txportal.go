@@ -14,25 +14,26 @@ import (
 )
 
 type txPortal struct {
-	lock      *sync.Mutex
-	tree      *btree.Tree
-	capacity  int
-	succCt    int
-	succAccum int
-	dupackCt  int
-	retxCt    int
-	ready     *sync.Cond
-	monitor   *retxMonitor
-	closeWait int32
-	closed    bool
-	lastRtt   time.Time
-	rttw      []int
-	retxMs    int
-	conn      *net.UDPConn
-	peer      *net.UDPAddr
-	pool      *pool
-	config    *Config
-	count     int
+	lock       *sync.Mutex
+	tree       *btree.Tree
+	capacity   int
+	succCt     int
+	succAccum  int
+	dupackCt   int
+	retxCt     int
+	ready      *sync.Cond
+	monitor    *retxMonitor
+	closeWait  int32
+	closed     bool
+	lastRtt    time.Time
+	rttw       []int
+	retxMs     int
+	rxPortalSz int32
+	conn       *net.UDPConn
+	peer       *net.UDPAddr
+	pool       *pool
+	config     *Config
+	count      int
 }
 
 type retxMonitor struct {
@@ -47,18 +48,19 @@ type retxSubject struct {
 
 func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal {
 	txp := &txPortal{
-		lock:      new(sync.Mutex),
-		tree:      btree.NewWith(config.treeLen, utils.Int32Comparator),
-		capacity:  config.txPortalStartSz,
-		monitor:   &retxMonitor{},
-		closeWait: -1,
-		closed:    false,
-		retxMs:    config.retxStartMs,
-		conn:      conn,
-		peer:      peer,
-		pool:      newPool("txPortal", config),
-		config:    config,
-		count:     0,
+		lock:       new(sync.Mutex),
+		tree:       btree.NewWith(config.treeLen, utils.Int32Comparator),
+		capacity:   config.txPortalStartSz,
+		monitor:    &retxMonitor{},
+		closeWait:  -1,
+		closed:     false,
+		retxMs:     config.retxStartMs,
+		rxPortalSz: -1,
+		conn:       conn,
+		peer:       peer,
+		pool:       newPool("txPortal", config),
+		config:     config,
+		count:      0,
 	}
 	txp.ready = sync.NewCond(txp.lock)
 	txp.monitor.ready = sync.NewCond(txp.lock)
@@ -79,7 +81,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	for remaining > 0 {
 		self.count++
 		if self.count%treeReportCt == 0 {
-			logrus.Infof("tree.Size = %d", self.tree.Size())
+			logrus.Infof("tree.Size = %d, rxPortalSz = %d", self.tree.Size(), self.rxPortalSz)
 		}
 
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
@@ -147,9 +149,13 @@ func (self *txPortal) close(seq *util.Sequence) error {
 	return nil
 }
 
-func (self *txPortal) ack(sequence int32) {
+func (self *txPortal) ack(sequence, rxPortalSz int32) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
+
+	if rxPortalSz > -1 {
+		self.rxPortalSz = rxPortalSz
+	}
 
 	if v, found := self.tree.Get(sequence); found {
 		wm := v.(*wireMessage)
