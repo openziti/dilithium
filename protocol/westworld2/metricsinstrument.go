@@ -55,10 +55,7 @@ func (self *metricsInstrument) connected(_ *net.UDPAddr) {
 	logrus.Infof("new connection, metrics collection reset")
 }
 
-func (self *metricsInstrument) closed(_ *net.UDPAddr) {
-	if err := self.writeAllSamples(); err != nil {
-		logrus.Errorf("error writing samples (%v)", err)
-	}
+func (self *metricsInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *metricsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
@@ -79,10 +76,25 @@ func (self *metricsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) 
 	self.lock.Unlock()
 }
 
-func (self *metricsInstrument) portalCapacitySz(_ *net.UDPAddr, capacity int) {
+func (self *metricsInstrument) txPortalSzChanged(_ *net.UDPAddr, capacity int) {
 	self.lock.Lock()
 	self.txPortalSz = append(self.txPortalSz, &sample{time.Now(), int64(capacity)})
 	self.lock.Unlock()
+}
+
+func (self *metricsInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *metricsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
+	self.lock.Lock()
+	self.retxMs = append(self.retxMs, &sample{time.Now(), int64(retxMs)})
+	self.lock.Unlock()
+}
+
+func (self *metricsInstrument) closed(_ *net.UDPAddr) {
+	if err := self.writeAllSamples(); err != nil {
+		logrus.Errorf("error writing samples (%v)", err)
+	}
 }
 
 func (self *metricsInstrument) unknownPeer(peer *net.UDPAddr) {
@@ -109,12 +121,6 @@ func (self *metricsInstrument) duplicateRx(_ *net.UDPAddr, wm *wireMessage) {
 func (self *metricsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
 	self.lock.Lock()
 	self.duplicateAcks = append(self.duplicateAcks, &sample{time.Now(), 1})
-	self.lock.Unlock()
-}
-
-func (self *metricsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
-	self.lock.Lock()
-	self.retxMs = append(self.retxMs, &sample{time.Now(), int64(retxMs)})
 	self.lock.Unlock()
 }
 

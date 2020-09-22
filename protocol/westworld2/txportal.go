@@ -329,6 +329,6 @@ func (self *txPortal) updatePortalSz(newCapacity int) {
 		self.capacity = self.config.txPortalMaxSz
 	}
 	if self.config.i != nil {
-		self.config.i.portalCapacitySz(self.peer, self.capacity)
+		self.config.i.txPortalSzChanged(self.peer, self.capacity)
 	}
 }

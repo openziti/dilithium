@@ -7,18 +7,22 @@ import (
 
 type Instrument interface {
 	connected(peer *net.UDPAddr)
-	closed(peer *net.UDPAddr)
+	rxPortalSzChanged(peer *net.UDPAddr, capacity int)
 	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
-	portalCapacitySz(peer *net.UDPAddr, capacity int)
+	txPortalSzChanged(peer *net.UDPAddr, capacity int)
+	txPortalRxPortalSzChanged(peer *net.UDPAddr, capacity int)
+	newRetxMs(peer *net.UDPAddr, retxMs int)
+	closed(peer *net.UDPAddr)
+
 	unknownPeer(peer *net.UDPAddr)
 	readError(peer *net.UDPAddr, err error)
 	connectError(peer *net.UDPAddr, err error)
 	unexpectedMessageType(peer *net.UDPAddr, mt messageType)
 	duplicateRx(peer *net.UDPAddr, wm *wireMessage)
 	duplicateAck(peer *net.UDPAddr, ack int32)
-	newRetxMs(peer *net.UDPAddr, retxMs int)
+
 	allocate(ctx string)
 }
 

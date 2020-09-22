@@ -15,8 +15,7 @@ func (self *loggerInstrument) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }
 
-func (self *loggerInstrument) closed(peer *net.UDPAddr) {
-	logrus.Infof("closed, peer [%s]", peer)
+func (self *loggerInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *loggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
@@ -31,7 +30,18 @@ func (self *loggerInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage
 	logrus.Warnf("!> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
-func (self *loggerInstrument) portalCapacitySz(_ *net.UDPAddr, _ int) {
+func (self *loggerInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *loggerInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *loggerInstrument) newRetxMs(peer *net.UDPAddr, retxMs int) {
+	logrus.Infof("!+[%d ms]  <- [%s]", retxMs, peer)
+}
+
+func (self *loggerInstrument) closed(peer *net.UDPAddr) {
+	logrus.Infof("closed, peer [%s]", peer)
 }
 
 func (self *loggerInstrument) unknownPeer(peer *net.UDPAddr) {
@@ -56,10 +66,6 @@ func (self *loggerInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
 
 func (self *loggerInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
 	logrus.Warnf("~ <- [@%d] <- [%s]", ack, peer)
-}
-
-func (self *loggerInstrument) newRetxMs(peer *net.UDPAddr, retxMs int) {
-	logrus.Infof("!+[%d ms]  <- [%s]", retxMs, peer)
 }
 
 func (self *loggerInstrument) allocate(ctx string) {

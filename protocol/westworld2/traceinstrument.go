@@ -27,8 +27,7 @@ func (self *traceInstrument) connected(peer *net.UDPAddr) {
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CONNECTED", peer))
 }
 
-func (self *traceInstrument) closed(peer *net.UDPAddr) {
-	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CLOSED", peer))
+func (self *traceInstrument) rxPortalSzChanged(peer *net.UDPAddr, capacity int) {
 }
 
 func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
@@ -73,7 +72,17 @@ func (self *traceInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
-func (self *traceInstrument) portalCapacitySz(_ *net.UDPAddr, _ int) {
+func (self *traceInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *traceInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *traceInstrument) closed(peer *net.UDPAddr) {
+	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CLOSED", peer))
+}
+
+func (self *traceInstrument) newRetxMs(_ *net.UDPAddr, _ int) {
 }
 
 func (self *traceInstrument) unknownPeer(peer *net.UDPAddr) {
@@ -110,9 +119,6 @@ func (self *traceInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
 	decode := fmt.Sprintf("%-12s", "DPACK")
 	decode += fmt.Sprintf("%-8s", fmt.Sprintf("@%d", ack))
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
-}
-
-func (self *traceInstrument) newRetxMs(_ *net.UDPAddr, _ int) {
 }
 
 func (self *traceInstrument) allocate(ctx string) {

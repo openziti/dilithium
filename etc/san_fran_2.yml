@@ -4,12 +4,12 @@ tx_portal_min_sz:             8192
 tx_portal_max_sz:             512000
 tx_portal_increase_ct:        16
 tx_portal_increase_frac:      1.0
-tx_portal_dup_ack_ct:         128
+tx_portal_dup_ack_ct:         64
 tx_portal_dup_ack_frac:       0.75
-tx_portal_retx_ct:            128
+tx_portal_retx_ct:            64
 tx_portal_retx_frac:          0.75
 retx_start_ms:                200
-retx_add_ms:                  65
+retx_add_ms:                  25
 rtt_probe_ms:                 50
 rtt_probe_avg_ct:             8
 max_segment_sz:               1400
