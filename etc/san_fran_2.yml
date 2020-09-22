@@ -17,8 +17,8 @@ retx_add_ms:                  25
 rtt_probe_ms:                 50
 rtt_probe_avg_ct:             8
 max_segment_sz:               1420
-rx_buffer_sz:                 4096000
-tx_buffer_sz:                 4096000
+rx_buffer_sz:                 16000000
+tx_buffer_sz:                 16000000
 instrument:
   name:                       nil
   prefix:                     logs
