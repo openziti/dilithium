@@ -114,7 +114,7 @@ func (self *statsInstrument) allocate(_ string) {
 
 func (self *statsInstrument) dumper() {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 		out := "stats{\n"
 		out += fmt.Sprintf("\t%-20s %d\n", "rxMessages", self.rxMessages)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxBytes", self.rxBytes)
