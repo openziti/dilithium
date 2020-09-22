@@ -82,7 +82,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	for remaining > 0 {
 		self.count++
 		if self.count%treeReportCt == 0 {
-			logrus.Infof("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz)
+			//logrus.Infof("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz)
 		}
 
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
@@ -150,12 +150,15 @@ func (self *txPortal) close(seq *util.Sequence) error {
 	return nil
 }
 
-func (self *txPortal) ack(sequence, rxPortalSz int32) {
+func (self *txPortal) ack(peer *net.UDPAddr, sequence, rxPortalSz int32) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
 	if rxPortalSz > -1 {
 		self.rxPortalSz = rxPortalSz
+		if self.config.i != nil {
+			self.config.i.txPortalRxPortalSzChanged(peer, int(rxPortalSz))
+		}
 	}
 
 	if v, found := self.tree.Get(sequence); found {
@@ -329,6 +332,6 @@ func (self *txPortal) updatePortalSz(newCapacity int) {
 		self.capacity = self.config.txPortalMaxSz
 	}
 	if self.config.i != nil {
-		self.config.i.txPortalSzChanged(self.peer, self.capacity)
+		self.config.i.txPortalCapacityChanged(self.peer, self.capacity)
 	}
 }

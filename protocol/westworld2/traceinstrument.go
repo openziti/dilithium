@@ -27,9 +27,6 @@ func (self *traceInstrument) connected(peer *net.UDPAddr) {
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CONNECTED", peer))
 }
 
-func (self *traceInstrument) rxPortalSzChanged(peer *net.UDPAddr, capacity int) {
-}
-
 func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	decode := fmt.Sprintf("%-12s", "RX "+self.mt(wm.mt))
 	if wm.seq != -1 {
@@ -72,7 +69,7 @@ func (self *traceInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
-func (self *traceInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
+func (self *traceInstrument) txPortalCapacityChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *traceInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {

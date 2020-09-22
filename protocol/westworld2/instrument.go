@@ -7,12 +7,11 @@ import (
 
 type Instrument interface {
 	connected(peer *net.UDPAddr)
-	rxPortalSzChanged(peer *net.UDPAddr, capacity int)
 	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
 	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
-	txPortalSzChanged(peer *net.UDPAddr, capacity int)
-	txPortalRxPortalSzChanged(peer *net.UDPAddr, capacity int)
+	txPortalCapacityChanged(peer *net.UDPAddr, capacity int)
+	txPortalRxPortalSzChanged(peer *net.UDPAddr, sz int)
 	newRetxMs(peer *net.UDPAddr, retxMs int)
 	closed(peer *net.UDPAddr)
 

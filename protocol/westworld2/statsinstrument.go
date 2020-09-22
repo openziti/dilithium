@@ -9,13 +9,12 @@ import (
 )
 
 type statsInstrument struct {
-	rxPortalSz         int32
 	rxMessages         int32
 	rxBytes            int64
 	rxDupeMessages     int32
 	rxDupeBytes        int64
 	rxDupeAcks         int32
-	txPortalSz         int32
+	txPortalCapacity   int32
 	txPortalRxPortalSz int32
 	txMessages         int32
 	txBytes            int64
@@ -43,10 +42,6 @@ func newStatsInstrument() Instrument {
 func (self *statsInstrument) connected(_ *net.UDPAddr) {
 }
 
-func (self *statsInstrument) rxPortalSzChanged(_ *net.UDPAddr, capacity int) {
-	atomic.StoreInt32(&self.rxPortalSz, int32(capacity))
-}
-
 func (self *statsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.rxMessages, 1)
 	atomic.AddInt64(&self.rxBytes, int64(len(wm.data)))
@@ -62,12 +57,12 @@ func (self *statsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt64(&self.retxBytes, int64(len(wm.data)))
 }
 
-func (self *statsInstrument) txPortalSzChanged(_ *net.UDPAddr, capacity int) {
-	atomic.StoreInt32(&self.txPortalSz, int32(capacity))
+func (self *statsInstrument) txPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
+	atomic.StoreInt32(&self.txPortalCapacity, int32(capacity))
 }
 
-func (self *statsInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, capacity int) {
-	atomic.StoreInt32(&self.txPortalRxPortalSz, int32(capacity))
+func (self *statsInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, sz int) {
+	atomic.StoreInt32(&self.txPortalRxPortalSz, int32(sz))
 }
 
 func (self *statsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
@@ -121,13 +116,12 @@ func (self *statsInstrument) dumper() {
 	for {
 		time.Sleep(1 * time.Second)
 		out := "stats{\n"
-		out += fmt.Sprintf("\t%-20s %d\n", "rxPortalSz", self.rxPortalSz)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxMessages", self.rxMessages)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxBytes", self.rxBytes)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeMessages", self.rxDupeMessages)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeBytes", self.rxDupeBytes)
 		out += fmt.Sprintf("\t%-20s %d\n", "rxDupeAcks", self.rxDupeAcks)
-		out += fmt.Sprintf("\t%-20s %d\n", "txPortalSz", self.txPortalSz)
+		out += fmt.Sprintf("\t%-20s %d\n", "txPortalCapacity", self.txPortalCapacity)
 		out += fmt.Sprintf("\t%-20s %d\n", "txPortalRxPortalSz", self.txPortalRxPortalSz)
 		out += fmt.Sprintf("\t%-20s %d\n", "txMessages", self.txMessages)
 		out += fmt.Sprintf("\t%-20s %d\n", "txBytes", self.txBytes)

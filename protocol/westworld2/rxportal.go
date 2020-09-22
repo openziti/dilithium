@@ -141,7 +141,7 @@ func (self *rxPortal) run() {
 
 		self.count++
 		if self.count%treeReportCt == 0 {
-			logrus.Infof("tree.Size = %d, rxPortalSz = %d", self.tree.Size(), self.rxPortalSz)
+			//logrus.Infof("tree.Size = %d, rxPortalSz = %d", self.tree.Size(), self.rxPortalSz)
 		}
 
 		if wm.seq > self.accepted || (self.accepted == math.MaxInt32 && wm.seq == 0) {

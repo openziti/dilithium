@@ -15,9 +15,6 @@ func (self *loggerInstrument) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }
 
-func (self *loggerInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
-}
-
 func (self *loggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	logrus.Infof("<- [%c/#%d/@%d/:%d] <- [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
@@ -30,7 +27,7 @@ func (self *loggerInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage
 	logrus.Warnf("!> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
-func (self *loggerInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
+func (self *loggerInstrument) txPortalCapacityChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *loggerInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {

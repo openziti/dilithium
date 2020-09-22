@@ -1,20 +1,24 @@
+# san_fran_2
+#
+# for westworld2 0.2.1
+#
 seq_random:                   false
 tx_portal_start_sz:           8192
 tx_portal_min_sz:             8192
-tx_portal_max_sz:             512000
-tx_portal_increase_ct:        16
+tx_portal_max_sz:             1280000
+tx_portal_increase_ct:        160
 tx_portal_increase_frac:      1.0
-tx_portal_dup_ack_ct:         64
-tx_portal_dup_ack_frac:       0.75
-tx_portal_retx_ct:            64
-tx_portal_retx_frac:          0.75
+tx_portal_dup_ack_ct:         8
+tx_portal_dup_ack_frac:       0.25
+tx_portal_retx_ct:            8
+tx_portal_retx_frac:          0.25
 retx_start_ms:                200
 retx_add_ms:                  25
 rtt_probe_ms:                 50
 rtt_probe_avg_ct:             8
 max_segment_sz:               1400
-rx_buffer_sz:                 419430
-tx_buffer_sz:                 419430
+rx_buffer_sz:                 1600000
+tx_buffer_sz:                 1600000
 instrument:
-  name:                       metrics
+  name:                       nil
   prefix:                     logs

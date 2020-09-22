@@ -76,7 +76,7 @@ func (self *metricsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) 
 	self.lock.Unlock()
 }
 
-func (self *metricsInstrument) txPortalSzChanged(_ *net.UDPAddr, capacity int) {
+func (self *metricsInstrument) txPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
 	self.lock.Lock()
 	self.txPortalSz = append(self.txPortalSz, &sample{time.Now(), int64(capacity)})
 	self.lock.Unlock()
