@@ -88,7 +88,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
 		wm := newData(seq.Next(), p[n:n+sz], self.pool)
 
-		for self.capacity - int(self.txPortalSz) - int(self.rxPortalSz) < 0 {
+		for math.Min(float64(self.capacity - int(self.txPortalSz)), float64(self.capacity - int(self.rxPortalSz))) < 0 {
 			self.ready.Wait()
 		}
 
