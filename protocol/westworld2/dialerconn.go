@@ -106,7 +106,7 @@ func (self *dialerConn) rxer() {
 				if len(wm.data) == 4 {
 					rxPortalSz = util.ReadInt32(wm.data[0:4])
 				}
-				self.txPortal.ack(peer, wm.ack, rxPortalSz)
+				self.txPortal.ack(peer, wm.ack, int(rxPortalSz))
 			}
 			if wm.mf&RTT == 1 {
 				ts, err := wm.readRtt()

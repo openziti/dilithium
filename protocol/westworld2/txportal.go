@@ -14,27 +14,27 @@ import (
 )
 
 type txPortal struct {
-	lock       *sync.Mutex
-	tree       *btree.Tree
-	capacity   int
-	succCt     int
-	succAccum  int
-	dupackCt   int
-	retxCt     int
-	ready      *sync.Cond
-	monitor    *retxMonitor
-	closeWait  int32
-	closed     bool
-	lastRtt    time.Time
-	rttw       []int
-	retxMs     int
-	txPortalSz int32
-	rxPortalSz int32
-	conn       *net.UDPConn
-	peer       *net.UDPAddr
-	pool       *pool
-	config     *Config
-	count      int
+	lock         *sync.Mutex
+	tree         *btree.Tree
+	capacity     int
+	txPortalSz   int
+	rxPortalSz   int
+	succCt       int
+	succAccum    int
+	dupAckCt     int
+	retxCt       int
+	ready        *sync.Cond
+	monitor      *retxMonitor
+	lastRtt      time.Time
+	rttw         []int
+	retxMs       int
+	closeWaitSeq int32
+	closed       bool
+	conn         *net.UDPConn
+	peer         *net.UDPAddr
+	pool         *pool
+	config       *Config
+	count        int
 }
 
 type retxMonitor struct {
@@ -49,19 +49,18 @@ type retxSubject struct {
 
 func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal {
 	txp := &txPortal{
-		lock:       new(sync.Mutex),
-		tree:       btree.NewWith(config.treeLen, utils.Int32Comparator),
-		capacity:   config.txPortalStartSz,
-		monitor:    &retxMonitor{},
-		closeWait:  -1,
-		closed:     false,
-		retxMs:     config.retxStartMs,
-		rxPortalSz: -1,
-		conn:       conn,
-		peer:       peer,
-		pool:       newPool("txPortal", config),
-		config:     config,
-		count:      0,
+		lock:         new(sync.Mutex),
+		tree:         btree.NewWith(config.treeLen, utils.Int32Comparator),
+		capacity:     config.txPortalStartSz,
+		rxPortalSz:   -1,
+		retxMs:       config.retxStartMs,
+		monitor:      &retxMonitor{},
+		closeWaitSeq: -1,
+		closed:       false,
+		conn:         conn,
+		peer:         peer,
+		pool:         newPool("txPortal", config),
+		config:       config,
 	}
 	txp.ready = sync.NewCond(txp.lock)
 	txp.monitor.ready = sync.NewCond(txp.lock)
@@ -73,7 +72,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if self.closeWait != -1 || self.closed {
+	if self.closeWaitSeq != -1 || self.closed {
 		return 0, errors.New("closed")
 	}
 
@@ -82,7 +81,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	for remaining > 0 {
 		self.count++
 		if self.count%treeReportCt == 0 {
-			//logrus.Infof("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz)
+			logrus.Infof("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz)
 		}
 
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
@@ -93,7 +92,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		}
 
 		self.tree.Put(wm.seq, wm)
-		self.txPortalSz += int32(sz)
+		self.txPortalSz += sz
 
 		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
 			rttWm, err := wm.clone()
@@ -135,7 +134,7 @@ func (self *txPortal) close(seq *util.Sequence) error {
 
 	if !self.closed {
 		wm := newClose(seq.Next(), self.pool)
-		self.closeWait = wm.seq
+		self.closeWaitSeq = wm.seq
 		self.tree.Put(wm.seq, wm)
 		self.addMonitor(wm)
 
@@ -150,7 +149,7 @@ func (self *txPortal) close(seq *util.Sequence) error {
 	return nil
 }
 
-func (self *txPortal) ack(peer *net.UDPAddr, sequence, rxPortalSz int32) {
+func (self *txPortal) ack(peer *net.UDPAddr, sequence int32, rxPortalSz int) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
@@ -166,12 +165,12 @@ func (self *txPortal) ack(peer *net.UDPAddr, sequence, rxPortalSz int32) {
 		self.cancelMonitor(wm)
 		self.tree.Remove(sequence)
 		sz := len(wm.data)
-		self.txPortalSz -= int32(sz)
+		self.txPortalSz -= sz
 		wm.buffer.unref()
 
 		self.portalSuccessfulAck(sz)
 
-		if wm.seq == self.closeWait {
+		if wm.seq == self.closeWaitSeq {
 			self.closed = true
 		}
 
@@ -302,11 +301,11 @@ func (self *txPortal) portalSuccessfulAck(sz int) {
 }
 
 func (self *txPortal) portalDuplicateAck(sequence int32) {
-	self.dupackCt++
+	self.dupAckCt++
 	self.succCt = 0
-	if self.dupackCt == self.config.txPortalDupAckCt {
+	if self.dupAckCt == self.config.txPortalDupAckCt {
 		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalDupAckFrac))
-		self.dupackCt = 0
+		self.dupAckCt = 0
 		self.succAccum = 0
 	}
 	if self.config.i != nil {

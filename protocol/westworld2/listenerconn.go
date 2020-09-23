@@ -99,11 +99,11 @@ func (self *listenerConn) rxer() {
 
 		} else if wm.mt == ACK {
 			if wm.ack != -1 {
-				rxPortalSz := int32(-1)
+				rxPortalSz := -1
 				if len(wm.data) == 4 {
-					rxPortalSz = util.ReadInt32(wm.data[0:4])
+					rxPortalSz = int(util.ReadInt32(wm.data[0:4]))
 				}
-				self.txPortal.ack(self.txPortal.peer, wm.ack, rxPortalSz)
+				self.txPortal.ack(self.txPortal.peer, wm.ack, int(rxPortalSz))
 			}
 			if wm.mf & RTT == 1 {
 				ts, err := wm.readRtt()
