@@ -17,7 +17,20 @@ import (
 type metricsInstrument struct {
 	prefix string
 	lock   *sync.Mutex
-	peers  map[*net.UDPAddr]*metrics
+
+	txBytesQ            chan *peeredSample
+	retxBytesQ          chan *peeredSample
+	rxBytesQ            chan *peeredSample
+	txPortalCapacityQ   chan *peeredSample
+	txPortalSzQ         chan *peeredSample
+	txPortalRxPortalSzQ chan *peeredSample
+	retxMsQ             chan *peeredSample
+	duplicateAcksQ      chan *peeredSample
+	rxPortalSzQ         chan *peeredSample
+	duplicateRxBytesQ   chan *peeredSample
+	errorsQ             chan *peeredSample
+
+	peers map[*net.UDPAddr]*metrics
 }
 
 type metrics struct {
@@ -39,6 +52,11 @@ type metrics struct {
 	errors []*sample
 }
 
+type peeredSample struct {
+	peer *net.UDPAddr
+	s    *sample
+}
+
 type sample struct {
 	ts time.Time
 	v  int64
@@ -46,13 +64,25 @@ type sample struct {
 
 func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	mi := &metricsInstrument{
-		lock:  new(sync.Mutex),
-		peers: make(map[*net.UDPAddr]*metrics),
+		lock:                new(sync.Mutex),
+		txBytesQ:            make(chan *peeredSample, 10240),
+		retxBytesQ:          make(chan *peeredSample, 10240),
+		rxBytesQ:            make(chan *peeredSample, 10240),
+		txPortalCapacityQ:   make(chan *peeredSample, 10240),
+		txPortalSzQ:         make(chan *peeredSample, 10240),
+		txPortalRxPortalSzQ: make(chan *peeredSample, 10240),
+		retxMsQ:             make(chan *peeredSample, 10240),
+		duplicateAcksQ:      make(chan *peeredSample, 10240),
+		rxPortalSzQ:         make(chan *peeredSample, 10240),
+		duplicateRxBytesQ:   make(chan *peeredSample, 10240),
+		errorsQ:             make(chan *peeredSample, 10240),
+		peers:               make(map[*net.UDPAddr]*metrics),
 	}
 	if err := mi.configure(config); err != nil {
 		return nil, err
 	}
 	go mi.signalHandler()
+	go mi.manager()
 	return mi, nil
 }
 
@@ -60,49 +90,30 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
  * connection
  */
 func (self *metricsInstrument) connected(peer *net.UDPAddr) {
-	self.lock.Lock()
-	self.peers[peer] = &metrics{lock: new(sync.Mutex)}
-	self.lock.Unlock()
 }
 
 func (self *metricsInstrument) closed(peer *net.UDPAddr) {
 }
 
 func (self *metricsInstrument) connectError(peer *net.UDPAddr, err error) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.errors = append(m.errors, &sample{time.Now(), 1})
-		m.lock.Unlock()
-	}
-	logrus.Errorf("connect error (%v)", err)
+	self.errorsQ <- &peeredSample{peer, &sample{time.Now(), 1}}
 }
+
 /* */
 
 /*
  * wire
  */
 func (self *metricsInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.txBytes = append(m.txBytes, &sample{time.Now(), int64(len(wm.data))})
-		m.lock.Unlock()
-	}
+	self.txBytesQ <- &peeredSample{peer, &sample{time.Now(), int64(len(wm.data))}}
 }
 
 func (self *metricsInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.retxBytes = append(m.retxBytes, &sample{time.Now(), int64(len(wm.data))})
-		m.lock.Unlock()
-	}
+	self.retxBytesQ <- &peeredSample{peer, &sample{time.Now(), int64(len(wm.data))}}
 }
 
 func (self *metricsInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.rxBytes = append(m.rxBytes, &sample{time.Now(), int64(len(wm.data))})
-		m.lock.Unlock()
-	}
+	self.rxBytesQ <- &peeredSample{peer, &sample{time.Now(), int64(len(wm.data))}}
 }
 
 func (self *metricsInstrument) unknownPeer(peer *net.UDPAddr) {
@@ -110,86 +121,53 @@ func (self *metricsInstrument) unknownPeer(peer *net.UDPAddr) {
 }
 
 func (self *metricsInstrument) readError(peer *net.UDPAddr, err error) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.errors = append(m.errors, &sample{time.Now(), 1})
-		m.lock.Unlock()
-	}
 	logrus.Errorf("read error (%v)", err)
+	self.errorsQ <- &peeredSample{peer, &sample{time.Now(), 1}}
 }
 
 func (self *metricsInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.errors = append(m.errors, &sample{time.Now(), 1})
-		m.lock.Unlock()
-	}
 	logrus.Errorf("unexpected message type (%d)", mt)
+	self.errorsQ <- &peeredSample{peer, &sample{time.Now(), 1}}
 }
+
 /* */
 
 /*
  * txPortal
  */
 func (self *metricsInstrument) txPortalCapacityChanged(peer *net.UDPAddr, capacity int) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.txPortalCapacity = append(m.txPortalCapacity, &sample{time.Now(), int64(capacity)})
-		m.lock.Unlock()
-	}
+	self.txPortalCapacityQ <- &peeredSample{peer, &sample{time.Now(), int64(capacity)}}
 }
 
 func (self *metricsInstrument) txPortalSzChanged(peer *net.UDPAddr, sz int) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.txPortalSz = append(m.txPortalSz, &sample{time.Now(), int64(sz)})
-		m.lock.Unlock()
-	}
+	self.txPortalSzQ <- &peeredSample{peer, &sample{time.Now(), int64(sz)}}
 }
 
 func (self *metricsInstrument) txPortalRxPortalSzChanged(peer *net.UDPAddr, sz int) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.txPortalRxPortalSz = append(m.txPortalRxPortalSz, &sample{time.Now(), int64(sz)})
-		m.lock.Unlock()
-	}
+	self.txPortalRxPortalSzQ <- &peeredSample{peer, &sample{time.Now(), int64(sz)}}
 }
 
 func (self *metricsInstrument) newRetxMs(peer *net.UDPAddr, retxMs int) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.retxMs = append(m.retxMs, &sample{time.Now(), int64(retxMs)})
-		m.lock.Unlock()
-	}
+	self.retxMsQ <- &peeredSample{peer, &sample{time.Now(), int64(retxMs)}}
 }
 
 func (self *metricsInstrument) duplicateAck(peer *net.UDPAddr, _ int32) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.duplicateAcks = append(m.duplicateAcks, &sample{time.Now(), 1})
-		m.lock.Unlock()
-	}
+	self.duplicateAcksQ <- &peeredSample{peer, &sample{time.Now(), 1}}
 }
+
 /* */
 
 /*
  * rxPortal
  */
 func (self *metricsInstrument) rxPortalSzChanged(peer *net.UDPAddr, sz int) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.rxPortalSz = append(m.rxPortalSz, &sample{time.Now(), int64(sz)})
-		m.lock.Unlock()
-	}
+	self.rxPortalSzQ <- &peeredSample{peer, &sample{time.Now(), int64(sz)}}
 }
 
 func (self *metricsInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
-	if m, found := self.peers[peer]; found {
-		m.lock.Lock()
-		m.duplicateRxBytes = append(m.duplicateRxBytes, &sample{time.Now(), int64(len(wm.data))})
-		m.lock.Unlock()
-	}
+	self.duplicateRxBytesQ <- &peeredSample{peer, &sample{time.Now(), int64(len(wm.data))}}
 }
+
 /* */
 
 /*
@@ -197,6 +175,7 @@ func (self *metricsInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
  */
 func (self *metricsInstrument) allocate(_ string) {
 }
+
 /* */
 
 func (self *metricsInstrument) configure(data map[string]interface{}) error {
@@ -209,6 +188,99 @@ func (self *metricsInstrument) configure(data map[string]interface{}) error {
 		}
 	}
 	return nil
+}
+
+func (self *metricsInstrument) manager() {
+	for {
+		select {
+		case ps, ok := <-self.txBytesQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.txBytes = append(m.txBytes, ps.s)
+
+		case ps, ok := <-self.retxBytesQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.retxBytes = append(m.retxBytes, ps.s)
+
+		case ps, ok := <-self.rxBytesQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.rxBytes = append(m.rxBytes, ps.s)
+
+		case ps, ok := <-self.txPortalCapacityQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.txPortalCapacity = append(m.txPortalCapacity, ps.s)
+
+		case ps, ok := <-self.txPortalSzQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.txPortalSz = append(m.txPortalSz, ps.s)
+
+		case ps, ok := <-self.txPortalRxPortalSzQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.txPortalRxPortalSz = append(m.txPortalRxPortalSz, ps.s)
+
+		case ps, ok := <-self.retxMsQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.retxMs = append(m.retxMs, ps.s)
+
+		case ps, ok := <-self.duplicateAcksQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.duplicateAcks = append(m.duplicateAcks, ps.s)
+
+		case ps, ok := <-self.rxPortalSzQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.rxPortalSz = append(m.rxPortalSz, ps.s)
+
+		case ps, ok := <-self.duplicateRxBytesQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.duplicateRxBytes = append(m.duplicateRxBytes, ps.s)
+
+		case ps, ok := <-self.errorsQ:
+			if !ok {
+				return
+			}
+			m := self.metricsForPeer(ps.peer)
+			m.errors = append(m.errors, ps.s)
+		}
+	}
+}
+
+func (self *metricsInstrument) metricsForPeer(peer *net.UDPAddr) (m *metrics) {
+	if pm, f := self.peers[peer]; f {
+		m = pm
+	} else {
+		m = &metrics{}
+		self.peers[peer] = m
+	}
+	return
 }
 
 func (self *metricsInstrument) writeAllSamples() error {

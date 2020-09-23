@@ -20,5 +20,5 @@ max_segment_sz:               1420
 rx_buffer_sz:                 16000000
 tx_buffer_sz:                 16000000
 instrument:
-  name:                       nil
+  name:                       metrics
   prefix:                     logs
