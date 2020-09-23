@@ -42,9 +42,10 @@ func newStatsInstrument() Instrument {
 func (self *statsInstrument) connected(_ *net.UDPAddr) {
 }
 
-func (self *statsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt32(&self.rxMessages, 1)
-	atomic.AddInt64(&self.rxBytes, int64(len(wm.data)))
+func (self *statsInstrument) closed(_ *net.UDPAddr) {
+}
+
+func (self *statsInstrument) connectError(_ *net.UDPAddr, _ error) {
 }
 
 func (self *statsInstrument) wireMessageTx(_ *net.UDPAddr, wm *wireMessage) {
@@ -57,8 +58,28 @@ func (self *statsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt64(&self.retxBytes, int64(len(wm.data)))
 }
 
+func (self *statsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
+	atomic.AddInt32(&self.rxMessages, 1)
+	atomic.AddInt64(&self.rxBytes, int64(len(wm.data)))
+}
+
+func (self *statsInstrument) unknownPeer(_ *net.UDPAddr) {
+	atomic.AddInt32(&self.unknownPeers, 1)
+}
+
+func (self *statsInstrument) readError(_ *net.UDPAddr, _ error) {
+	atomic.AddInt32(&self.readErrors, 1)
+}
+
+func (self *statsInstrument) unexpectedMessageType(_ *net.UDPAddr, _ messageType) {
+	atomic.AddInt32(&self.unexpectedMt, 1)
+}
+
 func (self *statsInstrument) txPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
 	atomic.StoreInt32(&self.txPortalCapacity, int32(capacity))
+}
+
+func (self *statsInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *statsInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, sz int) {
@@ -81,31 +102,16 @@ func (self *statsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
 	}
 }
 
-func (self *statsInstrument) closed(_ *net.UDPAddr) {
+func (self *statsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
+	atomic.AddInt32(&self.rxDupeAcks, 1)
 }
 
-func (self *statsInstrument) unknownPeer(_ *net.UDPAddr) {
-	atomic.AddInt32(&self.unknownPeers, 1)
-}
-
-func (self *statsInstrument) readError(_ *net.UDPAddr, _ error) {
-	atomic.AddInt32(&self.readErrors, 1)
-}
-
-func (self *statsInstrument) connectError(_ *net.UDPAddr, _ error) {
-}
-
-func (self *statsInstrument) unexpectedMessageType(_ *net.UDPAddr, _ messageType) {
-	atomic.AddInt32(&self.unexpectedMt, 1)
+func (self *statsInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *statsInstrument) duplicateRx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.rxDupeMessages, 1)
 	atomic.AddInt64(&self.rxDupeBytes, int64(len(wm.data)))
-}
-
-func (self *statsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
-	atomic.AddInt32(&self.rxDupeAcks, 1)
 }
 
 func (self *statsInstrument) allocate(_ string) {

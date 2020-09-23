@@ -20,7 +20,7 @@ type rxPortal struct {
 	rxs        chan *wireMessage
 	reads      chan *rxRead
 	readBuffer *bytes.Buffer
-	rxPortalSz int32
+	rxPortalSz int
 	readPool   *sync.Pool
 	ackPool    *pool
 	conn       *net.UDPConn
@@ -28,7 +28,6 @@ type rxPortal struct {
 	txPortal   *txPortal
 	seq        *util.Sequence
 	config     *Config
-	count      int
 }
 
 type rxRead struct {
@@ -51,7 +50,6 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		txPortal:   txPortal,
 		seq:        seq,
 		config:     config,
-		count:      0,
 	}
 	rxp.readPool.New = func() interface{} {
 		return make([]byte, config.poolBufferSz)
@@ -139,14 +137,12 @@ func (self *rxPortal) run() {
 			return
 		}
 
-		self.count++
-		if self.count%treeReportCt == 0 {
-			//logrus.Infof("tree.Size = %d, rxPortalSz = %d", self.tree.Size(), self.rxPortalSz)
-		}
-
 		if wm.seq > self.accepted || (self.accepted == math.MaxInt32 && wm.seq == 0) {
 			self.tree.Put(wm.seq, wm)
-			self.rxPortalSz += int32(len(wm.data))
+			self.rxPortalSz += len(wm.data)
+			if self.config.i != nil {
+				self.config.i.rxPortalSzChanged(self.peer, self.rxPortalSz)
+			}
 		} else {
 			if self.config.i != nil {
 				self.config.i.duplicateRx(self.peer, wm)
@@ -188,7 +184,10 @@ func (self *rxPortal) run() {
 					self.reads <- &rxRead{buf, n, false}
 
 					self.tree.Remove(key)
-					self.rxPortalSz -= int32(len(wm.data))
+					self.rxPortalSz -= len(wm.data)
+					if self.config.i != nil {
+						self.config.i.rxPortalSzChanged(self.peer, self.rxPortalSz)
+					}
 					wm.buffer.unref()
 					self.accepted = next
 					if next < math.MaxInt32 {

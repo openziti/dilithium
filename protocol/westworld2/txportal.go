@@ -34,7 +34,6 @@ type txPortal struct {
 	peer         *net.UDPAddr
 	pool         *pool
 	config       *Config
-	count        int
 }
 
 type retxMonitor struct {
@@ -79,11 +78,6 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	remaining := len(p)
 	n = 0
 	for remaining > 0 {
-		self.count++
-		if self.count%treeReportCt == 0 {
-			logrus.Infof("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz)
-		}
-
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
 		wm := newData(seq.Next(), p[n:n+sz], self.pool)
 
@@ -93,6 +87,9 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 
 		self.tree.Put(wm.seq, wm)
 		self.txPortalSz += sz
+		if self.config.i != nil {
+			self.config.i.txPortalSzChanged(self.peer, self.txPortalSz)
+		}
 
 		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
 			rttWm, err := wm.clone()
@@ -166,6 +163,9 @@ func (self *txPortal) ack(peer *net.UDPAddr, sequence int32, rxPortalSz int) {
 		self.tree.Remove(sequence)
 		sz := len(wm.data)
 		self.txPortalSz -= sz
+		if self.config.i != nil {
+			self.config.i.txPortalSzChanged(peer, self.txPortalSz)
+		}
 		wm.buffer.unref()
 
 		self.portalSuccessfulAck(sz)

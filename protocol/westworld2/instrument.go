@@ -6,22 +6,31 @@ import (
 )
 
 type Instrument interface {
+	// connection
 	connected(peer *net.UDPAddr)
-	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
-	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
-	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
-	txPortalCapacityChanged(peer *net.UDPAddr, capacity int)
-	txPortalRxPortalSzChanged(peer *net.UDPAddr, sz int)
-	newRetxMs(peer *net.UDPAddr, retxMs int)
 	closed(peer *net.UDPAddr)
+	connectError(peer *net.UDPAddr, err error)
 
+	// wire
+	wireMessageTx(peer *net.UDPAddr, wm *wireMessage)
+	wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
+	wireMessageRx(peer *net.UDPAddr, wm *wireMessage)
 	unknownPeer(peer *net.UDPAddr)
 	readError(peer *net.UDPAddr, err error)
-	connectError(peer *net.UDPAddr, err error)
 	unexpectedMessageType(peer *net.UDPAddr, mt messageType)
-	duplicateRx(peer *net.UDPAddr, wm *wireMessage)
+
+	// txPortal
+	txPortalCapacityChanged(peer *net.UDPAddr, capacity int)
+	txPortalSzChanged(peer *net.UDPAddr, capacity int)
+	txPortalRxPortalSzChanged(peer *net.UDPAddr, sz int)
+	newRetxMs(peer *net.UDPAddr, retxMs int)
 	duplicateAck(peer *net.UDPAddr, ack int32)
 
+	// rxPortal
+	rxPortalSzChanged(peer *net.UDPAddr, capacity int)
+	duplicateRx(peer *net.UDPAddr, wm *wireMessage)
+
+	// allocation
 	allocate(ctx string)
 }
 

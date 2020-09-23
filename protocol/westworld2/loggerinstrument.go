@@ -11,10 +11,25 @@ func newLoggerInstrument() Instrument {
 	return &loggerInstrument{}
 }
 
+/*
+ * connection
+ */
 func (self *loggerInstrument) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }
 
+func (self *loggerInstrument) closed(peer *net.UDPAddr) {
+	logrus.Infof("closed, peer [%s]", peer)
+}
+
+func (self *loggerInstrument) connectError(peer *net.UDPAddr, err error) {
+	logrus.Errorf("connect failed, peer [%s] (%v)", peer, err)
+}
+/* */
+
+/*
+ * wire
+ */
 func (self *loggerInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	logrus.Infof("<- [%c/#%d/@%d/:%d] <- [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
@@ -27,7 +42,26 @@ func (self *loggerInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage
 	logrus.Warnf("!> [%c/#%d/@%d/:%d] -> [%s]", self.symbol(wm.mt), wm.seq, wm.ack, len(wm.data), peer)
 }
 
+func (self *loggerInstrument) unknownPeer(peer *net.UDPAddr) {
+	logrus.Errorf("unknown peer [%s]", peer)
+}
+
+func (self *loggerInstrument) readError(peer *net.UDPAddr, err error) {
+	logrus.Errorf("read error, peer [%s] (%v)", peer, err)
+}
+
+func (self *loggerInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
+	logrus.Errorf("unexpected message type [%s], peer [%s]", mt.string(), peer)
+}
+/* */
+
+/*
+ * txPortal
+ */
 func (self *loggerInstrument) txPortalCapacityChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *loggerInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *loggerInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
@@ -37,37 +71,29 @@ func (self *loggerInstrument) newRetxMs(peer *net.UDPAddr, retxMs int) {
 	logrus.Infof("!+[%d ms]  <- [%s]", retxMs, peer)
 }
 
-func (self *loggerInstrument) closed(peer *net.UDPAddr) {
-	logrus.Infof("closed, peer [%s]", peer)
+func (self *loggerInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
+	logrus.Warnf("~ <- [@%d] <- [%s]", ack, peer)
 }
+/* */
 
-func (self *loggerInstrument) unknownPeer(peer *net.UDPAddr) {
-	logrus.Errorf("unknown peer [%s]", peer)
-}
-
-func (self *loggerInstrument) readError(peer *net.UDPAddr, err error) {
-	logrus.Errorf("read error, peer [%s] (%v)", peer, err)
-}
-
-func (self *loggerInstrument) connectError(peer *net.UDPAddr, err error) {
-	logrus.Errorf("connect failed, peer [%s] (%v)", peer, err)
-}
-
-func (self *loggerInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
-	logrus.Errorf("unexpected message type [%s], peer [%s]", mt.string(), peer)
+/*
+ * rxPortal
+ */
+func (self *loggerInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *loggerInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
 	logrus.Warnf("~ <- [#%d] <- [%s]", wm.seq, peer)
 }
+/* */
 
-func (self *loggerInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
-	logrus.Warnf("~ <- [@%d] <- [%s]", ack, peer)
-}
-
+/*
+ * allocation
+ */
 func (self *loggerInstrument) allocate(ctx string) {
 	logrus.WithField("context", ctx).Warn("allocate")
 }
+/* */
 
 func (self *loggerInstrument) symbol(mt messageType) rune {
 	switch mt {

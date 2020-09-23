@@ -15,16 +15,28 @@ import (
 )
 
 type metricsInstrument struct {
-	prefix           string
-	lock             *sync.Mutex
-	txBytes          []*sample
-	retxBytes        []*sample
-	rxBytes          []*sample
-	txPortalSz       []*sample
+	prefix string
+	lock   *sync.Mutex
+	peers  map[*net.UDPAddr]*metrics
+}
+
+type metrics struct {
+	lock *sync.Mutex
+
+	txBytes   []*sample
+	retxBytes []*sample
+	rxBytes   []*sample
+
+	txPortalCapacity   []*sample
+	txPortalSz         []*sample
+	txPortalRxPortalSz []*sample
+	retxMs             []*sample
+	duplicateAcks      []*sample
+
+	rxPortalSz       []*sample
 	duplicateRxBytes []*sample
-	duplicateAcks    []*sample
-	retxMs           []*sample
-	allocations      []*sample
+
+	errors []*sample
 }
 
 type sample struct {
@@ -34,7 +46,8 @@ type sample struct {
 
 func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	mi := &metricsInstrument{
-		lock: new(sync.Mutex),
+		lock:  new(sync.Mutex),
+		peers: make(map[*net.UDPAddr]*metrics),
 	}
 	if err := mi.configure(config); err != nil {
 		return nil, err
@@ -43,92 +56,148 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	return mi, nil
 }
 
-func (self *metricsInstrument) connected(_ *net.UDPAddr) {
-	self.txBytes = nil
-	self.retxBytes = nil
-	self.rxBytes = nil
-	self.txPortalSz = nil
-	self.duplicateRxBytes = nil
-	self.duplicateAcks = nil
-	self.retxMs = nil
-	self.allocations = nil
-	logrus.Infof("new connection, metrics collection reset")
-}
-
-func (self *metricsInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
-}
-
-func (self *metricsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
+/*
+ * connection
+ */
+func (self *metricsInstrument) connected(peer *net.UDPAddr) {
 	self.lock.Lock()
-	self.rxBytes = append(self.rxBytes, &sample{time.Now(), int64(len(wm.data))})
+	self.peers[peer] = &metrics{lock: new(sync.Mutex)}
 	self.lock.Unlock()
 }
 
-func (self *metricsInstrument) wireMessageTx(_ *net.UDPAddr, wm *wireMessage) {
-	self.lock.Lock()
-	self.txBytes = append(self.txBytes, &sample{time.Now(), int64(len(wm.data))})
-	self.lock.Unlock()
+func (self *metricsInstrument) closed(peer *net.UDPAddr) {
 }
 
-func (self *metricsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
-	self.lock.Lock()
-	self.retxBytes = append(self.retxBytes, &sample{time.Now(), int64(len(wm.data))})
-	self.lock.Unlock()
+func (self *metricsInstrument) connectError(peer *net.UDPAddr, err error) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.errors = append(m.errors, &sample{time.Now(), 1})
+		m.lock.Unlock()
+	}
+	logrus.Errorf("connect error (%v)", err)
+}
+/* */
+
+/*
+ * wire
+ */
+func (self *metricsInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.txBytes = append(m.txBytes, &sample{time.Now(), int64(len(wm.data))})
+		m.lock.Unlock()
+	}
 }
 
-func (self *metricsInstrument) txPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
-	self.lock.Lock()
-	self.txPortalSz = append(self.txPortalSz, &sample{time.Now(), int64(capacity)})
-	self.lock.Unlock()
+func (self *metricsInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.retxBytes = append(m.retxBytes, &sample{time.Now(), int64(len(wm.data))})
+		m.lock.Unlock()
+	}
 }
 
-func (self *metricsInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
-}
-
-func (self *metricsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
-	self.lock.Lock()
-	self.retxMs = append(self.retxMs, &sample{time.Now(), int64(retxMs)})
-	self.lock.Unlock()
-}
-
-func (self *metricsInstrument) closed(_ *net.UDPAddr) {
-	if err := self.writeAllSamples(); err != nil {
-		logrus.Errorf("error writing samples (%v)", err)
+func (self *metricsInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.rxBytes = append(m.rxBytes, &sample{time.Now(), int64(len(wm.data))})
+		m.lock.Unlock()
 	}
 }
 
 func (self *metricsInstrument) unknownPeer(peer *net.UDPAddr) {
-	logrus.Errorf("unknownPeer (%s)", peer)
+	logrus.Errorf("unknown peer (%s)", peer)
 }
 
-func (self *metricsInstrument) readError(_ *net.UDPAddr, err error) {
-	logrus.Errorf("readError (%v)", err)
+func (self *metricsInstrument) readError(peer *net.UDPAddr, err error) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.errors = append(m.errors, &sample{time.Now(), 1})
+		m.lock.Unlock()
+	}
+	logrus.Errorf("read error (%v)", err)
 }
 
-func (self *metricsInstrument) connectError(_ *net.UDPAddr, _ error) {
+func (self *metricsInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.errors = append(m.errors, &sample{time.Now(), 1})
+		m.lock.Unlock()
+	}
+	logrus.Errorf("unexpected message type (%d)", mt)
+}
+/* */
+
+/*
+ * txPortal
+ */
+func (self *metricsInstrument) txPortalCapacityChanged(peer *net.UDPAddr, capacity int) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.txPortalCapacity = append(m.txPortalCapacity, &sample{time.Now(), int64(capacity)})
+		m.lock.Unlock()
+	}
 }
 
-func (self *metricsInstrument) unexpectedMessageType(_ *net.UDPAddr, mt messageType) {
-	logrus.Errorf("unexpectedMessageType (%s)", mt.string())
+func (self *metricsInstrument) txPortalSzChanged(peer *net.UDPAddr, sz int) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.txPortalSz = append(m.txPortalSz, &sample{time.Now(), int64(sz)})
+		m.lock.Unlock()
+	}
 }
 
-func (self *metricsInstrument) duplicateRx(_ *net.UDPAddr, wm *wireMessage) {
-	self.lock.Lock()
-	self.duplicateRxBytes = append(self.duplicateRxBytes, &sample{time.Now(), int64(len(wm.data))})
-	self.lock.Unlock()
+func (self *metricsInstrument) txPortalRxPortalSzChanged(peer *net.UDPAddr, sz int) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.txPortalRxPortalSz = append(m.txPortalRxPortalSz, &sample{time.Now(), int64(sz)})
+		m.lock.Unlock()
+	}
 }
 
-func (self *metricsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
-	self.lock.Lock()
-	self.duplicateAcks = append(self.duplicateAcks, &sample{time.Now(), 1})
-	self.lock.Unlock()
+func (self *metricsInstrument) newRetxMs(peer *net.UDPAddr, retxMs int) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.retxMs = append(m.retxMs, &sample{time.Now(), int64(retxMs)})
+		m.lock.Unlock()
+	}
 }
 
+func (self *metricsInstrument) duplicateAck(peer *net.UDPAddr, _ int32) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.duplicateAcks = append(m.duplicateAcks, &sample{time.Now(), 1})
+		m.lock.Unlock()
+	}
+}
+/* */
+
+/*
+ * rxPortal
+ */
+func (self *metricsInstrument) rxPortalSzChanged(peer *net.UDPAddr, sz int) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.rxPortalSz = append(m.rxPortalSz, &sample{time.Now(), int64(sz)})
+		m.lock.Unlock()
+	}
+}
+
+func (self *metricsInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
+	if m, found := self.peers[peer]; found {
+		m.lock.Lock()
+		m.duplicateRxBytes = append(m.duplicateRxBytes, &sample{time.Now(), int64(len(wm.data))})
+		m.lock.Unlock()
+	}
+}
+/* */
+
+/*
+ * allocation
+ */
 func (self *metricsInstrument) allocate(_ string) {
-	self.lock.Lock()
-	self.allocations = append(self.allocations, &sample{time.Now(), 1})
-	self.lock.Unlock()
 }
+/* */
 
 func (self *metricsInstrument) configure(data map[string]interface{}) error {
 	if v, found := data["prefix"]; found {
@@ -143,39 +212,64 @@ func (self *metricsInstrument) configure(data map[string]interface{}) error {
 }
 
 func (self *metricsInstrument) writeAllSamples() error {
-	if err := os.MkdirAll(self.prefix, os.ModePerm); err == nil {
-		outPath, err := ioutil.TempDir(self.prefix, "")
-		if err == nil {
-			logrus.Infof("writing metrics to prefix [%s]", outPath)
-			if err := self.writeSamples("txBytes", outPath, self.txBytes); err != nil {
-				logrus.Errorf("error writing txBytes (%v)", err)
-			}
-			if err := self.writeSamples("retxBytes", outPath, self.retxBytes); err != nil {
-				logrus.Errorf("error writing retxBytes (%v)", err)
-			}
-			if err := self.writeSamples("rxBytes", outPath, self.rxBytes); err != nil {
-				logrus.Errorf("error writing rxBytes (%v)", err)
-			}
-			if err := self.writeSamples("txPortalSz", outPath, self.txPortalSz); err != nil {
-				logrus.Errorf("error writing txPortalSz (%v)", err)
-			}
-			if err := self.writeSamples("duplicateRxBytes", outPath, self.duplicateRxBytes); err != nil {
-				logrus.Errorf("error writing duplicateRxBytes (%v)", err)
-			}
-			if err := self.writeSamples("duplicateAcks", outPath, self.duplicateAcks); err != nil {
-				logrus.Errorf("error writing duplicateAcks (%v)", err)
-			}
-			if err := self.writeSamples("retxMs", outPath, self.retxMs); err != nil {
-				logrus.Errorf("error writing retxMs (%v)", err)
-			}
-			if err := self.writeSamples("allocations", outPath, self.allocations); err != nil {
-				logrus.Errorf("error writing allocations (%v)", err)
-			}
-		} else {
-			logrus.Errorf("error writing metrics (%v)", err)
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	for peer, m := range self.peers {
+		peerName := fmt.Sprintf("%s_%d_", peer.IP.String(), peer.Port)
+		if err := os.MkdirAll(self.prefix, os.ModePerm); err != nil {
+			return err
 		}
-	} else {
-		logrus.Errorf("unable to make output parent [%s] (%v)", self.prefix, err)
+		outpath, err := ioutil.TempDir(self.prefix, peerName)
+		if err != nil {
+			return err
+		}
+		logrus.Infof("writing metrics to: %s", outpath)
+
+		if err := self.writeSamples("txBytes", outpath, m.txBytes); err != nil {
+			return err
+		}
+		m.txBytes = nil
+		if err := self.writeSamples("retxBytes", outpath, m.retxBytes); err != nil {
+			return err
+		}
+		m.retxBytes = nil
+		if err := self.writeSamples("rxBytes", outpath, m.rxBytes); err != nil {
+			return err
+		}
+		m.rxBytes = nil
+		if err := self.writeSamples("txPortalCapacity", outpath, m.txPortalCapacity); err != nil {
+			return err
+		}
+		m.txPortalCapacity = nil
+		if err := self.writeSamples("txPortalSz", outpath, m.txPortalSz); err != nil {
+			return err
+		}
+		m.txPortalSz = nil
+		if err := self.writeSamples("txPortalRxPortalSz", outpath, m.txPortalRxPortalSz); err != nil {
+			return err
+		}
+		m.txPortalRxPortalSz = nil
+		if err := self.writeSamples("retxMs", outpath, m.retxMs); err != nil {
+			return err
+		}
+		m.retxMs = nil
+		if err := self.writeSamples("duplicateAcks", outpath, m.duplicateAcks); err != nil {
+			return err
+		}
+		m.duplicateAcks = nil
+		if err := self.writeSamples("rxPortalSz", outpath, m.rxPortalSz); err != nil {
+			return err
+		}
+		m.rxPortalSz = nil
+		if err := self.writeSamples("duplicateRxBytes", outpath, m.duplicateRxBytes); err != nil {
+			return err
+		}
+		m.duplicateRxBytes = nil
+		if err := self.writeSamples("errors", outpath, m.errors); err != nil {
+			return err
+		}
+		m.errors = nil
 	}
 	return nil
 }

@@ -27,18 +27,12 @@ func (self *traceInstrument) connected(peer *net.UDPAddr) {
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CONNECTED", peer))
 }
 
-func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	decode := fmt.Sprintf("%-12s", "RX "+self.mt(wm.mt))
-	if wm.seq != -1 {
-		decode += fmt.Sprintf("%-8s", fmt.Sprintf("#%d", wm.seq))
-	}
-	if wm.ack != -1 {
-		decode += fmt.Sprintf("%-8s", fmt.Sprintf("@%d", wm.ack))
-	}
-	if len(wm.data) > 0 {
-		decode += fmt.Sprintf("[%d]", len(wm.data))
-	}
-	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
+func (self *traceInstrument) closed(peer *net.UDPAddr) {
+	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CLOSED", peer))
+}
+
+func (self *traceInstrument) connectError(peer *net.UDPAddr, err error) {
+	logrus.Errorf("connect failed, peer [%s] (%v)", peer, err)
 }
 
 func (self *traceInstrument) wireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
@@ -69,17 +63,18 @@ func (self *traceInstrument) wireMessageRetx(peer *net.UDPAddr, wm *wireMessage)
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
-func (self *traceInstrument) txPortalCapacityChanged(_ *net.UDPAddr, _ int) {
-}
-
-func (self *traceInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
-}
-
-func (self *traceInstrument) closed(peer *net.UDPAddr) {
-	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CLOSED", peer))
-}
-
-func (self *traceInstrument) newRetxMs(_ *net.UDPAddr, _ int) {
+func (self *traceInstrument) wireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
+	decode := fmt.Sprintf("%-12s", "RX "+self.mt(wm.mt))
+	if wm.seq != -1 {
+		decode += fmt.Sprintf("%-8s", fmt.Sprintf("#%d", wm.seq))
+	}
+	if wm.ack != -1 {
+		decode += fmt.Sprintf("%-8s", fmt.Sprintf("@%d", wm.ack))
+	}
+	if len(wm.data) > 0 {
+		decode += fmt.Sprintf("[%d]", len(wm.data))
+	}
+	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
 func (self *traceInstrument) unknownPeer(peer *net.UDPAddr) {
@@ -90,12 +85,29 @@ func (self *traceInstrument) readError(peer *net.UDPAddr, err error) {
 	logrus.Errorf("read error, peer [%s] (%v)", peer, err)
 }
 
-func (self *traceInstrument) connectError(peer *net.UDPAddr, err error) {
-	logrus.Errorf("connect failed, peer [%s] (%v)", peer, err)
-}
-
 func (self *traceInstrument) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
 	logrus.Errorf("unexpected message type [%s], peer [%s]", mt.string(), peer)
+}
+
+func (self *traceInstrument) txPortalCapacityChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *traceInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *traceInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
+}
+
+func (self *traceInstrument) newRetxMs(_ *net.UDPAddr, _ int) {
+}
+
+func (self *traceInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
+	decode := fmt.Sprintf("%-12s", "DPACK")
+	decode += fmt.Sprintf("%-8s", fmt.Sprintf("@%d", ack))
+	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
+}
+
+func (self *traceInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *traceInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
@@ -109,12 +121,6 @@ func (self *traceInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
 	if len(wm.data) > 0 {
 		decode += fmt.Sprintf("[%d]", len(wm.data))
 	}
-	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
-}
-
-func (self *traceInstrument) duplicateAck(peer *net.UDPAddr, ack int32) {
-	decode := fmt.Sprintf("%-12s", "DPACK")
-	decode += fmt.Sprintf("%-8s", fmt.Sprintf("@%d", ack))
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), decode, peer))
 }
 
