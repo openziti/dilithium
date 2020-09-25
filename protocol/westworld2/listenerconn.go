@@ -20,6 +20,7 @@ type listenerConn struct {
 	rxPortal *rxPortal
 	pool     *pool
 	config   *Config
+	ii       InstrumentInstance
 }
 
 func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*listenerConn, error) {
@@ -36,11 +37,14 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*lis
 		peer:    peer,
 		rxQueue: make(chan *wireMessage, config.listenerRxQLen),
 		seq:     util.NewSequence(int32(sSeq)),
-		pool:    newPool("listenerConn", config),
 		config:  config,
 	}
-	lc.txPortal = newTxPortal(conn, peer, config)
-	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, config)
+	if config.i != nil {
+		lc.ii = config.i.newInstance(peer)
+	}
+	lc.pool = newPool("listenerConn", lc.ii)
+	lc.txPortal = newTxPortal(conn, peer, config, lc.ii)
+	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, config, lc.ii)
 	return lc, nil
 }
 
@@ -105,7 +109,7 @@ func (self *listenerConn) rxer() {
 				}
 				self.txPortal.ack(self.txPortal.peer, wm.ack, int(rxPortalSz))
 			}
-			if wm.mf & RTT == 1 {
+			if wm.mf&RTT == 1 {
 				ts, err := wm.readRtt()
 				if err == nil {
 					self.txPortal.rtt(ts)
@@ -116,8 +120,8 @@ func (self *listenerConn) rxer() {
 			wm.buffer.unref()
 
 		} else {
-			if self.config.i != nil {
-				self.config.i.unexpectedMessageType(self.peer, wm.mt)
+			if self.ii != nil {
+				self.ii.unexpectedMessageType(self.peer, wm.mt)
 			}
 			wm.buffer.unref()
 		}
@@ -142,8 +146,8 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write hello ack")
 	}
-	if self.config.i != nil {
-		self.config.i.wireMessageTx(self.peer, helloAck)
+	if self.ii != nil {
+		self.ii.wireMessageTx(self.peer, helloAck)
 	}
 	/* */
 

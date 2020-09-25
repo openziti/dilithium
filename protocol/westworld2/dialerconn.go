@@ -19,6 +19,7 @@ type dialerConn struct {
 	rxPortal *rxPortal
 	pool     *pool
 	config   *Config
+	ii       InstrumentInstance
 }
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*dialerConn, error) {
@@ -34,11 +35,14 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*diale
 		conn:   conn,
 		peer:   peer,
 		seq:    util.NewSequence(int32(sSeq)),
-		pool:   newPool("dialerConn", config),
 		config: config,
 	}
-	dc.txPortal = newTxPortal(conn, peer, config)
-	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, config)
+	if config.i != nil {
+		dc.ii = config.i.newInstance(peer)
+	}
+	dc.pool = newPool("dialerConn", dc.ii)
+	dc.txPortal = newTxPortal(conn, peer, config, dc.ii)
+	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, config, dc.ii)
 	return dc, nil
 }
 
@@ -82,13 +86,13 @@ func (self *dialerConn) rxer() {
 	for {
 		wm, peer, err := readWireMessage(self.conn, self.pool)
 		if err != nil {
-			if self.config.i != nil {
-				self.config.i.readError(self.peer, err)
+			if self.ii != nil {
+				self.ii.readError(self.peer, err)
 			}
 			continue
 		}
-		if self.config.i != nil {
-			self.config.i.wireMessageRx(peer, wm)
+		if self.ii != nil {
+			self.ii.wireMessageRx(peer, wm)
 		}
 
 		if wm.mt == DATA || wm.mt == CLOSE {
@@ -119,8 +123,8 @@ func (self *dialerConn) rxer() {
 			wm.buffer.unref()
 
 		} else {
-			if self.config.i != nil {
-				self.config.i.unexpectedMessageType(self.peer, wm.mt)
+			if self.ii != nil {
+				self.ii.unexpectedMessageType(self.peer, wm.mt)
 			}
 			wm.buffer.unref()
 		}
@@ -138,8 +142,8 @@ func (self *dialerConn) hello() error {
 	if err := writeWireMessage(hello, self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write hello")
 	}
-	if self.config.i != nil {
-		self.config.i.wireMessageTx(self.peer, hello)
+	if self.ii != nil {
+		self.ii.wireMessageTx(self.peer, hello)
 	}
 	/* */
 
@@ -154,8 +158,8 @@ func (self *dialerConn) hello() error {
 	if err != nil {
 		return errors.Wrap(err, "read hello ack")
 	}
-	if self.config.i != nil {
-		self.config.i.wireMessageRx(peer, helloAck)
+	if self.ii != nil {
+		self.ii.wireMessageRx(peer, helloAck)
 	}
 	defer helloAck.buffer.unref()
 
@@ -182,13 +186,13 @@ func (self *dialerConn) hello() error {
 	if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 		return errors.Wrap(err, "write ack")
 	}
-	if self.config.i != nil {
-		self.config.i.wireMessageTx(self.peer, ack)
+	if self.ii != nil {
+		self.ii.wireMessageTx(self.peer, ack)
 	}
 	/* */
 
-	if self.config.i != nil {
-		self.config.i.connected(self.peer)
+	if self.ii != nil {
+		self.ii.connected(self.peer)
 	}
 
 	go self.rxer()

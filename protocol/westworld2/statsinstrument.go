@@ -8,7 +8,25 @@ import (
 	"time"
 )
 
-type statsInstrument struct {
+type statsInstrument struct{}
+
+func newStatsInstrument() Instrument {
+	return &statsInstrument{}
+}
+
+func (self *statsInstrument) newInstance(peer *net.UDPAddr) InstrumentInstance {
+	si := &statsInstrumentInstance{
+		peer:       peer,
+		retxLowMs:  -1,
+		retxCurrMs: -1,
+		retxHighMs: -1,
+	}
+	go si.dumper()
+	return si
+}
+
+type statsInstrumentInstance struct {
+	peer               *net.UDPAddr
 	rxMessages         int32
 	rxBytes            int64
 	rxDupeMessages     int32
@@ -29,64 +47,54 @@ type statsInstrument struct {
 	allocations        int32
 }
 
-func newStatsInstrument() Instrument {
-	si := &statsInstrument{
-		retxLowMs:  -1,
-		retxCurrMs: -1,
-		retxHighMs: -1,
-	}
-	go si.dumper()
-	return si
+func (self *statsInstrumentInstance) connected(peer *net.UDPAddr) {
 }
 
-func (self *statsInstrument) connected(_ *net.UDPAddr) {
+func (self *statsInstrumentInstance) closed(_ *net.UDPAddr) {
 }
 
-func (self *statsInstrument) closed(_ *net.UDPAddr) {
+func (self *statsInstrumentInstance) connectError(_ *net.UDPAddr, _ error) {
 }
 
-func (self *statsInstrument) connectError(_ *net.UDPAddr, _ error) {
-}
-
-func (self *statsInstrument) wireMessageTx(_ *net.UDPAddr, wm *wireMessage) {
+func (self *statsInstrumentInstance) wireMessageTx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.txMessages, 1)
 	atomic.AddInt64(&self.txBytes, int64(len(wm.data)))
 }
 
-func (self *statsInstrument) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
+func (self *statsInstrumentInstance) wireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.retxMessages, 1)
 	atomic.AddInt64(&self.retxBytes, int64(len(wm.data)))
 }
 
-func (self *statsInstrument) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
+func (self *statsInstrumentInstance) wireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.rxMessages, 1)
 	atomic.AddInt64(&self.rxBytes, int64(len(wm.data)))
 }
 
-func (self *statsInstrument) unknownPeer(_ *net.UDPAddr) {
+func (self *statsInstrumentInstance) unknownPeer(_ *net.UDPAddr) {
 	atomic.AddInt32(&self.unknownPeers, 1)
 }
 
-func (self *statsInstrument) readError(_ *net.UDPAddr, _ error) {
+func (self *statsInstrumentInstance) readError(_ *net.UDPAddr, _ error) {
 	atomic.AddInt32(&self.readErrors, 1)
 }
 
-func (self *statsInstrument) unexpectedMessageType(_ *net.UDPAddr, _ messageType) {
+func (self *statsInstrumentInstance) unexpectedMessageType(_ *net.UDPAddr, _ messageType) {
 	atomic.AddInt32(&self.unexpectedMt, 1)
 }
 
-func (self *statsInstrument) txPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
+func (self *statsInstrumentInstance) txPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
 	atomic.StoreInt32(&self.txPortalCapacity, int32(capacity))
 }
 
-func (self *statsInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
+func (self *statsInstrumentInstance) txPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
-func (self *statsInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, sz int) {
+func (self *statsInstrumentInstance) txPortalRxPortalSzChanged(_ *net.UDPAddr, sz int) {
 	atomic.StoreInt32(&self.txPortalRxPortalSz, int32(sz))
 }
 
-func (self *statsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
+func (self *statsInstrumentInstance) newRetxMs(_ *net.UDPAddr, retxMs int) {
 	if !atomic.CompareAndSwapInt32(&self.retxLowMs, int32(-1), int32(retxMs)) {
 		old := atomic.LoadInt32(&self.retxLowMs)
 		if old > int32(retxMs) {
@@ -102,23 +110,23 @@ func (self *statsInstrument) newRetxMs(_ *net.UDPAddr, retxMs int) {
 	}
 }
 
-func (self *statsInstrument) duplicateAck(_ *net.UDPAddr, _ int32) {
+func (self *statsInstrumentInstance) duplicateAck(_ *net.UDPAddr, _ int32) {
 	atomic.AddInt32(&self.rxDupeAcks, 1)
 }
 
-func (self *statsInstrument) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
+func (self *statsInstrumentInstance) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
-func (self *statsInstrument) duplicateRx(_ *net.UDPAddr, wm *wireMessage) {
+func (self *statsInstrumentInstance) duplicateRx(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt32(&self.rxDupeMessages, 1)
 	atomic.AddInt64(&self.rxDupeBytes, int64(len(wm.data)))
 }
 
-func (self *statsInstrument) allocate(_ string) {
+func (self *statsInstrumentInstance) allocate(_ string) {
 	atomic.AddInt32(&self.allocations, 1)
 }
 
-func (self *statsInstrument) dumper() {
+func (self *statsInstrumentInstance) dumper() {
 	for {
 		time.Sleep(5 * time.Second)
 		out := "stats{\n"

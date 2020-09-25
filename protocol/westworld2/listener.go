@@ -16,6 +16,7 @@ type listener struct {
 	addr        *net.UDPAddr
 	pool        *pool
 	config      *Config
+	ii          InstrumentInstance
 }
 
 func Listen(addr *net.UDPAddr, config *Config) (net.Listener, error) {
@@ -35,9 +36,12 @@ func Listen(addr *net.UDPAddr, config *Config) (net.Listener, error) {
 		acceptQueue: make(chan net.Conn, config.acceptQLen),
 		conn:        conn,
 		addr:        addr,
-		pool:        newPool("listener", config),
 		config:      config,
 	}
+	if config.i != nil {
+		l.ii = config.i.newInstance(nil)
+	}
+	l.pool = newPool("listener", l.ii)
 	go l.run()
 	return l, nil
 }
@@ -64,8 +68,8 @@ func (self *listener) run() {
 
 	for {
 		if wm, peer, err := readWireMessage(self.conn, self.pool); err == nil {
-			if self.config.i != nil {
-				self.config.i.wireMessageRx(peer, wm)
+			if self.ii != nil {
+				self.ii.wireMessageRx(peer, wm)
 			}
 			conn, found := self.peers.Get(peer)
 			if found {
@@ -76,14 +80,14 @@ func (self *listener) run() {
 
 				} else {
 					wm.buffer.unref()
-					if self.config.i != nil {
-						self.config.i.unknownPeer(peer)
+					if self.ii != nil {
+						self.ii.unknownPeer(peer)
 					}
 				}
 			}
 		} else {
-			if self.config.i != nil {
-				self.config.i.readError(peer, err)
+			if self.ii != nil {
+				self.ii.readError(peer, err)
 			}
 		}
 	}
@@ -92,8 +96,8 @@ func (self *listener) run() {
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 	conn, err := newListenerConn(self.conn, peer, self.config)
 	if err != nil {
-		if self.config.i != nil {
-			self.config.i.connectError(peer, err)
+		if self.ii != nil {
+			self.ii.connectError(peer, err)
 		}
 		return
 	}
@@ -103,8 +107,8 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 	self.lock.Unlock()
 
 	if err := conn.hello(hello); err != nil {
-		if self.config.i != nil {
-			self.config.i.connectError(peer, err)
+		if self.ii != nil {
+			self.ii.connectError(peer, err)
 		}
 		return
 	}
@@ -112,8 +116,8 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 
 	self.acceptQueue <- conn
 
-	if self.config.i != nil {
-		self.config.i.connected(peer)
+	if self.ii != nil {
+		self.ii.connected(peer)
 	}
 }
 

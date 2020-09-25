@@ -28,6 +28,7 @@ type rxPortal struct {
 	txPortal   *txPortal
 	seq        *util.Sequence
 	config     *Config
+	ii         InstrumentInstance
 }
 
 type rxRead struct {
@@ -36,7 +37,7 @@ type rxRead struct {
 	eof bool
 }
 
-func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, config *Config) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, config *Config, ii InstrumentInstance) *rxPortal {
 	rxp := &rxPortal{
 		tree:       btree.NewWith(config.treeLen, utils.Int32Comparator),
 		accepted:   -1,
@@ -44,12 +45,13 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		reads:      make(chan *rxRead, config.readsQLen),
 		readBuffer: new(bytes.Buffer),
 		readPool:   new(sync.Pool),
-		ackPool:    newPool("ackPool", config),
+		ackPool:    newPool("ackPool", ii),
 		conn:       conn,
 		peer:       peer,
 		txPortal:   txPortal,
 		seq:        seq,
 		config:     config,
+		ii:         ii,
 	}
 	rxp.readPool.New = func() interface{} {
 		return make([]byte, config.poolBufferSz)
@@ -140,12 +142,12 @@ func (self *rxPortal) run() {
 		if wm.seq > self.accepted || (self.accepted == math.MaxInt32 && wm.seq == 0) {
 			self.tree.Put(wm.seq, wm)
 			self.rxPortalSz += len(wm.data)
-			if self.config.i != nil {
-				self.config.i.rxPortalSzChanged(self.peer, self.rxPortalSz)
+			if self.ii != nil {
+				self.ii.rxPortalSzChanged(self.peer, self.rxPortalSz)
 			}
 		} else {
-			if self.config.i != nil {
-				self.config.i.duplicateRx(self.peer, wm)
+			if self.ii != nil {
+				self.ii.duplicateRx(self.peer, wm)
 			}
 			wm.buffer.unref()
 		}
@@ -162,8 +164,8 @@ func (self *rxPortal) run() {
 		if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 			logrus.Errorf("error sending ack (%v)", err)
 		}
-		if self.config.i != nil {
-			self.config.i.wireMessageTx(self.peer, ack)
+		if self.ii != nil {
+			self.ii.wireMessageTx(self.peer, ack)
 		}
 		ack.buffer.unref()
 
@@ -185,8 +187,8 @@ func (self *rxPortal) run() {
 
 					self.tree.Remove(key)
 					self.rxPortalSz -= len(wm.data)
-					if self.config.i != nil {
-						self.config.i.rxPortalSzChanged(self.peer, self.rxPortalSz)
+					if self.ii != nil {
+						self.ii.rxPortalSzChanged(self.peer, self.rxPortalSz)
 					}
 					wm.buffer.unref()
 					self.accepted = next

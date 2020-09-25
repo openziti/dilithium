@@ -23,6 +23,10 @@ func newTraceInstrument() Instrument {
 	return ti
 }
 
+func (self *traceInstrument) newInstance(_ *net.UDPAddr) InstrumentInstance {
+	return self
+}
+
 func (self *traceInstrument) connected(peer *net.UDPAddr) {
 	self.append(fmt.Sprintf("&& %-10d %-64s [%s]", time.Since(self.last).Milliseconds(), "CONNECTED", peer))
 }

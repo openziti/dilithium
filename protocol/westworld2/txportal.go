@@ -34,6 +34,7 @@ type txPortal struct {
 	peer         *net.UDPAddr
 	pool         *pool
 	config       *Config
+	ii           InstrumentInstance
 }
 
 type retxMonitor struct {
@@ -46,7 +47,7 @@ type retxSubject struct {
 	wm       *wireMessage
 }
 
-func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config, ii InstrumentInstance) *txPortal {
 	txp := &txPortal{
 		lock:         new(sync.Mutex),
 		tree:         btree.NewWith(config.treeLen, utils.Int32Comparator),
@@ -58,8 +59,9 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config) *txPortal
 		closed:       false,
 		conn:         conn,
 		peer:         peer,
-		pool:         newPool("txPortal", config),
+		pool:         newPool("txPortal", ii),
 		config:       config,
+		ii:           ii,
 	}
 	txp.ready = sync.NewCond(txp.lock)
 	txp.monitor.ready = sync.NewCond(txp.lock)
@@ -81,14 +83,14 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
 		wm := newData(seq.Next(), p[n:n+sz], self.pool)
 
-		for math.Min(float64(self.capacity - int(self.txPortalSz)), float64(self.capacity - int(self.rxPortalSz))) < 0 {
+		for math.Min(float64(self.capacity-int(self.txPortalSz)), float64(self.capacity-int(self.rxPortalSz))) < 0 {
 			self.ready.Wait()
 		}
 
 		self.tree.Put(wm.seq, wm)
 		self.txPortalSz += sz
-		if self.config.i != nil {
-			self.config.i.txPortalSzChanged(self.peer, self.txPortalSz)
+		if self.ii != nil {
+			self.ii.txPortalSzChanged(self.peer, self.txPortalSz)
 		}
 
 		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
@@ -101,8 +103,8 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 				rttWm.buffer.unref()
 				return 0, errors.Wrap(err, "rttTx")
 			}
-			if self.config.i != nil {
-				self.config.i.wireMessageTx(self.peer, rttWm)
+			if self.ii != nil {
+				self.ii.wireMessageTx(self.peer, rttWm)
 			}
 			rttWm.buffer.unref()
 			self.lastRtt = time.Now()
@@ -111,8 +113,8 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 			if err = writeWireMessage(wm, self.conn, self.peer); err != nil {
 				return 0, errors.Wrap(err, "tx")
 			}
-			if self.config.i != nil {
-				self.config.i.wireMessageTx(self.peer, wm)
+			if self.ii != nil {
+				self.ii.wireMessageTx(self.peer, wm)
 			}
 		}
 
@@ -138,8 +140,8 @@ func (self *txPortal) close(seq *util.Sequence) error {
 		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			return errors.Wrap(err, "tx close")
 		}
-		if self.config.i != nil {
-			self.config.i.wireMessageTx(self.peer, wm)
+		if self.ii != nil {
+			self.ii.wireMessageTx(self.peer, wm)
 		}
 	}
 
@@ -152,8 +154,8 @@ func (self *txPortal) ack(peer *net.UDPAddr, sequence int32, rxPortalSz int) {
 
 	if rxPortalSz > -1 {
 		self.rxPortalSz = rxPortalSz
-		if self.config.i != nil {
-			self.config.i.txPortalRxPortalSzChanged(peer, int(rxPortalSz))
+		if self.ii != nil {
+			self.ii.txPortalRxPortalSzChanged(peer, int(rxPortalSz))
 		}
 	}
 
@@ -163,8 +165,8 @@ func (self *txPortal) ack(peer *net.UDPAddr, sequence int32, rxPortalSz int) {
 		self.tree.Remove(sequence)
 		sz := len(wm.data)
 		self.txPortalSz -= sz
-		if self.config.i != nil {
-			self.config.i.txPortalSzChanged(peer, self.txPortalSz)
+		if self.ii != nil {
+			self.ii.txPortalSzChanged(peer, self.txPortalSz)
 		}
 		wm.buffer.unref()
 
@@ -202,8 +204,8 @@ func (self *txPortal) rtt(ts int64) {
 		self.retxMs = 5
 	}
 
-	if self.config.i != nil {
-		self.config.i.newRetxMs(self.peer, self.retxMs)
+	if self.ii != nil {
+		self.ii.newRetxMs(self.peer, self.retxMs)
 	}
 }
 
@@ -218,8 +220,8 @@ func (self *txPortal) runMonitor() {
 		self.lock.Lock()
 		{
 			if self.closed {
-				if self.config.i != nil {
-					self.config.i.closed(self.peer)
+				if self.ii != nil {
+					self.ii.closed(self.peer)
 				}
 				return
 			}
@@ -242,14 +244,14 @@ func (self *txPortal) runMonitor() {
 				for ; i < x; i++ {
 					delta := self.monitor.waiting[i].deadline.Sub(headline).Milliseconds()
 					if delta <= 2 {
-						if self.config.i != nil {
-							self.config.i.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
+						if self.ii != nil {
+							self.ii.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
 						}
 						if err := writeWireMessage(self.monitor.waiting[i].wm, self.conn, self.peer); err != nil {
 							logrus.Errorf("retx (%v)", err)
 						} else {
-							if self.config.i != nil {
-								self.config.i.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
+							if self.ii != nil {
+								self.ii.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
 							}
 						}
 						self.portalRetx()
@@ -308,8 +310,8 @@ func (self *txPortal) portalDuplicateAck(sequence int32) {
 		self.dupAckCt = 0
 		self.succAccum = 0
 	}
-	if self.config.i != nil {
-		self.config.i.duplicateAck(self.peer, sequence)
+	if self.ii != nil {
+		self.ii.duplicateAck(self.peer, sequence)
 	}
 }
 
@@ -330,7 +332,7 @@ func (self *txPortal) updatePortalSz(newCapacity int) {
 	if self.config.txPortalMaxSz > 0 && self.capacity > self.config.txPortalMaxSz {
 		self.capacity = self.config.txPortalMaxSz
 	}
-	if self.config.i != nil {
-		self.config.i.txPortalCapacityChanged(self.peer, self.capacity)
+	if self.ii != nil {
+		self.ii.txPortalCapacityChanged(self.peer, self.capacity)
 	}
 }

@@ -6,6 +6,10 @@ import (
 )
 
 type Instrument interface {
+	newInstance(peer *net.UDPAddr) InstrumentInstance
+}
+
+type InstrumentInstance interface {
 	// connection
 	connected(peer *net.UDPAddr)
 	closed(peer *net.UDPAddr)
