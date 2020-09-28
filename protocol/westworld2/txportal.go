@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"fmt"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/util"
@@ -22,7 +23,9 @@ type txPortal struct {
 	succCt       int
 	succAccum    int
 	dupAckCt     int
+	dupAckAllCt  int
 	retxCt       int
+	retxAllCt    int
 	ready        *sync.Cond
 	monitor      *retxMonitor
 	lastRtt      time.Time
@@ -35,6 +38,7 @@ type txPortal struct {
 	pool         *pool
 	config       *Config
 	ii           InstrumentInstance
+	txCount      int64
 }
 
 type retxMonitor struct {
@@ -65,7 +69,8 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, config *Config, ii Instru
 	}
 	txp.ready = sync.NewCond(txp.lock)
 	txp.monitor.ready = sync.NewCond(txp.lock)
-	go txp.runMonitor()
+	go txp.retxMonitor()
+	go txp.watchdog()
 	return txp
 }
 
@@ -83,15 +88,12 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		sz := int(math.Min(float64(remaining), float64(self.config.maxSegmentSz)))
 		wm := newData(seq.Next(), p[n:n+sz], self.pool)
 
-		for math.Min(float64(self.capacity-int(self.txPortalSz)), float64(self.capacity-int(self.rxPortalSz))) < 0 {
+		for math.Min(float64(self.capacity-int(self.txPortalSz+sz)), float64(self.capacity-int(self.rxPortalSz))) < 0 {
 			self.ready.Wait()
 		}
 
 		self.tree.Put(wm.seq, wm)
 		self.txPortalSz += sz
-		if self.ii != nil {
-			self.ii.txPortalSzChanged(self.peer, self.txPortalSz)
-		}
 
 		if time.Since(self.lastRtt).Milliseconds() > int64(self.config.rttProbeMs) {
 			rttWm, err := wm.clone()
@@ -108,6 +110,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 			}
 			rttWm.buffer.unref()
 			self.lastRtt = time.Now()
+			self.txCount++
 
 		} else {
 			if err = writeWireMessage(wm, self.conn, self.peer); err != nil {
@@ -116,6 +119,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 			if self.ii != nil {
 				self.ii.wireMessageTx(self.peer, wm)
 			}
+			self.txCount++
 		}
 
 		self.addMonitor(wm)
@@ -176,7 +180,7 @@ func (self *txPortal) ack(peer *net.UDPAddr, sequence int32, rxPortalSz int) {
 			self.closed = true
 		}
 
-		self.ready.Signal()
+		self.ready.Broadcast()
 
 	} else {
 		self.portalDuplicateAck(sequence)
@@ -209,7 +213,22 @@ func (self *txPortal) rtt(ts int64) {
 	}
 }
 
-func (self *txPortal) runMonitor() {
+func (self *txPortal) watchdog() {
+	for {
+		last := self.txCount
+		time.Sleep(1 * time.Second)
+		logrus.Infof("\n%s\n%s\n%s\n%s\n\n",
+			fmt.Sprintf("txCount = %d (%d)", self.txCount, self.txCount-last),
+			fmt.Sprintf("capacity = %d, txPortalSz = %d, rxPortalSz = %d", self.capacity, self.txPortalSz, self.rxPortalSz),
+			fmt.Sprintf("retx = %d, dupAck = %d", self.retxAllCt, self.dupAckAllCt),
+			fmt.Sprintf("retxMs = %d, monitoring = %d", self.retxMs, len(self.monitor.waiting)),
+		)
+		self.ready.Broadcast()
+		self.monitor.ready.Broadcast()
+	}
+}
+
+func (self *txPortal) retxMonitor() {
 	logrus.Info("started")
 	defer logrus.Warn("exited")
 
@@ -227,6 +246,10 @@ func (self *txPortal) runMonitor() {
 			}
 
 			for len(self.monitor.waiting) < 1 {
+				dup := newData(-33, nil, self.pool)
+				if err := writeWireMessage(dup, self.conn, self.peer); err != nil {
+					logrus.Errorf("error provoking peer (%v)", err)
+				}
 				self.monitor.ready.Wait()
 			}
 			headline = self.monitor.waiting[0].deadline
@@ -253,10 +276,11 @@ func (self *txPortal) runMonitor() {
 							if self.ii != nil {
 								self.ii.wireMessageRetx(self.peer, self.monitor.waiting[i].wm)
 							}
+							self.txCount++
 						}
 						self.portalRetx()
 
-						self.monitor.waiting[i].deadline = time.Now().Add(time.Duration(self.retxMs+self.config.retxAddMs) * time.Millisecond)
+						self.monitor.waiting[i].deadline = time.Now().Add(time.Duration((self.retxMs*2)+self.config.retxAddMs) * time.Millisecond)
 						self.monitor.waiting = append(self.monitor.waiting, self.monitor.waiting[i])
 					} else {
 						break
@@ -273,7 +297,7 @@ func (self *txPortal) runMonitor() {
 }
 
 func (self *txPortal) addMonitor(wm *wireMessage) {
-	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration(self.retxMs+self.config.retxAddMs) * time.Millisecond), wm})
+	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration((self.retxMs*2)+self.config.retxAddMs) * time.Millisecond), wm})
 	self.monitor.ready.Signal()
 }
 
@@ -304,6 +328,7 @@ func (self *txPortal) portalSuccessfulAck(sz int) {
 
 func (self *txPortal) portalDuplicateAck(sequence int32) {
 	self.dupAckCt++
+	self.dupAckAllCt++
 	self.succCt = 0
 	if self.dupAckCt == self.config.txPortalDupAckCt {
 		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalDupAckFrac))
@@ -317,6 +342,7 @@ func (self *txPortal) portalDuplicateAck(sequence int32) {
 
 func (self *txPortal) portalRetx() {
 	self.retxCt++
+	self.retxAllCt++
 	if self.retxCt == self.config.txPortalRetxCt {
 		self.updatePortalSz(int(float64(self.capacity) * self.config.txPortalRetxFrac))
 		self.retxCt = 0

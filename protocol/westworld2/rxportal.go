@@ -11,6 +11,7 @@ import (
 	"math"
 	"net"
 	"sync"
+	"time"
 )
 
 type rxPortal struct {
@@ -57,6 +58,7 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		return make([]byte, config.poolBufferSz)
 	}
 	go rxp.run()
+	go rxp.watchdog()
 	return rxp
 }
 
@@ -139,21 +141,21 @@ func (self *rxPortal) run() {
 			return
 		}
 
-		if wm.seq > self.accepted || (self.accepted == math.MaxInt32 && wm.seq == 0) {
+		dupe := false
+		_, found := self.tree.Get(wm.seq)
+		if !found && (wm.seq > self.accepted || (wm.seq == 0 && self.accepted == math.MaxInt32)) {
 			self.tree.Put(wm.seq, wm)
 			self.rxPortalSz += len(wm.data)
-			if self.ii != nil {
-				self.ii.rxPortalSzChanged(self.peer, self.rxPortalSz)
-			}
 		} else {
 			if self.ii != nil {
 				self.ii.duplicateRx(self.peer, wm)
 			}
 			wm.buffer.unref()
+			dupe = true
 		}
 
 		ack := newAck(wm.seq, self.rxPortalSz, self.ackPool)
-		if wm.mf&RTT == 1 {
+		if !dupe && wm.mf&RTT == 1 {
 			ts, err := wm.readRtt()
 			if err == nil {
 				ack.writeRtt(ts)
@@ -177,7 +179,8 @@ func (self *rxPortal) run() {
 				next = 0
 			}
 
-			for _, key := range self.tree.Keys() {
+			keys := self.tree.Keys()
+			for _, key := range keys {
 				if key.(int32) == next {
 					v, _ := self.tree.Get(key)
 					wm := v.(*wireMessage)
@@ -187,9 +190,6 @@ func (self *rxPortal) run() {
 
 					self.tree.Remove(key)
 					self.rxPortalSz -= len(wm.data)
-					if self.ii != nil {
-						self.ii.rxPortalSzChanged(self.peer, self.rxPortalSz)
-					}
 					wm.buffer.unref()
 					self.accepted = next
 					if next < math.MaxInt32 {
@@ -207,5 +207,12 @@ func (self *rxPortal) run() {
 			self.closed = true
 			close(self.rxs)
 		}
+	}
+}
+
+func (self *rxPortal) watchdog() {
+	for {
+		time.Sleep(1 * time.Second)
+		logrus.Infof("\nrxPortalSz = %d, tree.size = %d\n\n", self.rxPortalSz, self.tree.Size())
 	}
 }
