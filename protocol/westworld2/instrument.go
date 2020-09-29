@@ -43,11 +43,9 @@ func NewInstrument(name string, config map[string]interface{}) (i Instrument, er
 	case "logger":
 		return newLoggerInstrument(), nil
 	case "metrics":
-		return newMetricsInstrument2(config)
+		return newMetricsInstrument(config)
 	case "nil":
 		return nil, nil
-	case "stats":
-		return newStatsInstrument(), nil
 	case "trace":
 		return newTraceInstrument(), nil
 	default:
