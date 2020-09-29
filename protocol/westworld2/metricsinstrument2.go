@@ -1,11 +1,18 @@
 package westworld2
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net"
+	"os"
+	"os/signal"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
+	"time"
 )
 
 type metricsInstrument2 struct {
@@ -19,6 +26,7 @@ func newMetricsInstrument2(config map[string]interface{}) (Instrument, error) {
 	if err := mi.configure(config); err != nil {
 		return nil, err
 	}
+	go mi.signalHandler()
 	return mi, nil
 }
 
@@ -27,6 +35,7 @@ func (self *metricsInstrument2) newInstance(peer *net.UDPAddr) InstrumentInstanc
 	defer self.lock.Unlock()
 	mi := &metricsInstrumentInstance2{peer: peer}
 	self.instances = append(self.instances, mi)
+	go mi.snapshotter()
 	return mi
 }
 
@@ -39,6 +48,110 @@ func (self *metricsInstrument2) configure(config map[string]interface{}) error {
 			return errors.New("invalid 'prefix' type")
 		}
 	}
+	return nil
+}
+
+func (self *metricsInstrument2) signalHandler() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGUSR2)
+
+	for {
+		s := <-c
+		if s == syscall.SIGUSR2 {
+			if err := self.writeAllSamples(); err != nil {
+				logrus.Errorf("error writing all samples (%v)", err)
+			}
+		}
+	}
+}
+
+func (self *metricsInstrument2) writeAllSamples() error {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	for _, mii := range self.instances {
+		peerName := fmt.Sprintf("%s_", mii.peer.String())
+		if err := os.MkdirAll(self.prefix, os.ModePerm); err != nil {
+			return err
+		}
+		outpath, err := ioutil.TempDir(self.prefix, peerName)
+		if err != nil {
+			return err
+		}
+		logrus.Infof("writing metrics to: %s", outpath)
+
+		if err := self.writeSamples("txBytes", outpath, mii.txBytes); err != nil {
+			return err
+		}
+		if err := self.writeSamples("txMsgs", outpath, mii.txMsgs); err != nil {
+			return err
+		}
+		if err := self.writeSamples("retxBytes", outpath, mii.retxBytes); err != nil {
+			return err
+		}
+		if err := self.writeSamples("retxMsgs", outpath, mii.retxMs); err != nil {
+			return err
+		}
+		if err := self.writeSamples("rxBytes", outpath, mii.rxBytes); err != nil {
+			return err
+		}
+		if err := self.writeSamples("rxMsgs", outpath, mii.rxMsgs); err != nil {
+			return err
+		}
+		if err := self.writeSamples("txPortalCapacity", outpath, mii.txPortalCapacity); err != nil {
+			return err
+		}
+		if err := self.writeSamples("txPortalSz", outpath, mii.txPortalSz); err != nil {
+			return err
+		}
+		if err := self.writeSamples("txPortalRxSz", outpath, mii.txPortalRxSz); err != nil {
+			return err
+		}
+		if err := self.writeSamples("retxMs", outpath, mii.retxMs); err != nil {
+			return err
+		}
+		if err := self.writeSamples("dupAcks", outpath, mii.dupAcks); err != nil {
+			return err
+		}
+		if err := self.writeSamples("rxPortalSz", outpath, mii.rxPortalSz); err != nil {
+			return err
+		}
+		if err := self.writeSamples("dupRxBytes", outpath, mii.dupRxBytes); err != nil {
+			return err
+		}
+		if err := self.writeSamples("dupRxMsgs", outpath, mii.dupRxMsgs); err != nil {
+			return err
+		}
+		if err := self.writeSamples("allocations", outpath, mii.allocations); err != nil {
+			return err
+		}
+		if err := self.writeSamples("errors", outpath, mii.errors); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (self *metricsInstrument2) writeSamples(name, outPath string, samples []*sample) error {
+	path := filepath.Join(outPath, fmt.Sprintf("%s.csv", name))
+	oF, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = oF.Close()
+	}()
+	for _, sample := range samples {
+		line := fmt.Sprintf("%d,%d\n", sample.ts.UnixNano(), sample.v)
+		n, err := oF.Write([]byte(line))
+		if err != nil {
+			return err
+		}
+		if n != len(line) {
+			return errors.New("short write")
+		}
+	}
+	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
 	return nil
 }
 
@@ -169,4 +282,29 @@ func (self *metricsInstrumentInstance2) duplicateRx(_ *net.UDPAddr, wm *wireMess
  */
 func (self *metricsInstrumentInstance2) allocate(_ string) {
 	atomic.AddInt64(&self.allocationsAccum, 1)
+}
+
+/*
+ * snapshotter
+ */
+func (self *metricsInstrumentInstance2) snapshotter() {
+	for {
+		time.Sleep(1 * time.Second)
+		self.txBytes = append(self.txBytes, &sample{time.Now(), atomic.SwapInt64(&self.txBytesAccum, 0)})
+		self.txMsgs = append(self.txMsgs, &sample{time.Now(), atomic.SwapInt64(&self.txMsgsAccum, 0)})
+		self.retxBytes = append(self.retxBytes, &sample{time.Now(), atomic.SwapInt64(&self.retxBytesAccum, 0)})
+		self.retxMsgs = append(self.retxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.retxMsgsAccum, 0)})
+		self.rxBytes = append(self.rxBytes, &sample{time.Now(), atomic.SwapInt64(&self.rxBytesAccum, 0)})
+		self.rxMsgs = append(self.rxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.rxMsgsAccum, 0)})
+		self.txPortalCapacity = append(self.txPortalCapacity, &sample{time.Now(), atomic.LoadInt64(&self.txPortalCapacityVal)})
+		self.txPortalSz = append(self.txPortalSz, &sample{time.Now(), atomic.LoadInt64(&self.txPortalSzVal)})
+		self.txPortalRxSz = append(self.txPortalRxSz, &sample{time.Now(), atomic.LoadInt64(&self.txPortalRxSzVal)})
+		self.retxMs = append(self.retxMs, &sample{time.Now(), atomic.LoadInt64(&self.retxMsVal)})
+		self.dupAcks = append(self.dupAcks, &sample{time.Now(), atomic.SwapInt64(&self.dupAcksAccum, 0)})
+		self.rxPortalSz = append(self.rxPortalSz, &sample{time.Now(), atomic.LoadInt64(&self.rxPortalSzVal)})
+		self.dupRxBytes = append(self.dupRxBytes, &sample{time.Now(), atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
+		self.dupRxMsgs = append(self.dupRxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
+		self.allocations = append(self.allocations, &sample{time.Now(), atomic.SwapInt64(&self.allocationsAccum, 0)})
+		self.errors = append(self.errors, &sample{time.Now(), atomic.SwapInt64(&self.errorsAccum, 0)})
+	}
 }
