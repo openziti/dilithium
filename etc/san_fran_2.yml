@@ -22,3 +22,4 @@ tx_buffer_sz:                 16000000
 instrument:
   name:                       metrics
   prefix:                     logs
+  snapshot_ms:                200

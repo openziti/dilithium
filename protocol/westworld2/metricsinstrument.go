@@ -16,13 +16,14 @@ import (
 )
 
 type metricsInstrument struct {
-	prefix    string
-	lock      *sync.Mutex
-	instances []*metricsInstrumentInstance
+	prefix     string
+	snapshotMs int
+	lock       *sync.Mutex
+	instances  []*metricsInstrumentInstance
 }
 
 func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
-	mi := &metricsInstrument{lock: new(sync.Mutex)}
+	mi := &metricsInstrument{snapshotMs: 1000, lock: new(sync.Mutex)}
 	if err := mi.configure(config); err != nil {
 		return nil, err
 	}
@@ -35,7 +36,7 @@ func (self *metricsInstrument) newInstance(peer *net.UDPAddr) InstrumentInstance
 	defer self.lock.Unlock()
 	mi := &metricsInstrumentInstance{peer: peer}
 	self.instances = append(self.instances, mi)
-	go mi.snapshotter()
+	go mi.snapshotter(self.snapshotMs)
 	return mi
 }
 
@@ -46,6 +47,12 @@ func (self *metricsInstrument) configure(config map[string]interface{}) error {
 			logrus.Infof("metrics data prefix set to [%s]", self.prefix)
 		} else {
 			return errors.New("invalid 'prefix' type")
+		}
+	}
+	if v, found := config["snapshot_ms"]; found {
+		if snapshotMs, ok := v.(int); ok {
+			self.snapshotMs = snapshotMs
+			logrus.Infof("snapshot interval set to [%d ms.]", self.snapshotMs)
 		}
 	}
 	return nil
@@ -292,9 +299,9 @@ func (self *metricsInstrumentInstance) allocate(_ string) {
 /*
  * snapshotter
  */
-func (self *metricsInstrumentInstance) snapshotter() {
+func (self *metricsInstrumentInstance) snapshotter(ms int) {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(time.Duration(ms) * time.Millisecond)
 		self.txBytes = append(self.txBytes, &sample{time.Now(), atomic.SwapInt64(&self.txBytesAccum, 0)})
 		self.txMsgs = append(self.txMsgs, &sample{time.Now(), atomic.SwapInt64(&self.txMsgsAccum, 0)})
 		self.retxBytes = append(self.retxBytes, &sample{time.Now(), atomic.SwapInt64(&self.retxBytesAccum, 0)})
