@@ -18,6 +18,7 @@ type Config struct {
 	txPortalRetxCt       int
 	txPortalRetxFrac     float64
 	retxStartMs          int
+	retxScale            float64
 	retxAddMs            int
 	rttProbeMs           int
 	rttProbeAvgCt        int
@@ -46,6 +47,7 @@ func NewDefaultConfig() *Config {
 		txPortalRetxCt:       64,
 		txPortalRetxFrac:     0.75,
 		retxStartMs:          200,
+		retxScale:            2.0,
 		retxAddMs:            100,
 		rttProbeMs:           50,
 		rttProbeAvgCt:        8,
@@ -136,6 +138,13 @@ func (self *Config) Load(data map[interface{}]interface{}) error {
 			self.retxStartMs = i
 		} else {
 			return errors.New("invalid 'retx_start_ms' value")
+		}
+	}
+	if v, found := data["retx_scale"]; found {
+		if f, ok := v.(float64); ok {
+			self.retxScale = f
+		} else {
+			return errors.New("invalid 'retx_scale' value")
 		}
 	}
 	if v, found := data["retx_add_ms"]; found {
@@ -264,6 +273,7 @@ func (self *Config) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "tx_portal_retx_ct", self.txPortalRetxCt)
 	out += fmt.Sprintf("\t%-30s %.4f\n", "tx_portal_retx_frac", self.txPortalRetxFrac)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_start_ms", self.retxStartMs)
+	out += fmt.Sprintf("\t%-30s %.4f\n", "retx_scale", self.retxScale)
 	out += fmt.Sprintf("\t%-30s %d\n", "retx_add_ms", self.retxAddMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_ms", self.rttProbeMs)
 	out += fmt.Sprintf("\t%-30s %d\n", "rtt_probe_avg_ct", self.rttProbeAvgCt)

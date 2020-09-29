@@ -269,7 +269,7 @@ func (self *txPortal) retxMonitor() {
 						}
 						self.portalRetx()
 
-						self.monitor.waiting[i].deadline = time.Now().Add(time.Duration((self.retxMs*2)+self.config.retxAddMs) * time.Millisecond)
+						self.monitor.waiting[i].deadline = time.Now().Add(time.Duration(int(float64(self.retxMs)*self.config.retxScale)+self.config.retxAddMs) * time.Millisecond)
 						self.monitor.waiting = append(self.monitor.waiting, self.monitor.waiting[i])
 					} else {
 						break
@@ -286,7 +286,7 @@ func (self *txPortal) retxMonitor() {
 }
 
 func (self *txPortal) addMonitor(wm *wireMessage) {
-	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration((self.retxMs*2)+self.config.retxAddMs) * time.Millisecond), wm})
+	self.monitor.waiting = append(self.monitor.waiting, &retxSubject{time.Now().Add(time.Duration(int(float64(self.retxMs)*self.config.retxScale)+self.config.retxAddMs) * time.Millisecond), wm})
 	self.monitor.ready.Signal()
 }
 
