@@ -195,6 +195,11 @@ type metricsInstrumentInstance2 struct {
 	errorsAccum      int64
 }
 
+type sample struct {
+	ts time.Time
+	v  int64
+}
+
 /*
  * connection
  */

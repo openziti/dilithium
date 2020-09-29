@@ -11,7 +11,6 @@ import (
 	"math"
 	"net"
 	"sync"
-	"time"
 )
 
 type rxPortal struct {
@@ -58,7 +57,6 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		return make([]byte, config.poolBufferSz)
 	}
 	go rxp.run()
-	go rxp.watchdog()
 	return rxp
 }
 
@@ -207,12 +205,5 @@ func (self *rxPortal) run() {
 			self.closed = true
 			close(self.rxs)
 		}
-	}
-}
-
-func (self *rxPortal) watchdog() {
-	for {
-		time.Sleep(1 * time.Second)
-		logrus.Infof("\nrxPortalSz = %d, tree.size = %d\n\n", self.rxPortalSz, self.tree.Size())
 	}
 }

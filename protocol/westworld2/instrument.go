@@ -43,7 +43,7 @@ func NewInstrument(name string, config map[string]interface{}) (i Instrument, er
 	case "logger":
 		return newLoggerInstrument(), nil
 	case "metrics":
-		return newMetricsInstrument(config)
+		return newMetricsInstrument2(config)
 	case "nil":
 		return nil, nil
 	case "stats":
