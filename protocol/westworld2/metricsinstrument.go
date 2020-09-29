@@ -265,7 +265,7 @@ func (self *metricsInstrumentInstance) txPortalSzChanged(_ *net.UDPAddr, sz int)
 	atomic.StoreInt64(&self.txPortalSzVal, int64(sz))
 }
 
-func (self *metricsInstrumentInstance) txPortalRxPortalSzChanged(_ *net.UDPAddr, sz int) {
+func (self *metricsInstrumentInstance) txPortalRxSzChanged(_ *net.UDPAddr, sz int) {
 	atomic.StoreInt64(&self.txPortalRxSzVal, int64(sz))
 }
 

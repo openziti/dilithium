@@ -72,7 +72,7 @@ func (self *loggerInstrumentInstance) txPortalCapacityChanged(_ *net.UDPAddr, _ 
 func (self *loggerInstrumentInstance) txPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
-func (self *loggerInstrumentInstance) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
+func (self *loggerInstrumentInstance) txPortalRxSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *loggerInstrumentInstance) newRetxMs(peer *net.UDPAddr, retxMs int) {

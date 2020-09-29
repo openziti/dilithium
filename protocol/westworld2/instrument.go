@@ -26,7 +26,7 @@ type InstrumentInstance interface {
 	// txPortal
 	txPortalCapacityChanged(peer *net.UDPAddr, capacity int)
 	txPortalSzChanged(peer *net.UDPAddr, capacity int)
-	txPortalRxPortalSzChanged(peer *net.UDPAddr, sz int)
+	txPortalRxSzChanged(peer *net.UDPAddr, sz int)
 	newRetxMs(peer *net.UDPAddr, retxMs int)
 	duplicateAck(peer *net.UDPAddr, ack int32)
 

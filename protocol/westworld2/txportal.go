@@ -156,7 +156,7 @@ func (self *txPortal) ack(peer *net.UDPAddr, sequence int32, rxPortalSz int) {
 	if rxPortalSz > -1 {
 		self.rxPortalSz = rxPortalSz
 		if self.ii != nil {
-			self.ii.txPortalRxPortalSzChanged(peer, int(rxPortalSz))
+			self.ii.txPortalRxSzChanged(peer, int(rxPortalSz))
 		}
 	}
 

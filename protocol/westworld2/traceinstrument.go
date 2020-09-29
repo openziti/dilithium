@@ -99,7 +99,7 @@ func (self *traceInstrument) txPortalCapacityChanged(_ *net.UDPAddr, _ int) {
 func (self *traceInstrument) txPortalSzChanged(_ *net.UDPAddr, _ int) {
 }
 
-func (self *traceInstrument) txPortalRxPortalSzChanged(_ *net.UDPAddr, _ int) {
+func (self *traceInstrument) txPortalRxSzChanged(_ *net.UDPAddr, _ int) {
 }
 
 func (self *traceInstrument) newRetxMs(_ *net.UDPAddr, _ int) {
