@@ -39,7 +39,7 @@ func Listen(addr *net.UDPAddr, config *Config) (net.Listener, error) {
 		config:      config,
 	}
 	if config.i != nil {
-		l.ii = config.i.newInstance(nil)
+		l.ii = config.i.newInstance(addr)
 	}
 	l.pool = newPool("listener", l.ii)
 	go l.run()
