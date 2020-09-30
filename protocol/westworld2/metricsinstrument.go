@@ -23,7 +23,10 @@ type metricsInstrument struct {
 }
 
 func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
-	mi := &metricsInstrument{snapshotMs: 1000, lock: new(sync.Mutex)}
+	mi := &metricsInstrument{
+		snapshotMs: 1000,
+		lock:       new(sync.Mutex),
+	}
 	if err := mi.configure(config); err != nil {
 		return nil, err
 	}
@@ -34,7 +37,10 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 func (self *metricsInstrument) newInstance(peer *net.UDPAddr) InstrumentInstance {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	mi := &metricsInstrumentInstance{peer: peer}
+	mi := &metricsInstrumentInstance{
+		peer:  peer,
+		close: make(chan struct{}, 1),
+	}
 	self.instances = append(self.instances, mi)
 	go mi.snapshotter(self.snapshotMs)
 	return mi
@@ -163,7 +169,8 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 }
 
 type metricsInstrumentInstance struct {
-	peer *net.UDPAddr
+	peer  *net.UDPAddr
+	close chan struct{}
 
 	txBytes        []*sample
 	txBytesAccum   int64
@@ -214,6 +221,8 @@ func (self *metricsInstrumentInstance) connected(_ *net.UDPAddr) {
 }
 
 func (self *metricsInstrumentInstance) closed(_ *net.UDPAddr) {
+	logrus.Warnf("closing snapshotter")
+	close(self.close)
 }
 
 func (self *metricsInstrumentInstance) connectError(_ *net.UDPAddr, err error) {
@@ -300,6 +309,8 @@ func (self *metricsInstrumentInstance) allocate(_ string) {
  * snapshotter
  */
 func (self *metricsInstrumentInstance) snapshotter(ms int) {
+	logrus.Infof("started")
+	defer logrus.Infof("exited")
 	for {
 		time.Sleep(time.Duration(ms) * time.Millisecond)
 		self.txBytes = append(self.txBytes, &sample{time.Now(), atomic.SwapInt64(&self.txBytesAccum, 0)})
@@ -318,5 +329,9 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 		self.dupRxMsgs = append(self.dupRxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
 		self.allocations = append(self.allocations, &sample{time.Now(), atomic.SwapInt64(&self.allocationsAccum, 0)})
 		self.errors = append(self.errors, &sample{time.Now(), atomic.SwapInt64(&self.errorsAccum, 0)})
+		select {
+		case <-self.close:
+			return
+		}
 	}
 }
