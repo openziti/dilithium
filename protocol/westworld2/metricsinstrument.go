@@ -332,6 +332,8 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 		select {
 		case <-self.close:
 			return
+		default:
+			//
 		}
 	}
 }
