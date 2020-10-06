@@ -139,41 +139,47 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 	hello.buffer.unref()
 	/* */
 
-	/*
-	 * Send Ack'd Hello
-	 */
-	helloAckSeq := self.seq.Next()
-	helloAck := newHelloAck(helloAckSeq, hello.seq, self.pool)
-	defer helloAck.buffer.unref()
+	for i := 0; i < 5; i++ {
+		/*
+		 * Send Ack'd Hello
+		 */
+		helloAckSeq := self.seq.Next()
+		helloAck := newHelloAck(helloAckSeq, hello.seq, self.pool)
+		defer helloAck.buffer.unref()
 
-	if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
-		return errors.Wrap(err, "write hello ack")
-	}
-	if self.ii != nil {
-		self.ii.wireMessageTx(self.peer, helloAck)
-	}
-	/* */
-
-	/*
-	 * Receive Final Ack
-	 */
-	select {
-	case ack, ok := <-self.rxQueue:
-		if !ok {
-			return errors.New("rxQueue closed")
+		if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
+			return errors.Wrap(err, "write hello ack")
 		}
-		defer ack.buffer.unref()
-
-		if ack.mt != ACK {
-			return errors.Errorf("expected ack, got (%d)", ack.mt)
+		if self.ii != nil {
+			self.ii.wireMessageTx(self.peer, helloAck)
 		}
-		if ack.ack != helloAckSeq {
-			return errors.Errorf("invalid hello ack sequence (%d != %d)", ack.ack, helloAckSeq)
-		}
-		return nil
+		/* */
 
-	case <-time.After(5 * time.Second):
-		return errors.New("timeout")
+		/*
+		 * Receive Final Ack
+		 */
+		select {
+		case ack, ok := <-self.rxQueue:
+			if !ok {
+				return errors.New("rxQueue closed")
+			}
+			defer ack.buffer.unref()
+
+			if ack.mt != ACK {
+				logrus.Errorf("expected ack, got (%s)", ack.mt.string())
+				continue
+			}
+			if ack.ack != helloAckSeq {
+				logrus.Errorf("invalid hello ack sequence (%d != %d)", ack.ack, helloAckSeq)
+				continue
+			}
+			return nil
+
+		case <-time.After(5 * time.Second):
+			logrus.Infof("timeout")
+		}
+		/* */
 	}
-	/* */
+
+	return errors.New("connection failed")
 }
