@@ -68,25 +68,32 @@ func (self *listener) run() {
 
 	for {
 		if wm, peer, err := readWireMessage(self.conn, self.pool); err == nil {
-			if self.ii != nil {
-				self.ii.wireMessageRx(peer, wm)
-			}
 			conn, found := self.peers.Get(peer)
 			if found {
-				conn.(*listenerConn).queue(wm)
+				lc := conn.(*listenerConn)
+				if lc.ii != nil {
+					lc.ii.wireMessageRx(peer, wm)
+				}
+				lc.queue(wm)
+
 			} else {
 				if wm.mt == HELLO {
+					if self.ii != nil {
+						self.ii.wireMessageRx(peer, wm)
+					}
 					go self.hello(wm, peer)
 
 				} else {
-					wm.buffer.unref()
 					if self.ii != nil {
 						self.ii.unknownPeer(peer)
+						self.ii.wireMessageRx(peer, wm)
 					}
+					wm.buffer.unref()
 				}
 			}
 		} else {
 			if self.ii != nil {
+				self.ii.wireMessageRx(peer, wm)
 				self.ii.readError(peer, err)
 			}
 		}
@@ -106,13 +113,13 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 	self.peers.Put(peer, conn)
 	self.lock.Unlock()
 
+	go conn.rxer()
 	if err := conn.hello(hello); err != nil {
 		if self.ii != nil {
 			self.ii.connectError(peer, err)
 		}
 		return
 	}
-	go conn.rxer()
 
 	self.acceptQueue <- conn
 
