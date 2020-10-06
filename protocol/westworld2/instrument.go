@@ -11,6 +11,7 @@ type Instrument interface {
 
 type InstrumentInstance interface {
 	// connection
+	listener(addr *net.UDPAddr)
 	connected(peer *net.UDPAddr)
 	closed(peer *net.UDPAddr)
 	connectError(peer *net.UDPAddr, err error)

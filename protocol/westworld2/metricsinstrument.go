@@ -169,8 +169,9 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 }
 
 type metricsInstrumentInstance struct {
-	peer  *net.UDPAddr
-	close chan struct{}
+	peer         *net.UDPAddr
+	listenerAddr *net.UDPAddr
+	close        chan struct{}
 
 	txBytes        []*sample
 	txBytesAccum   int64
@@ -217,6 +218,10 @@ type sample struct {
 /*
  * connection
  */
+func (self *metricsInstrumentInstance) listener(addr *net.UDPAddr) {
+	self.listenerAddr = addr
+}
+
 func (self *metricsInstrumentInstance) connected(_ *net.UDPAddr) {
 }
 

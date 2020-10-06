@@ -22,6 +22,10 @@ type loggerInstrumentInstance struct{
 /*
  * connection
  */
+func (self *loggerInstrumentInstance) listener(addr *net.UDPAddr) {
+	logrus.Infof("listener, addr [%s]", addr)
+}
+
 func (self *loggerInstrumentInstance) connected(peer *net.UDPAddr) {
 	logrus.Infof("connected, peer [%s]", peer)
 }

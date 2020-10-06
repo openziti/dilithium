@@ -94,7 +94,7 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
-	conn, err := newListenerConn(self.conn, peer, self.config)
+	conn, err := newListenerConn(self, self.conn, peer, self.config)
 	if err != nil {
 		if self.ii != nil {
 			self.ii.connectError(peer, err)

@@ -12,6 +12,7 @@ import (
 )
 
 type listenerConn struct {
+	listener *listener
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	rxQueue  chan *wireMessage
@@ -23,7 +24,7 @@ type listenerConn struct {
 	ii       InstrumentInstance
 }
 
-func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*listenerConn, error) {
+func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*listenerConn, error) {
 	sSeq := int64(0)
 	if config.seqRandom {
 		randSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
@@ -33,14 +34,16 @@ func newListenerConn(conn *net.UDPConn, peer *net.UDPAddr, config *Config) (*lis
 		sSeq = randSeq.Int64()
 	}
 	lc := &listenerConn{
-		conn:    conn,
-		peer:    peer,
-		rxQueue: make(chan *wireMessage, config.listenerRxQLen),
-		seq:     util.NewSequence(int32(sSeq)),
-		config:  config,
+		listener: listener,
+		conn:     conn,
+		peer:     peer,
+		rxQueue:  make(chan *wireMessage, config.listenerRxQLen),
+		seq:      util.NewSequence(int32(sSeq)),
+		config:   config,
 	}
 	if config.i != nil {
 		lc.ii = config.i.newInstance(peer)
+		lc.ii.listener(listener.addr)
 	}
 	lc.pool = newPool("listenerConn", lc.ii)
 	lc.txPortal = newTxPortal(conn, peer, config, lc.ii)
