@@ -164,10 +164,13 @@ func (self *listenerConn) hello(hello *wireMessage) error {
 		}
 		defer ack.buffer.unref()
 
-		if ack.mt == ACK && ack.ack == helloAckSeq {
-			return nil
+		if ack.mt != ACK {
+			return errors.Errorf("expected ack, got (%d)", ack.mt)
 		}
-		return errors.New("invalid hello ack")
+		if ack.ack != helloAckSeq {
+			return errors.Errorf("invalid hello ack sequence (%d != %d)", ack.ack, helloAckSeq)
+		}
+		return nil
 
 	case <-time.After(5 * time.Second):
 		return errors.New("timeout")

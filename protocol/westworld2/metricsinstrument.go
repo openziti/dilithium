@@ -1,6 +1,7 @@
 package westworld2
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -87,58 +88,61 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := os.MkdirAll(self.prefix, os.ModePerm); err != nil {
 			return err
 		}
-		outpath, err := ioutil.TempDir(self.prefix, peerName)
+		outPath, err := ioutil.TempDir(self.prefix, peerName)
 		if err != nil {
 			return err
 		}
-		logrus.Infof("writing metrics to: %s", outpath)
+		logrus.Infof("writing metrics to: %s", outPath)
 
-		if err := self.writeSamples("txBytes", outpath, mii.txBytes); err != nil {
+		if err := self.writeId(mii, outPath); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txMsgs", outpath, mii.txMsgs); err != nil {
+		if err := self.writeSamples("txBytes", outPath, mii.txBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("retxBytes", outpath, mii.retxBytes); err != nil {
+		if err := self.writeSamples("txMsgs", outPath, mii.txMsgs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("retxMsgs", outpath, mii.retxMs); err != nil {
+		if err := self.writeSamples("retxBytes", outPath, mii.retxBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("rxBytes", outpath, mii.rxBytes); err != nil {
+		if err := self.writeSamples("retxMsgs", outPath, mii.retxMs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("rxMsgs", outpath, mii.rxMsgs); err != nil {
+		if err := self.writeSamples("rxBytes", outPath, mii.rxBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txPortalCapacity", outpath, mii.txPortalCapacity); err != nil {
+		if err := self.writeSamples("rxMsgs", outPath, mii.rxMsgs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txPortalSz", outpath, mii.txPortalSz); err != nil {
+		if err := self.writeSamples("txPortalCapacity", outPath, mii.txPortalCapacity); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txPortalRxSz", outpath, mii.txPortalRxSz); err != nil {
+		if err := self.writeSamples("txPortalSz", outPath, mii.txPortalSz); err != nil {
 			return err
 		}
-		if err := self.writeSamples("retxMs", outpath, mii.retxMs); err != nil {
+		if err := self.writeSamples("txPortalRxSz", outPath, mii.txPortalRxSz); err != nil {
 			return err
 		}
-		if err := self.writeSamples("dupAcks", outpath, mii.dupAcks); err != nil {
+		if err := self.writeSamples("retxMs", outPath, mii.retxMs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("rxPortalSz", outpath, mii.rxPortalSz); err != nil {
+		if err := self.writeSamples("dupAcks", outPath, mii.dupAcks); err != nil {
 			return err
 		}
-		if err := self.writeSamples("dupRxBytes", outpath, mii.dupRxBytes); err != nil {
+		if err := self.writeSamples("rxPortalSz", outPath, mii.rxPortalSz); err != nil {
 			return err
 		}
-		if err := self.writeSamples("dupRxMsgs", outpath, mii.dupRxMsgs); err != nil {
+		if err := self.writeSamples("dupRxBytes", outPath, mii.dupRxBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("allocations", outpath, mii.allocations); err != nil {
+		if err := self.writeSamples("dupRxMsgs", outPath, mii.dupRxMsgs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("errors", outpath, mii.errors); err != nil {
+		if err := self.writeSamples("allocations", outPath, mii.allocations); err != nil {
+			return err
+		}
+		if err := self.writeSamples("errors", outPath, mii.errors); err != nil {
 			return err
 		}
 	}
@@ -151,9 +155,7 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = oF.Close()
-	}()
+	defer func() { _ = oF.Close() }()
 	for _, sample := range samples {
 		line := fmt.Sprintf("%d,%d\n", sample.ts.UnixNano(), sample.v)
 		n, err := oF.Write([]byte(line))
@@ -165,6 +167,30 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 		}
 	}
 	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
+	return nil
+}
+
+type metricsId struct {
+	Id     string            `json:"id"`
+	Values map[string]string `json:"values"`
+}
+
+func (self *metricsInstrument) writeId(mii *metricsInstrumentInstance, outPath string) error {
+	mid := &metricsId{Id: "westworld2.1"}
+	if mii.listenerAddr != nil {
+		mid.Values = make(map[string]string)
+		mid.Values["listener"] = mii.listenerAddr.String()
+	}
+	data, err := json.MarshalIndent(mid, "", "  ")
+	if err != nil {
+		return err
+	}
+	oF, err := os.OpenFile(filepath.Join(outPath, "metrics.id"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = oF.Close() }()
+	oF.Write(data)
 	return nil
 }
 

@@ -167,7 +167,7 @@ func (self *dialerConn) hello() error {
 		return errors.Wrap(err, "unexpected response")
 	}
 	if helloAck.ack != helloSeq {
-		return errors.New("invalid hello ack")
+		return errors.Errorf("invalid hello ack (%d != %d)", helloAck.ack, helloSeq)
 	}
 	if err := self.conn.SetReadDeadline(time.Time{}); err != nil {
 		return errors.Wrap(err, "clear read deadline")
