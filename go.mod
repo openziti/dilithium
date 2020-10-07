@@ -7,6 +7,7 @@ require (
 	github.com/emirpasic/gods v1.12.0
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/influxdata/influxdb-client-go v1.4.0
+	github.com/influxdata/influxdb-client-go/v2 v2.1.0
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucas-clemente/quic-go v0.18.0
 	github.com/mattn/go-colorable v0.1.7 // indirect

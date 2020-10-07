@@ -4,8 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	influxdb2 "github.com/influxdata/influxdb-client-go"
-	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -16,25 +15,18 @@ import (
 )
 
 func init() {
-	influxCmd.Flags().StringVarP(&influxDbUrl, "url", "", "http://localhost:8086", "InfluxDB URL")
-	influxCmd.Flags().StringVarP(&influxDbUsername, "username", "", "", "InfluxDB Username")
-	influxCmd.Flags().StringVarP(&influxDbPassword, "password", "", "", "InfluxDB Password")
-	influxCmd.Flags().StringVarP(&influxDbDatabase, "database", "", "dilithium", "InfluxDB Database")
-	dilithium.RootCmd.AddCommand(influxCmd)
+	influxCmd.AddCommand(influxLoadCmd)
 }
 
-var influxCmd = &cobra.Command{
-	Use:   "influx <metricsRoot>",
-	Short: "Import metrics data into the analyzer",
+var influxLoadCmd = &cobra.Command{
+	Use:   "load <metricsRoot>",
+	Short: "Load metrics data into the analyzer",
 	Args:  cobra.ExactArgs(1),
-	Run:   influx,
+	Run:   influxLoad,
 }
-var influxDbUrl string
-var influxDbUsername string
-var influxDbPassword string
-var influxDbDatabase string
 
-func influx(_ *cobra.Command, args []string) {
+
+func influxLoad(_ *cobra.Command, args []string) {
 	peers, err := discoverW21Peers(args[0])
 	if err != nil {
 		panic(err)
