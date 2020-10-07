@@ -34,7 +34,7 @@ func discoverW21Peers(path string) ([]*w21peer, error) {
 			parts := strings.Split(filepath.Base(filepath.Dir(path)), "_")
 			peers = append(peers, &w21peer{
 				id: parts[1],
-				paths: []string {
+				paths: []string{
 					filepath.Dir(path),
 				},
 			})

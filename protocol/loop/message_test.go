@@ -10,7 +10,7 @@ import (
 func TestEncodeDecodeMessage(t *testing.T) {
 	pool := NewPool(19)
 
-	inH := &header{0, START, 1024*1024+68, pool.get()}
+	inH := &header{0, START, 1024*1024 + 68, pool.get()}
 	inH.encode()
 	assert.Equal(t, int(inH.buffer.uz), headerSz)
 
@@ -34,7 +34,7 @@ func TestEncodeDecodeMessage(t *testing.T) {
 func TestReadWriteHeader(t *testing.T) {
 	pool := NewPool(512)
 
-	inH := &header{0, START, 1024*1024+68, pool.get()}
+	inH := &header{0, START, 1024*1024 + 68, pool.get()}
 	buf := new(bytes.Buffer)
 	err := writeHeader(inH, buf)
 	assert.NoError(t, err)

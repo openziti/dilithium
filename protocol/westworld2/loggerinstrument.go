@@ -15,7 +15,7 @@ func (self *loggerInstrument) newInstance(peer *net.UDPAddr) InstrumentInstance 
 	return &loggerInstrumentInstance{peer: peer}
 }
 
-type loggerInstrumentInstance struct{
+type loggerInstrumentInstance struct {
 	peer *net.UDPAddr
 }
 
@@ -37,6 +37,7 @@ func (self *loggerInstrumentInstance) closed(peer *net.UDPAddr) {
 func (self *loggerInstrumentInstance) connectError(peer *net.UDPAddr, err error) {
 	logrus.Errorf("connect failed, peer [%s] (%v)", peer, err)
 }
+
 /* */
 
 /*
@@ -65,6 +66,7 @@ func (self *loggerInstrumentInstance) readError(peer *net.UDPAddr, err error) {
 func (self *loggerInstrumentInstance) unexpectedMessageType(peer *net.UDPAddr, mt messageType) {
 	logrus.Errorf("unexpected message type [%s], peer [%s]", mt.string(), peer)
 }
+
 /* */
 
 /*
@@ -86,6 +88,7 @@ func (self *loggerInstrumentInstance) newRetxMs(peer *net.UDPAddr, retxMs int) {
 func (self *loggerInstrumentInstance) duplicateAck(peer *net.UDPAddr, ack int32) {
 	logrus.Warnf("~ <- [@%d] <- [%s]", ack, peer)
 }
+
 /* */
 
 /*
@@ -97,6 +100,7 @@ func (self *loggerInstrumentInstance) rxPortalSzChanged(_ *net.UDPAddr, _ int) {
 func (self *loggerInstrumentInstance) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
 	logrus.Warnf("~ <- [#%d] <- [%s]", wm.seq, peer)
 }
+
 /* */
 
 /*
@@ -105,6 +109,7 @@ func (self *loggerInstrumentInstance) duplicateRx(peer *net.UDPAddr, wm *wireMes
 func (self *loggerInstrumentInstance) allocate(ctx string) {
 	logrus.WithField("context", ctx).Warn("allocate")
 }
+
 /* */
 
 func (self *loggerInstrumentInstance) symbol(mt messageType) rune {

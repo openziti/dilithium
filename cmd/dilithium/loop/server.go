@@ -22,7 +22,7 @@ func loopServer(_ *cobra.Command, args []string) {
 	var ds *loop.DataSet
 	if startSender {
 		var err error
-		ds, err = loop.NewDataSet(2+64+size)
+		ds, err = loop.NewDataSet(2 + 64 + size)
 		if err != nil {
 			logrus.Fatalf("error creating dataset (%v)", err)
 		}
@@ -56,9 +56,9 @@ func loopServer(_ *cobra.Command, args []string) {
 	}
 
 	if rx != nil {
-		<- rx.Done
+		<-rx.Done
 	}
 	if tx != nil {
-		<- tx.Done
+		<-tx.Done
 	}
 }

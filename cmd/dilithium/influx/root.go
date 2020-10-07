@@ -14,7 +14,7 @@ func init() {
 }
 
 var influxCmd = &cobra.Command{
-	Use: "influx",
+	Use:   "influx",
 	Short: "Manage the analyzer data in InfluxDB",
 }
 var influxDbUrl string

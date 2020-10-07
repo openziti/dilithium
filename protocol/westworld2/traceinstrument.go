@@ -133,10 +133,8 @@ func (self *traceInstrument) duplicateRx(peer *net.UDPAddr, wm *wireMessage) {
 }
 
 func (self *traceInstrument) allocate(ctx string) {
-	/*
 	decode := fmt.Sprintf("%-12s %s", "ALLOCATE", ctx)
 	self.append(fmt.Sprintf("&& %-10d %-64s", time.Since(self.last).Milliseconds(), decode))
-	*/
 }
 
 func (self *traceInstrument) mt(mt messageType) string {
