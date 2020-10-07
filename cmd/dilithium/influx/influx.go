@@ -3,11 +3,16 @@ package influx
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func init() {
@@ -30,55 +35,34 @@ var influxDbPassword string
 var influxDbDatabase string
 
 func influx(_ *cobra.Command, args []string) {
-	if _, err := discoverW21Peers(args[0]); err != nil {
+	peers, err := discoverW21Peers(args[0])
+	if err != nil {
 		panic(err)
 	}
-	/*
-	peer0Root := args[0]
-	peer1Root := args[1]
+
 	authToken := ""
 	if influxDbUsername != "" || influxDbPassword != "" {
 		authToken = fmt.Sprintf("%s:%s", influxDbUsername, influxDbPassword)
 	}
 	client := influxdb2.NewClient(influxDbUrl, authToken)
-	writeApi := client.WriteApi("", influxDbDatabase)
-	for _, dataset := range datasets {
-		peer0Data, err := readDataset(filepath.Join(peer0Root, fmt.Sprintf("%s.csv", dataset)))
-		if err != nil {
-			logrus.Fatalf("error reading peer 0 dataset [%s] (%v)", dataset, err)
-		}
-		peer1Data, err := readDataset(filepath.Join(peer1Root, fmt.Sprintf("%s.csv", dataset)))
-		if err != nil {
-			logrus.Fatalf("error reading peer 1 dataset [%s] (%v)", dataset, err)
-		}
-		logrus.Infof("dataset [%s] loaded", dataset)
+	writeApi := client.WriteAPI("", influxDbDatabase)
 
-		for ts, v := range peer0Data {
-			t := time.Unix(0, ts)
-			p := influxdb2.NewPoint(dataset,
-				nil,
-				map[string]interface{}{"v": v},
-				t,
-			).AddTag("peer", "0")
-			writeApi.WritePoint(p)
+	for _, peer := range peers {
+		for _, dataset := range datasets {
+			data, err := readDataset(filepath.Join(peer.paths[0], dataset+".csv"))
+			if err != nil {
+				panic(err)
+			}
+			for ts, v := range data {
+				t := time.Unix(0, ts)
+				p := influxdb2.NewPoint(dataset, nil, map[string]interface{}{"v": v}, t).AddTag("peer", peer.id)
+				writeApi.WritePoint(p)
+			}
+			logrus.Infof("wrote %d points for peer [%s] dataset [%s]", len(data), peer.id, dataset)
 		}
-		logrus.Infof("wrote [%d] points for peer 0 dataset [%s]", len(peer0Data), dataset)
-
-		for ts, v := range peer1Data {
-			t := time.Unix(0, ts)
-			p := influxdb2.NewPoint(dataset,
-				nil,
-				map[string]interface{}{"v": v},
-				t,
-			).AddTag("peer", "1")
-			writeApi.WritePoint(p)
-		}
-		logrus.Infof("wrote [%d] points for peer 1 dataset [%s]", len(peer1Data), dataset)
 	}
 
 	client.Close()
-	logrus.Infof("complete")
-	*/
 }
 
 func readDataset(path string) (data map[int64]int64, err error) {

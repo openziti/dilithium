@@ -3,10 +3,10 @@ package influx
 import (
 	"encoding/json"
 	"github.com/michaelquigley/dilithium/protocol/westworld2"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func discoverW21Peers(path string) ([]*w21peer, error) {
@@ -16,8 +16,7 @@ func discoverW21Peers(path string) ([]*w21peer, error) {
 			return err
 		}
 		if !fi.IsDir() && filepath.Base(walkPath) == "metrics.id" {
-			metricsIdPaths = append(metricsIdPaths, filepath.Join(path, walkPath))
-			logrus.Infof("appending: %s", walkPath)
+			metricsIdPaths = append(metricsIdPaths, walkPath)
 		}
 		return nil
 	})
@@ -25,17 +24,24 @@ func discoverW21Peers(path string) ([]*w21peer, error) {
 		return nil, err
 	}
 
-	var metricsIds []*westworld2.MetricsId
+	var peers []*w21peer
 	for _, path := range metricsIdPaths {
 		metricsId, err := loadW21MetricsId(path)
 		if err != nil {
 			return nil, err
 		}
-		metricsIds = append(metricsIds, metricsId)
-		logrus.Infof("loaded: %v", metricsId)
+		if metricsId.Id == "westworld2.1" {
+			parts := strings.Split(filepath.Base(filepath.Dir(path)), "_")
+			peers = append(peers, &w21peer{
+				id: parts[1],
+				paths: []string {
+					filepath.Dir(path),
+				},
+			})
+		}
 	}
 
-	return nil, nil
+	return peers, nil
 }
 
 func loadW21MetricsId(path string) (*westworld2.MetricsId, error) {
