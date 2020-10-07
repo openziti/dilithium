@@ -3,16 +3,11 @@ package influx
 import (
 	"bufio"
 	"bytes"
-	"fmt"
-	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func init() {
@@ -24,9 +19,9 @@ func init() {
 }
 
 var influxCmd = &cobra.Command{
-	Use:   "influx <peer_0_root> <peer_1_root>",
-	Short: "Import metricsInstrument data into InfluxDB",
-	Args:  cobra.ExactArgs(2),
+	Use:   "influx <metricsRoot>",
+	Short: "Import metrics data into the analyzer",
+	Args:  cobra.ExactArgs(1),
 	Run:   influx,
 }
 var influxDbUrl string
@@ -34,9 +29,11 @@ var influxDbUsername string
 var influxDbPassword string
 var influxDbDatabase string
 
-var datasets = []string{"txBytes", "retxBytes", "rxBytes", "txPortalSz", "duplicateRxBytes", "duplicateAcks", "retxMs", "allocations"}
-
 func influx(_ *cobra.Command, args []string) {
+	if _, err := discoverW21Peers(args[0]); err != nil {
+		panic(err)
+	}
+	/*
 	peer0Root := args[0]
 	peer1Root := args[1]
 	authToken := ""
@@ -81,6 +78,7 @@ func influx(_ *cobra.Command, args []string) {
 
 	client.Close()
 	logrus.Infof("complete")
+	*/
 }
 
 func readDataset(path string) (data map[int64]int64, err error) {
@@ -107,4 +105,22 @@ func readDataset(path string) (data map[int64]int64, err error) {
 	}
 
 	return
+}
+
+var datasets = []string{
+	"txBytes",
+	"txMsgs",
+	"retxBytes",
+	"retxMsgs",
+	"rxBytes",
+	"rxMsgs",
+	"txPortalCapacity",
+	"txPortalSz",
+	"retxMs",
+	"dupAcks",
+	"rxPortalSz",
+	"dupRxBytes",
+	"dupRxMsgs",
+	"allocations",
+	"errors",
 }

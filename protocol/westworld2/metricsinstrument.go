@@ -170,13 +170,13 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 	return nil
 }
 
-type metricsId struct {
+type MetricsId struct {
 	Id     string            `json:"id"`
 	Values map[string]string `json:"values"`
 }
 
 func (self *metricsInstrument) writeId(mii *metricsInstrumentInstance, outPath string) error {
-	mid := &metricsId{Id: "westworld2.1"}
+	mid := &MetricsId{Id: "westworld2.1"}
 	if mii.listenerAddr != nil {
 		mid.Values = make(map[string]string)
 		mid.Values["listener"] = mii.listenerAddr.String()
