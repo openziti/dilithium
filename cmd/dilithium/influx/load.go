@@ -25,7 +25,6 @@ var influxLoadCmd = &cobra.Command{
 	Run:   influxLoad,
 }
 
-
 func influxLoad(_ *cobra.Command, args []string) {
 	peers, err := discoverW21Peers(args[0])
 	if err != nil {
