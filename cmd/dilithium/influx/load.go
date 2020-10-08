@@ -91,6 +91,7 @@ var datasets = []string{
 	"rxMsgs",
 	"txPortalCapacity",
 	"txPortalSz",
+	"txPortalRxSz",
 	"retxMs",
 	"dupAcks",
 	"rxPortalSz",
