@@ -98,76 +98,55 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := self.writeId(mii, outPath); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txBytes", outPath, mii.txBytes); err != nil {
+		if err := util.WriteSamples("txBytes", outPath, mii.txBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txMsgs", outPath, mii.txMsgs); err != nil {
+		if err := util.WriteSamples("txMsgs", outPath, mii.txMsgs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("retxBytes", outPath, mii.retxBytes); err != nil {
+		if err := util.WriteSamples("retxBytes", outPath, mii.retxBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("retxMsgs", outPath, mii.retxMs); err != nil {
+		if err := util.WriteSamples("retxMsgs", outPath, mii.retxMs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("rxBytes", outPath, mii.rxBytes); err != nil {
+		if err := util.WriteSamples("rxBytes", outPath, mii.rxBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("rxMsgs", outPath, mii.rxMsgs); err != nil {
+		if err := util.WriteSamples("rxMsgs", outPath, mii.rxMsgs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txPortalCapacity", outPath, mii.txPortalCapacity); err != nil {
+		if err := util.WriteSamples("txPortalCapacity", outPath, mii.txPortalCapacity); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txPortalSz", outPath, mii.txPortalSz); err != nil {
+		if err := util.WriteSamples("txPortalSz", outPath, mii.txPortalSz); err != nil {
 			return err
 		}
-		if err := self.writeSamples("txPortalRxSz", outPath, mii.txPortalRxSz); err != nil {
+		if err := util.WriteSamples("txPortalRxSz", outPath, mii.txPortalRxSz); err != nil {
 			return err
 		}
-		if err := self.writeSamples("retxMs", outPath, mii.retxMs); err != nil {
+		if err := util.WriteSamples("retxMs", outPath, mii.retxMs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("dupAcks", outPath, mii.dupAcks); err != nil {
+		if err := util.WriteSamples("dupAcks", outPath, mii.dupAcks); err != nil {
 			return err
 		}
-		if err := self.writeSamples("rxPortalSz", outPath, mii.rxPortalSz); err != nil {
+		if err := util.WriteSamples("rxPortalSz", outPath, mii.rxPortalSz); err != nil {
 			return err
 		}
-		if err := self.writeSamples("dupRxBytes", outPath, mii.dupRxBytes); err != nil {
+		if err := util.WriteSamples("dupRxBytes", outPath, mii.dupRxBytes); err != nil {
 			return err
 		}
-		if err := self.writeSamples("dupRxMsgs", outPath, mii.dupRxMsgs); err != nil {
+		if err := util.WriteSamples("dupRxMsgs", outPath, mii.dupRxMsgs); err != nil {
 			return err
 		}
-		if err := self.writeSamples("allocations", outPath, mii.allocations); err != nil {
+		if err := util.WriteSamples("allocations", outPath, mii.allocations); err != nil {
 			return err
 		}
-		if err := self.writeSamples("errors", outPath, mii.errors); err != nil {
+		if err := util.WriteSamples("errors", outPath, mii.errors); err != nil {
 			return err
 		}
 	}
-	return nil
-}
-
-func (self *metricsInstrument) writeSamples(name, outPath string, samples []*util.Sample) error {
-	path := filepath.Join(outPath, fmt.Sprintf("%s.csv", name))
-	oF, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = oF.Close() }()
-	for _, sample := range samples {
-		line := fmt.Sprintf("%d,%d\n", sample.Ts.UnixNano(), sample.V)
-		n, err := oF.Write([]byte(line))
-		if err != nil {
-			return err
-		}
-		if n != len(line) {
-			return errors.New("short write")
-		}
-	}
-	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
 	return nil
 }
 
