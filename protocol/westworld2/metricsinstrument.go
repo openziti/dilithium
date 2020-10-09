@@ -1,7 +1,6 @@
 package westworld2
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
@@ -10,7 +9,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -95,7 +93,12 @@ func (self *metricsInstrument) writeAllSamples() error {
 		}
 		logrus.Infof("writing metrics to: %s", outPath)
 
-		if err := self.writeId(mii, outPath); err != nil {
+		var values map[string]string
+		if mii.listenerAddr != nil {
+			values = make(map[string]string)
+			values["listener"] = mii.listenerAddr.String()
+		}
+		if err := util.WriteMetricsId(outPath, values); err != nil {
 			return err
 		}
 		if err := util.WriteSamples("txBytes", outPath, mii.txBytes); err != nil {
@@ -146,32 +149,6 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := util.WriteSamples("errors", outPath, mii.errors); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-type MetricsId struct {
-	Id     string            `json:"id"`
-	Values map[string]string `json:"values"`
-}
-
-func (self *metricsInstrument) writeId(mii *metricsInstrumentInstance, outPath string) error {
-	mid := &MetricsId{Id: "westworld2.1"}
-	if mii.listenerAddr != nil {
-		mid.Values = make(map[string]string)
-		mid.Values["listener"] = mii.listenerAddr.String()
-	}
-	data, err := json.MarshalIndent(mid, "", "  ")
-	if err != nil {
-		return err
-	}
-	oF, err := os.OpenFile(filepath.Join(outPath, "metrics.id"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = oF.Close() }()
-	if _, err := oF.Write(data); err != nil {
-		return err
 	}
 	return nil
 }

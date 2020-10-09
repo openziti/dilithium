@@ -1,9 +1,7 @@
 package influx
 
 import (
-	"encoding/json"
-	"github.com/michaelquigley/dilithium/protocol/westworld2"
-	"io/ioutil"
+	"github.com/michaelquigley/dilithium/util"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +24,7 @@ func discoverW21Peers(path string) ([]*w21peer, error) {
 
 	var peers []*w21peer
 	for _, path := range metricsIdPaths {
-		metricsId, err := loadW21MetricsId(path)
+		metricsId, err := util.ReadMetricsId(path)
 		if err != nil {
 			return nil, err
 		}
@@ -42,18 +40,6 @@ func discoverW21Peers(path string) ([]*w21peer, error) {
 	}
 
 	return peers, nil
-}
-
-func loadW21MetricsId(path string) (*westworld2.MetricsId, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	metricsId := &westworld2.MetricsId{}
-	if err = json.Unmarshal(data, metricsId); err != nil {
-		return nil, err
-	}
-	return metricsId, nil
 }
 
 type w21peer struct {
