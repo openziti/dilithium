@@ -98,7 +98,7 @@ func (self *metricsInstrument) writeAllSamples() error {
 			values = make(map[string]string)
 			values["listener"] = mii.listenerAddr.String()
 		}
-		if err := util.WriteMetricsId(outPath, values); err != nil {
+		if err := util.WriteMetricsId("westworld2.1", outPath, values); err != nil {
 			return err
 		}
 		if err := util.WriteSamples("txBytes", outPath, mii.txBytes); err != nil {

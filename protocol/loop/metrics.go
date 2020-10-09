@@ -92,7 +92,9 @@ func (self *Metrics) writeAllSamples() error {
 		return err
 	}
 	logrus.Infof("writing metrics to: %s", outPath)
-
+	if err := util.WriteMetricsId("dilithiumLoop", outPath, nil); err != nil {
+		return err
+	}
 	if err := util.WriteSamples("rxBytes", outPath, self.RxBytes); err != nil {
 		return err
 	}

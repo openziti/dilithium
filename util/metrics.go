@@ -16,8 +16,8 @@ type MetricsId struct {
 	Values map[string]string `json:"values"`
 }
 
-func WriteMetricsId(outPath string, values map[string]string) error {
-	mid := &MetricsId{Id: "westworld2.1", Values: values}
+func WriteMetricsId(id, outPath string, values map[string]string) error {
+	mid := &MetricsId{Id: id, Values: values}
 	data, err := json.MarshalIndent(mid, "", "  ")
 	if err != nil {
 		return err
