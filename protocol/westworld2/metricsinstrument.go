@@ -3,6 +3,7 @@ package westworld2
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -149,7 +150,7 @@ func (self *metricsInstrument) writeAllSamples() error {
 	return nil
 }
 
-func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sample) error {
+func (self *metricsInstrument) writeSamples(name, outPath string, samples []*util.Sample) error {
 	path := filepath.Join(outPath, fmt.Sprintf("%s.csv", name))
 	oF, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
@@ -157,7 +158,7 @@ func (self *metricsInstrument) writeSamples(name, outPath string, samples []*sam
 	}
 	defer func() { _ = oF.Close() }()
 	for _, sample := range samples {
-		line := fmt.Sprintf("%d,%d\n", sample.ts.UnixNano(), sample.v)
+		line := fmt.Sprintf("%d,%d\n", sample.Ts.UnixNano(), sample.V)
 		n, err := oF.Write([]byte(line))
 		if err != nil {
 			return err
@@ -190,7 +191,9 @@ func (self *metricsInstrument) writeId(mii *metricsInstrumentInstance, outPath s
 		return err
 	}
 	defer func() { _ = oF.Close() }()
-	oF.Write(data)
+	if _, err := oF.Write(data); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -199,46 +202,41 @@ type metricsInstrumentInstance struct {
 	listenerAddr *net.UDPAddr
 	close        chan struct{}
 
-	txBytes        []*sample
+	txBytes        []*util.Sample
 	txBytesAccum   int64
-	txMsgs         []*sample
+	txMsgs         []*util.Sample
 	txMsgsAccum    int64
-	retxBytes      []*sample
+	retxBytes      []*util.Sample
 	retxBytesAccum int64
-	retxMsgs       []*sample
+	retxMsgs       []*util.Sample
 	retxMsgsAccum  int64
-	rxBytes        []*sample
+	rxBytes        []*util.Sample
 	rxBytesAccum   int64
-	rxMsgs         []*sample
+	rxMsgs         []*util.Sample
 	rxMsgsAccum    int64
 
-	txPortalCapacity    []*sample
+	txPortalCapacity    []*util.Sample
 	txPortalCapacityVal int64
-	txPortalSz          []*sample
+	txPortalSz          []*util.Sample
 	txPortalSzVal       int64
-	txPortalRxSz        []*sample
+	txPortalRxSz        []*util.Sample
 	txPortalRxSzVal     int64
-	retxMs              []*sample
+	retxMs              []*util.Sample
 	retxMsVal           int64
-	dupAcks             []*sample
+	dupAcks             []*util.Sample
 	dupAcksAccum        int64
 
-	rxPortalSz      []*sample
+	rxPortalSz      []*util.Sample
 	rxPortalSzVal   int64
-	dupRxBytes      []*sample
+	dupRxBytes      []*util.Sample
 	dupRxBytesAccum int64
-	dupRxMsgs       []*sample
+	dupRxMsgs       []*util.Sample
 	dupRxMsgsAccum  int64
 
-	allocations      []*sample
+	allocations      []*util.Sample
 	allocationsAccum int64
-	errors           []*sample
+	errors           []*util.Sample
 	errorsAccum      int64
-}
-
-type sample struct {
-	ts time.Time
-	v  int64
 }
 
 /*
@@ -344,22 +342,22 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 	defer logrus.Infof("exited")
 	for {
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-		self.txBytes = append(self.txBytes, &sample{time.Now(), atomic.SwapInt64(&self.txBytesAccum, 0)})
-		self.txMsgs = append(self.txMsgs, &sample{time.Now(), atomic.SwapInt64(&self.txMsgsAccum, 0)})
-		self.retxBytes = append(self.retxBytes, &sample{time.Now(), atomic.SwapInt64(&self.retxBytesAccum, 0)})
-		self.retxMsgs = append(self.retxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.retxMsgsAccum, 0)})
-		self.rxBytes = append(self.rxBytes, &sample{time.Now(), atomic.SwapInt64(&self.rxBytesAccum, 0)})
-		self.rxMsgs = append(self.rxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.rxMsgsAccum, 0)})
-		self.txPortalCapacity = append(self.txPortalCapacity, &sample{time.Now(), atomic.LoadInt64(&self.txPortalCapacityVal)})
-		self.txPortalSz = append(self.txPortalSz, &sample{time.Now(), atomic.LoadInt64(&self.txPortalSzVal)})
-		self.txPortalRxSz = append(self.txPortalRxSz, &sample{time.Now(), atomic.LoadInt64(&self.txPortalRxSzVal)})
-		self.retxMs = append(self.retxMs, &sample{time.Now(), atomic.LoadInt64(&self.retxMsVal)})
-		self.dupAcks = append(self.dupAcks, &sample{time.Now(), atomic.SwapInt64(&self.dupAcksAccum, 0)})
-		self.rxPortalSz = append(self.rxPortalSz, &sample{time.Now(), atomic.LoadInt64(&self.rxPortalSzVal)})
-		self.dupRxBytes = append(self.dupRxBytes, &sample{time.Now(), atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
-		self.dupRxMsgs = append(self.dupRxMsgs, &sample{time.Now(), atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
-		self.allocations = append(self.allocations, &sample{time.Now(), atomic.SwapInt64(&self.allocationsAccum, 0)})
-		self.errors = append(self.errors, &sample{time.Now(), atomic.SwapInt64(&self.errorsAccum, 0)})
+		self.txBytes = append(self.txBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txBytesAccum, 0)})
+		self.txMsgs = append(self.txMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txMsgsAccum, 0)})
+		self.retxBytes = append(self.retxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxBytesAccum, 0)})
+		self.retxMsgs = append(self.retxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxMsgsAccum, 0)})
+		self.rxBytes = append(self.rxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxBytesAccum, 0)})
+		self.rxMsgs = append(self.rxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxMsgsAccum, 0)})
+		self.txPortalCapacity = append(self.txPortalCapacity, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalCapacityVal)})
+		self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalSzVal)})
+		self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalRxSzVal)})
+		self.retxMs = append(self.retxMs, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxMsVal)})
+		self.dupAcks = append(self.dupAcks, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupAcksAccum, 0)})
+		self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.rxPortalSzVal)})
+		self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
+		self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
+		self.allocations = append(self.allocations, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.allocationsAccum, 0)})
+		self.errors = append(self.errors, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.errorsAccum, 0)})
 		select {
 		case <-self.close:
 			return
