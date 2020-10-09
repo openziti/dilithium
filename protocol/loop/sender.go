@@ -14,16 +14,18 @@ type Sender struct {
 	conn       net.Conn
 	seq        util.Sequence
 	ct         int
+	metrics    *Metrics
 	rate       *transferReporter
 	Done       chan struct{}
 }
 
-func NewSender(ds *DataSet, conn net.Conn, ct int) *Sender {
+func NewSender(ds *DataSet, metrics *Metrics, conn net.Conn, ct int) *Sender {
 	return &Sender{
 		headerPool: NewPool(headerSz + 1),
 		ds:         ds,
 		conn:       conn,
 		ct:         ct,
+		metrics:    metrics,
 		rate:       newTransferReporter("tx"),
 		Done:       make(chan struct{}),
 	}
@@ -49,6 +51,7 @@ func (self *Sender) Run() {
 
 	logrus.Infof("[%d] header pool allocations", self.headerPool.Allocations)
 
+	self.metrics.Close()
 	close(self.rate.in)
 	close(self.Done)
 }
@@ -66,8 +69,6 @@ func (self *Sender) sendData() error {
 	count := 0
 	for i := 0; i < self.ct; i++ {
 		for _, block := range self.ds.blocks {
-			//logrus.Infof("sending block #%d [uz: %d, sz: %d]", count, block.uz, block.sz)
-
 			h := &header{uint32(self.seq.Next()), DATA, block.uz, self.headerPool.get()}
 			if err := writeHeader(h, self.conn); err != nil {
 				return err
@@ -82,6 +83,7 @@ func (self *Sender) sendData() error {
 				return errors.Errorf("short data write [%d != %d]", n, block.uz)
 			}
 
+			self.metrics.Tx(int64(n))
 			self.rate.in <- &transferReport{time.Now(), int64(n)}
 
 			count++

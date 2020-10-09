@@ -15,16 +15,18 @@ type Receiver struct {
 	conn       net.Conn
 	blocks     chan *buffer
 	blocksDone chan struct{}
+	metrics    *Metrics
 	rate       *transferReporter
 	Done       chan struct{}
 }
 
-func NewReceiver(conn net.Conn) *Receiver {
+func NewReceiver(metrics *Metrics, conn net.Conn) *Receiver {
 	return &Receiver{
 		headerPool: NewPool(headerSz + 1),
 		conn:       conn,
 		blocks:     make(chan *buffer, 4096),
 		blocksDone: make(chan struct{}),
+		metrics:    metrics,
 		rate:       newTransferReporter("rx"),
 		Done:       make(chan struct{}),
 	}
@@ -103,7 +105,8 @@ func (self *Receiver) receiveData(hasher bool) error {
 			buffer.uz = int64(n)
 			h.buffer.unref()
 
-			self.rate.in <- &transferReport{time.Now(), int64(n)}
+			self.metrics.Rx(buffer.uz)
+			self.rate.in <- &transferReport{time.Now(), buffer.uz}
 
 			if hasher {
 				self.blocks <- buffer

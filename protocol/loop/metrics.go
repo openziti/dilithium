@@ -19,8 +19,8 @@ func init() {
 }
 
 type Metrics struct {
-	Addr   *net.TCPAddr
-	Peer   *net.TCPAddr
+	Addr   net.Addr
+	Peer   net.Addr
 	Prefix string
 	close  chan struct{}
 
@@ -30,7 +30,7 @@ type Metrics struct {
 	TxBytesAccum int64
 }
 
-func NewMetrics(addr, peer *net.TCPAddr, ms int, prefix string) *Metrics {
+func NewMetrics(addr, peer net.Addr, ms int, prefix string) *Metrics {
 	m := &Metrics{
 		Addr:   addr,
 		Peer:   peer,
@@ -54,16 +54,6 @@ func (self *Metrics) Tx(bytes int64) {
 
 func (self *Metrics) Close() {
 	close(self.close)
-	registryLock.Lock()
-	j := 0
-	for _, m := range registry {
-		if m == self {
-			break
-		}
-		j++
-	}
-	registry = append(registry[:j], registry[j+1:]...)
-	registryLock.Unlock()
 }
 
 func (self *Metrics) snapshotter(ms int) {

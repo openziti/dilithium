@@ -38,15 +38,17 @@ func loopClient(_ *cobra.Command, args []string) {
 		logrus.Fatalf("error dialing server (%v)", err)
 	}
 
+	m := loop.NewMetrics(conn.LocalAddr(), conn.RemoteAddr(), 100, "logs")
+
 	var rx *loop.Receiver
 	if startReceiver {
-		rx = loop.NewReceiver(conn)
+		rx = loop.NewReceiver(m, conn)
 		go rx.Run(startHasher)
 	}
 
 	var tx *loop.Sender
 	if startSender {
-		tx = loop.NewSender(ds, conn, count)
+		tx = loop.NewSender(ds, m, conn, count)
 		go tx.Run()
 	}
 
