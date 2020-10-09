@@ -44,6 +44,17 @@ func NewMetrics(addr, peer net.Addr, ms int, prefix string) *Metrics {
 	return m
 }
 
+func WriteAllSamples() {
+	registryLock.Lock()
+	defer registryLock.Unlock()
+
+	for _, m := range registry {
+		if err := m.writeSamples(); err != nil {
+			logrus.Errorf("error writing samples (%v)", err)
+		}
+	}
+}
+
 func (self *Metrics) Rx(bytes int64) {
 	atomic.AddInt64(&self.RxBytesAccum, bytes)
 }
@@ -72,11 +83,11 @@ func (self *Metrics) snapshotter(ms int) {
 	}
 }
 
-func (self *Metrics) writeAllSamples() error {
+func (self *Metrics) writeSamples() error {
 	if err := os.MkdirAll(self.Prefix, os.ModePerm); err != nil {
 		return err
 	}
-	name := fmt.Sprintf("%s_%s", self.Addr, self.Peer)
+	name := fmt.Sprintf("%s_%s_", self.Addr, self.Peer)
 	outPath, err := ioutil.TempDir(self.Prefix, name)
 	if err != nil {
 		return err
@@ -104,13 +115,7 @@ func signalHandler() {
 	for {
 		s := <-c
 		if s == syscall.SIGUSR2 {
-			registryLock.Lock()
-			for _, m := range registry {
-				if err := m.writeAllSamples(); err != nil {
-					logrus.Errorf("error writing samples (%v)", err)
-				}
-			}
-			registryLock.Unlock()
+			WriteAllSamples()
 		}
 	}
 }

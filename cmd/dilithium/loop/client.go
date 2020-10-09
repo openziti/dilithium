@@ -58,4 +58,6 @@ func loopClient(_ *cobra.Command, args []string) {
 	if tx != nil {
 		<-tx.Done
 	}
+
+	loop.WriteAllSamples()
 }
