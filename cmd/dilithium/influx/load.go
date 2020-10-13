@@ -27,6 +27,9 @@ func influxLoad(_ *cobra.Command, args []string) {
 	if err := loadWestworld21Metrics(args[0], client); err != nil {
 		panic(err)
 	}
+	if err := loadDilithiumLoopMetrics(args[0], client); err != nil {
+		panic(err)
+	}
 
 	client.Close()
 }
