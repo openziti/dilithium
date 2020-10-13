@@ -1,6 +1,8 @@
 package util
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -8,12 +10,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 )
 
 type MetricsId struct {
 	Id     string            `json:"id"`
-	Values map[string]string `json:"values"`
+	Values map[string]string `json:"values,omitempty"`
 }
 
 func WriteMetricsId(id, outPath string, values map[string]string) error {
@@ -69,4 +73,30 @@ func WriteSamples(name, outPath string, samples []*Sample) error {
 	}
 	logrus.Infof("wrote [%d] samples to [%s]", len(samples), path)
 	return nil
+}
+
+func ReadSamples(path string) (data map[int64]int64, err error) {
+	var raw []byte
+	raw, err = ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	data = make(map[int64]int64)
+	scanner := bufio.NewScanner(bytes.NewBuffer(raw))
+	for scanner.Scan() {
+		line := scanner.Text()
+		tokens := strings.Split(line, ",")
+		ts, err := strconv.ParseInt(tokens[0], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		v, err := strconv.ParseInt(tokens[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		data[ts] = v
+	}
+
+	return
 }
