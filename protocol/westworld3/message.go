@@ -26,7 +26,8 @@ type messageFlag uint8
 
 const (
 	// 0x8 ... 0x80
-	RTT messageFlag = 0x8
+	RTT        messageFlag = 0x8
+	INLINE_ACK messageFlag = 0x10
 )
 
 const headerSz = 7
