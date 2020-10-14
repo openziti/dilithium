@@ -26,7 +26,7 @@ func (self *buffer) ref() {
 
 func (self *buffer) unref() {
 	if atomic.AddInt32(&self.refs, -1) < 1 {
-		self.sz = 0
+		self.uz = 0
 		self.pool.put(self)
 	}
 }

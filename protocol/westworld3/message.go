@@ -1,7 +1,6 @@
 package westworld3
 
 import (
-	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 )
@@ -66,11 +65,22 @@ func (self *wireMessage) insertData(data []byte) error {
 	}
 	for i := self.buffer.uz - 1; i >= headerSz; i-- {
 		self.buffer.data[i+uint32(dataSz)] = self.buffer.data[i]
-		fmt.Printf("[%d]=>[%d]\n", i, i+uint32(dataSz))
 	}
 	for i := 0; i < int(dataSz); i++ {
 		self.buffer.data[headerSz+i] = data[i]
 	}
-	self.buffer.uz = self.buffer.uz+uint32(dataSz)
+	self.buffer.uz = self.buffer.uz + uint32(dataSz)
+	return nil
+}
+
+func (self *wireMessage) appendData(data []byte) error {
+	dataSz := uint16(len(data))
+	if self.buffer.sz < self.buffer.uz+uint32(dataSz) {
+		return errors.Errorf("short buffer for append [%d < %d]", self.buffer.sz, self.buffer.uz+uint32(dataSz))
+	}
+	for i := 0; i < int(dataSz); i++ {
+		self.buffer.data[self.buffer.uz+uint32(i)] = data[i]
+	}
+	self.buffer.uz = self.buffer.uz + uint32(dataSz)
 	return nil
 }
