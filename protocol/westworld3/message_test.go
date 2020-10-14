@@ -3,7 +3,6 @@ package westworld3
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"math"
 	"testing"
 )
 
@@ -79,8 +78,6 @@ func BenchmarkWireMessageAppendData256(b *testing.B)  { benchmarkWireMessageAppe
 func BenchmarkWireMessageAppendData1024(b *testing.B) { benchmarkWireMessageAppendData(1024, 8, b) }
 func BenchmarkWireMessageAppendData4096(b *testing.B) { benchmarkWireMessageAppendData(4096, 8, b) }
 
-func TestHighBitInt32(t *testing.T) {
-	a := uint32(2164260863)
-	fmt.Printf("%d\n", int32(a))
-	fmt.Printf("math.MaxInt32 = %d\n", math.MaxInt32)
+func TestBits(t *testing.T) {
+	fmt.Printf("%x\n", 1 << 7)
 }
