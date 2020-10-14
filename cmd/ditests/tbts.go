@@ -10,7 +10,7 @@ func testTwoByteTimestamps() {
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < 1024; i++ {
 		sourceTs := uint16(time.Now().UnixNano() / int64(time.Millisecond))
-		randMs := rand.Intn(1024)
+		randMs := rand.Intn(48000)
 		time.Sleep(time.Duration(randMs) * time.Millisecond)
 		checkTs := uint16(time.Now().UnixNano() / int64(time.Millisecond))
 		delta := checkTs - sourceTs
