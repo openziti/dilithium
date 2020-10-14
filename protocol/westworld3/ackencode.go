@@ -38,7 +38,7 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 			if dataSz < 4 {
 				return 0, errors.Errorf("insufficient buffer to encode ack [%d < 4]", dataSz)
 			}
-			util.WriteInt32(data, int32(uint32(acks[0].start) ^ sequenceRangeMarker))
+			util.WriteInt32(data, int32(uint32(acks[0].start)^sequenceRangeMarker))
 			return 4, nil
 		}
 	}
@@ -59,19 +59,20 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 			if (i + 4) > dataSz {
 				return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, i)
 			}
-			util.WriteInt32(data[i:i+4], int32(uint32(a.start) ^ sequenceRangeMarker))
+			util.WriteInt32(data[i:i+4], int32(uint32(a.start)^sequenceRangeMarker))
 			i += 4
+
 		} else {
 			if (i + 4) > dataSz {
 				return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, i)
 			}
-			util.WriteInt32(data[i:i+4], int32(uint32(a.start) | sequenceRangeMarker))
+			util.WriteInt32(data[i:i+4], int32(uint32(a.start)|sequenceRangeMarker))
 			i += 4
 
 			if (i + 4) > dataSz {
 				return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, i)
 			}
-			util.WriteInt32(data[i:i+4], int32(uint32(a.start) ^ sequenceRangeMarker))
+			util.WriteInt32(data[i:i+4], int32(uint32(a.start)^sequenceRangeMarker))
 			i += 4
 		}
 	}
@@ -80,5 +81,18 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 }
 
 func decodeAcks(data []byte) (acks []ack, err error) {
+	dataSz := uint32(len(data))
+	if dataSz < 4 {
+		return nil, errors.Errorf("short ack buffer [%d < 4]", dataSz)
+	}
+
+	if data[0]&ackSeriesMarker == 0 {
+		seq := util.ReadInt32(data[0:4])
+		acks = append(acks, ack{seq, seq})
+		return acks, nil
+
+	} else {
+		// decode series
+	}
 	return nil, nil
 }

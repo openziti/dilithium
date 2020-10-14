@@ -77,7 +77,3 @@ func BenchmarkWireMessageAppendData8(b *testing.B)    { benchmarkWireMessageAppe
 func BenchmarkWireMessageAppendData256(b *testing.B)  { benchmarkWireMessageAppendData(256, 8, b) }
 func BenchmarkWireMessageAppendData1024(b *testing.B) { benchmarkWireMessageAppendData(1024, 8, b) }
 func BenchmarkWireMessageAppendData4096(b *testing.B) { benchmarkWireMessageAppendData(4096, 8, b) }
-
-func TestBits(t *testing.T) {
-	fmt.Printf("%x\n", 1 << 7)
-}
