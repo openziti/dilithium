@@ -6,6 +6,7 @@ type buffer struct {
 	data []byte
 	refs int32
 	sz   uint32
+	uz   uint32
 	pool *pool
 }
 
@@ -13,6 +14,8 @@ func newBuffer(pool *pool) *buffer {
 	return &buffer{
 		data: make([]byte, pool.bufSz),
 		pool: pool,
+		sz:   pool.bufSz,
+		uz:   0,
 		refs: 0,
 	}
 }

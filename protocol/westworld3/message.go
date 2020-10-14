@@ -1,6 +1,7 @@
 package westworld3
 
 import (
+	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 )
@@ -31,17 +32,22 @@ const (
 
 const headerSz = 7
 
-func (self *wireMessage) encode() *wireMessage {
+func (self *wireMessage) encode() (*wireMessage, error) {
+	dataSz := uint16(len(self.data))
+	if self.buffer.sz < uint32(headerSz+dataSz) {
+		return nil, errors.Errorf("short buffer for encode [%d < %d]", self.buffer.sz, headerSz+dataSz)
+	}
 	util.WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
-	util.WriteUint16(self.buffer.data[5:headerSz], uint16(len(self.data)))
-	self.buffer.sz = uint32(headerSz + len(self.data))
-	return self
+	util.WriteUint16(self.buffer.data[5:headerSz], dataSz)
+	copy(self.buffer.data[headerSz:], self.data)
+	self.buffer.uz = uint32(headerSz + len(self.data))
+	return self, nil
 }
 
 func decode(buffer *buffer) (*wireMessage, error) {
 	sz := util.ReadUint16(buffer.data[5:headerSz])
-	if uint32(headerSz+sz) > buffer.sz {
+	if uint32(headerSz+sz) > buffer.uz {
 		return nil, errors.Errorf("short buffer read [%d != %d]", buffer.sz, headerSz+sz)
 	}
 	wm := &wireMessage{
@@ -51,4 +57,20 @@ func decode(buffer *buffer) (*wireMessage, error) {
 		buffer: buffer,
 	}
 	return wm, nil
+}
+
+func (self *wireMessage) insertData(data []byte) error {
+	dataSz := uint16(len(data))
+	if self.buffer.sz < self.buffer.uz+uint32(dataSz) {
+		return errors.Errorf("short buffer for insert [%d < %d]", self.buffer.sz, self.buffer.uz+uint32(dataSz))
+	}
+	for i := self.buffer.uz - 1; i >= headerSz; i-- {
+		self.buffer.data[i+uint32(dataSz)] = self.buffer.data[i]
+		fmt.Printf("[%d]=>[%d]\n", i, i+uint32(dataSz))
+	}
+	for i := 0; i < int(dataSz); i++ {
+		self.buffer.data[headerSz+i] = data[i]
+	}
+	self.buffer.uz = self.buffer.uz+uint32(dataSz)
+	return nil
 }
