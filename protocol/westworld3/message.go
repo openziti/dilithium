@@ -19,6 +19,7 @@ const (
 	HELLO messageType = iota
 	ACK
 	DATA
+	KEEPALIVE
 	CLOSE
 )
 
