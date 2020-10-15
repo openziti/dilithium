@@ -1,7 +1,6 @@
 package westworld3
 
 import (
-	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 )
@@ -99,7 +98,6 @@ func decodeAcks(data []byte) (acks []ack, err error) {
 				o += 4
 				second := util.ReadInt32(data[o : o+4])
 				acks = append(acks, ack{int32(uint32(first) & sequenceRangeInvert), int32(uint32(second) & sequenceRangeInvert)})
-				fmt.Printf("invert = %x\n", sequenceRangeInvert)
 
 			} else {
 				acks = append(acks, ack{int32(uint32(first) & sequenceRangeInvert), int32(uint32(first) & sequenceRangeInvert)})
