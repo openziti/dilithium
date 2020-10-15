@@ -1,6 +1,7 @@
 package westworld3
 
 import (
+	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
 )
@@ -23,35 +24,33 @@ type ack struct {
 	end   int32
 }
 
-const ackSeriesMarker = (1 << 7)
-const sequenceRangeMarker = (1 << 31)
+const ackSeriesMarker = uint8(1 << 7)
+const sequenceRangeMarker = uint32(1 << 31)
+const sequenceRangeInvert = 0xFFFFFFFF ^ sequenceRangeMarker
 
 func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 	if len(acks) < 1 {
 		return 0, nil
 	}
+	if len(acks) > 127 {
+		return 0, errors.Errorf("ack series too large [%d > 127]", len(acks))
+	}
 
 	dataSz := uint32(len(data))
 
-	if len(acks) == 1 {
-		if acks[0].start == acks[0].end {
-			if dataSz < 4 {
-				return 0, errors.Errorf("insufficient buffer to encode ack [%d < 4]", dataSz)
-			}
-			util.WriteInt32(data, int32(uint32(acks[0].start)^sequenceRangeMarker))
-			return 4, nil
+	if len(acks) == 1 && acks[0].start == acks[0].end {
+		if dataSz < 4 {
+			return 0, errors.Errorf("insufficient buffer to encode ack [%d < 4]", dataSz)
 		}
-	}
-
-	if len(acks) > 127 {
-		return 0, errors.Errorf("ack series too large [%d > 127]", len(acks))
+		util.WriteInt32(data, int32(uint32(acks[0].start)&sequenceRangeInvert))
+		return 4, nil
 	}
 
 	i := uint32(0)
 	if (i + 1) > dataSz {
 		return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, (i + 1))
 	}
-	data[i] = uint8(ackSeriesMarker + len(acks))
+	data[i] = ackSeriesMarker + uint8(len(acks))
 	i++
 
 	for _, a := range acks {
@@ -59,7 +58,7 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 			if (i + 4) > dataSz {
 				return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, i)
 			}
-			util.WriteInt32(data[i:i+4], int32(uint32(a.start)^sequenceRangeMarker))
+			util.WriteInt32(data[i:i+4], int32(uint32(a.start)&sequenceRangeInvert))
 			i += 4
 
 		} else {
@@ -72,7 +71,7 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 			if (i + 4) > dataSz {
 				return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, i)
 			}
-			util.WriteInt32(data[i:i+4], int32(uint32(a.start)^sequenceRangeMarker))
+			util.WriteInt32(data[i:i+4], int32(uint32(a.end)&sequenceRangeInvert))
 			i += 4
 		}
 	}
@@ -92,7 +91,21 @@ func decodeAcks(data []byte) (acks []ack, err error) {
 		return acks, nil
 
 	} else {
-		// decode series
+		seriesSz := int(data[0] ^ ackSeriesMarker)
+		o := 1
+		for i := 0; i < seriesSz; i++ {
+			first := util.ReadInt32(data[o : o+4])
+			if uint32(first)&sequenceRangeMarker == sequenceRangeMarker {
+				o += 4
+				second := util.ReadInt32(data[o : o+4])
+				acks = append(acks, ack{int32(uint32(first) & sequenceRangeInvert), int32(uint32(second) & sequenceRangeInvert)})
+				fmt.Printf("invert = %x\n", sequenceRangeInvert)
+
+			} else {
+				acks = append(acks, ack{int32(uint32(first) & sequenceRangeInvert), int32(uint32(first) & sequenceRangeInvert)})
+			}
+			o += 4
+		}
 	}
-	return nil, nil
+	return
 }
