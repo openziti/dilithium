@@ -33,16 +33,33 @@ const (
 
 const headerSz = 7
 
-func (self *wireMessage) encode() (*wireMessage, error) {
-	dataSz := uint16(len(self.data))
+func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) {
+	wm = &wireMessage{
+		seq:    seq,
+		mt:     HELLO,
+		buffer: p.get(),
+	}
+	var acksSz uint32
+	var helloSz uint32
+	if a != nil {
+		wm.setFlag(INLINE_ACK)
+		acksSz, err = encodeAcks([]ack{*a}, wm.buffer.data[headerSz:])
+		if err != nil {
+			return nil, errors.Wrap(err, "error encoding hello ack")
+		}
+	}
+	helloSz, err = encodeHello(h, wm.buffer.data[headerSz+acksSz:])
+	return wm.encodeHeader(uint16(acksSz + helloSz))
+}
+
+func (self *wireMessage) encodeHeader(dataSz uint16) (*wireMessage, error) {
 	if self.buffer.sz < uint32(headerSz+dataSz) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", self.buffer.sz, headerSz+dataSz)
 	}
 	util.WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
 	util.WriteUint16(self.buffer.data[5:headerSz], dataSz)
-	copy(self.buffer.data[headerSz:], self.data)
-	self.buffer.uz = uint32(headerSz + len(self.data))
+	self.buffer.uz = uint32(headerSz + dataSz)
 	return self, nil
 }
 
@@ -85,4 +102,19 @@ func (self *wireMessage) appendData(data []byte) error {
 	}
 	self.buffer.uz = self.buffer.uz + uint32(dataSz)
 	return nil
+}
+
+func (self *wireMessage) setFlag(flag messageFlag) {
+	self.mt = messageType(uint8(self.mt) | uint8(flag))
+}
+
+func (self *wireMessage) clearFlag(flag messageFlag) {
+	self.mt = messageType(uint8(self.mt) ^ uint8(flag))
+}
+
+func (self *wireMessage) hasFlag(flag messageFlag) bool {
+	if uint8(self.mt)&uint8(flag) > 0 {
+		return true
+	}
+	return false
 }
