@@ -48,7 +48,7 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 
 	i := uint32(0)
 	if (i + 1) > dataSz {
-		return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, (i + 1))
+		return i, errors.Errorf("insufficient buffer to encode ack series [%d < %d]", dataSz, i+1)
 	}
 	data[i] = ackSeriesMarker + uint8(len(acks))
 	i++
