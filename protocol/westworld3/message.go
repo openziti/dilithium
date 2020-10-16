@@ -72,23 +72,58 @@ func (self *wireMessage) asHello() (h hello, a []ack, err error) {
 	return
 }
 
-func newAck(acks []ack, rxPortalSz int, pool *pool) (wm *wireMessage, err error) {
+func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage, err error) {
 	wm = &wireMessage{
-		seq: -1,
-		mt:  ACK,
+		seq:    -1,
+		mt:     ACK,
+		buffer: p.get(),
+	}
+	var rttSz uint32
+	if rtt != nil {
+		if wm.buffer.sz < dataStart+2 {
+			return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, dataStart+2)
+		}
+		wm.setFlag(RTT)
+		util.WriteUint16(wm.buffer.data[dataStart:], *rtt)
+		rttSz = 2
 	}
 	var acksSz uint32
 	if len(acks) > 0 {
-		acksSz, err = encodeAcks(acks, wm.buffer.data[dataStart:])
+		acksSz, err = encodeAcks(acks, wm.buffer.data[dataStart+rttSz:])
 		if err != nil {
 			return nil, errors.Wrap(err, "error encoding acks")
 		}
 	}
-	if dataStart+acksSz > wm.buffer.sz {
+	if dataStart+rttSz+acksSz > wm.buffer.sz {
 		return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, dataStart+acksSz)
 	}
 	util.WriteInt32(wm.buffer.data[dataStart+acksSz:], int32(rxPortalSz))
 	return wm.encodeHeader(uint16(acksSz + 4))
+}
+
+func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err error) {
+	if self.messageType() != ACK {
+		return nil, 0, nil, errors.Errorf("unexpected message type [%d], expected ACK", self.messageType())
+	}
+	i := uint32(0)
+	if self.hasFlag(RTT) {
+		if self.buffer.uz < dataStart+2 {
+			return nil, 0, nil, errors.Errorf("short buffer for ack decode [%d < %d]", self.buffer.uz, dataStart+2)
+		}
+		util.ReadUint16(self.buffer.data[dataStart:])
+		i += 2
+	}
+	var acksSz uint32
+	a, acksSz, err = decodeAcks(self.buffer.data[i:])
+	if err != nil {
+		return nil, 0, nil, errors.Wrap(err, "error decoding acks")
+	}
+	i += acksSz
+	if self.buffer.uz < i+4 {
+		return nil, 0, nil, errors.Errorf("short buffer for rxPortalSz decode [%d < %d]", self.buffer.uz, i+4)
+	}
+	rxPortalSz = util.ReadInt32(self.buffer.data[i:])
+	return
 }
 
 func (self *wireMessage) encodeHeader(dataSz uint16) (*wireMessage, error) {
