@@ -11,7 +11,7 @@ func init() {
 	for i := 0; i < 16*1024; i++ {
 		wireMessageBenchmarkData[i] = uint8(i)
 	}
-	wireMessageBenchmarkPool = newPool("wireMessageBenchmark", headerSz+(16*1024), nil)
+	wireMessageBenchmarkPool = newPool("wireMessageBenchmark", dataStart+(16*1024), nil)
 }
 
 var wireMessageBenchmarkData [16 * 1024]byte
@@ -22,7 +22,7 @@ func TestHello(t *testing.T) {
 	wm, err := newHello(11, hello{protocolVersion, 6}, nil, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
-	assert.Equal(t, uint32(headerSz+5), wm.buffer.uz)
+	assert.Equal(t, uint32(dataStart+5), wm.buffer.uz)
 
 	wmOut, err := decodeHeader(wm.buffer)
 	assert.NoError(t, err)
@@ -40,7 +40,7 @@ func TestHelloResponse(t *testing.T) {
 	wm, err := newHello(12, hello{protocolVersion, 6}, &ack{11, 11}, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
-	assert.Equal(t, uint32(headerSz+4+5), wm.buffer.uz)
+	assert.Equal(t, uint32(dataStart+4+5), wm.buffer.uz)
 	assert.True(t, wm.hasFlag(INLINE_ACK))
 
 	wmOut, err := decodeHeader(wm.buffer)
@@ -59,22 +59,22 @@ func TestHelloResponse(t *testing.T) {
 func TestWireMessageInsertData(t *testing.T) {
 	p := newPool("test", 1024, nil)
 	wm := &wireMessage{seq: 0, mt: DATA, buffer: p.get()}
-	copy(wm.buffer.data[headerSz:], []byte{0x01, 0x02, 0x03, 0x04})
+	copy(wm.buffer.data[dataStart:], []byte{0x01, 0x02, 0x03, 0x04})
 	wmOut, err := wm.encodeHeader(4)
 	assert.NoError(t, err)
-	assert.Equal(t, wm.buffer.uz, uint32(headerSz+4))
+	assert.Equal(t, wm.buffer.uz, uint32(dataStart+4))
 	assert.Equal(t, wm, wmOut)
 
 	err = wm.insertData([]byte{0x0a, 0x0b, 0x0c, 0x0d})
 	assert.NoError(t, err)
-	assert.Equal(t, wm.buffer.uz, uint32(headerSz+8))
-	assert.ElementsMatch(t, []byte{0x0a, 0x0b, 0x0c, 0x0d, 0x01, 0x02, 0x03, 0x04}, wm.buffer.data[headerSz:wm.buffer.uz])
+	assert.Equal(t, wm.buffer.uz, uint32(dataStart+8))
+	assert.ElementsMatch(t, []byte{0x0a, 0x0b, 0x0c, 0x0d, 0x01, 0x02, 0x03, 0x04}, wm.buffer.data[dataStart:wm.buffer.uz])
 }
 
 func benchmarkWireMessageInsertData(dataSz, insertSz int, b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		wm := &wireMessage{seq: 0, mt: DATA, buffer: wireMessageBenchmarkPool.get()}
-		copy(wm.buffer.data[headerSz:], wireMessageBenchmarkData[:dataSz])
+		copy(wm.buffer.data[dataStart:], wireMessageBenchmarkData[:dataSz])
 		if _, err := wm.encodeHeader(uint16(dataSz)); err != nil {
 			panic(err)
 		}
@@ -92,22 +92,22 @@ func BenchmarkWireMessageinsertData4096(b *testing.B) { benchmarkWireMessageInse
 func TestWireMessageAppendData(t *testing.T) {
 	p := newPool("test", 1024, nil)
 	wm := &wireMessage{seq: 0, mt: DATA, buffer: p.get()}
-	copy(wm.buffer.data[headerSz:], []byte{0x01, 0x02, 0x03, 0x04})
+	copy(wm.buffer.data[dataStart:], []byte{0x01, 0x02, 0x03, 0x04})
 	wmOut, err := wm.encodeHeader(4)
 	assert.NoError(t, err)
-	assert.Equal(t, wm.buffer.uz, uint32(headerSz+4))
+	assert.Equal(t, wm.buffer.uz, uint32(dataStart+4))
 	assert.Equal(t, wm, wmOut)
 
 	err = wm.appendData([]byte{0x0a, 0x0b, 0x0c, 0x0d})
 	assert.NoError(t, err)
-	assert.Equal(t, wm.buffer.uz, uint32(headerSz+8))
-	assert.ElementsMatch(t, []byte{0x01, 0x02, 0x03, 0x04, 0x0a, 0x0b, 0x0c, 0x0d}, wm.buffer.data[headerSz:wm.buffer.uz])
+	assert.Equal(t, wm.buffer.uz, uint32(dataStart+8))
+	assert.ElementsMatch(t, []byte{0x01, 0x02, 0x03, 0x04, 0x0a, 0x0b, 0x0c, 0x0d}, wm.buffer.data[dataStart:wm.buffer.uz])
 }
 
 func benchmarkWireMessageAppendData(dataSz, insertSz int, b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		wm := &wireMessage{seq: 0, mt: DATA, buffer: wireMessageBenchmarkPool.get()}
-		copy(wm.buffer.data[headerSz:], wireMessageBenchmarkData[:dataSz])
+		copy(wm.buffer.data[dataStart:], wireMessageBenchmarkData[:dataSz])
 		if _, err := wm.encodeHeader(uint16(dataSz)); err != nil {
 			panic(err)
 		}

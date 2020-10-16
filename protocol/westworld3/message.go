@@ -33,7 +33,7 @@ const (
 	INLINE_ACK messageFlag = 0x10
 )
 
-const headerSz = 7
+const dataStart = 7
 
 func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) {
 	wm = &wireMessage{
@@ -45,12 +45,12 @@ func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) 
 	var helloSz uint32
 	if a != nil {
 		wm.setFlag(INLINE_ACK)
-		acksSz, err = encodeAcks([]ack{*a}, wm.buffer.data[headerSz:])
+		acksSz, err = encodeAcks([]ack{*a}, wm.buffer.data[dataStart:])
 		if err != nil {
 			return nil, errors.Wrap(err, "error encoding hello ack")
 		}
 	}
-	helloSz, err = encodeHello(h, wm.buffer.data[headerSz+acksSz:])
+	helloSz, err = encodeHello(h, wm.buffer.data[dataStart+acksSz:])
 	return wm.encodeHeader(uint16(acksSz + helloSz))
 }
 
@@ -79,38 +79,38 @@ func newAck(acks []ack, rxPortalSz int, pool *pool) (wm *wireMessage, err error)
 	}
 	var acksSz uint32
 	if len(acks) > 0 {
-		acksSz, err = encodeAcks(acks, wm.buffer.data[headerSz:])
+		acksSz, err = encodeAcks(acks, wm.buffer.data[dataStart:])
 		if err != nil {
 			return nil, errors.Wrap(err, "error encoding acks")
 		}
 	}
-	if headerSz+acksSz > wm.buffer.sz {
-		return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, headerSz+acksSz)
+	if dataStart+acksSz > wm.buffer.sz {
+		return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, dataStart+acksSz)
 	}
-	util.WriteInt32(wm.buffer.data[headerSz+acksSz:], int32(rxPortalSz))
+	util.WriteInt32(wm.buffer.data[dataStart+acksSz:], int32(rxPortalSz))
 	return wm.encodeHeader(uint16(acksSz + 4))
 }
 
 func (self *wireMessage) encodeHeader(dataSz uint16) (*wireMessage, error) {
-	if self.buffer.sz < uint32(headerSz+dataSz) {
-		return nil, errors.Errorf("short buffer for encode [%d < %d]", self.buffer.sz, headerSz+dataSz)
+	if self.buffer.sz < uint32(dataStart+dataSz) {
+		return nil, errors.Errorf("short buffer for encode [%d < %d]", self.buffer.sz, dataStart+dataSz)
 	}
 	util.WriteInt32(self.buffer.data[0:4], self.seq)
 	self.buffer.data[4] = byte(self.mt)
-	util.WriteUint16(self.buffer.data[5:headerSz], dataSz)
-	self.buffer.uz = uint32(headerSz + dataSz)
+	util.WriteUint16(self.buffer.data[5:dataStart], dataSz)
+	self.buffer.uz = uint32(dataStart + dataSz)
 	return self, nil
 }
 
 func decodeHeader(buffer *buffer) (*wireMessage, error) {
-	sz := util.ReadUint16(buffer.data[5:headerSz])
-	if uint32(headerSz+sz) > buffer.uz {
-		return nil, errors.Errorf("short buffer read [%d != %d]", buffer.sz, headerSz+sz)
+	sz := util.ReadUint16(buffer.data[5:dataStart])
+	if uint32(dataStart+sz) > buffer.uz {
+		return nil, errors.Errorf("short buffer read [%d != %d]", buffer.sz, dataStart+sz)
 	}
 	wm := &wireMessage{
 		seq:    util.ReadInt32(buffer.data[0:4]),
 		mt:     messageType(buffer.data[4]),
-		data:   buffer.data[headerSz : headerSz+sz],
+		data:   buffer.data[dataStart : dataStart+sz],
 		buffer: buffer,
 	}
 	return wm, nil
@@ -121,11 +121,11 @@ func (self *wireMessage) insertData(data []byte) error {
 	if self.buffer.sz < self.buffer.uz+uint32(dataSz) {
 		return errors.Errorf("short buffer for insert [%d < %d]", self.buffer.sz, self.buffer.uz+uint32(dataSz))
 	}
-	for i := self.buffer.uz - 1; i >= headerSz; i-- {
+	for i := self.buffer.uz - 1; i >= dataStart; i-- {
 		self.buffer.data[i+uint32(dataSz)] = self.buffer.data[i]
 	}
 	for i := 0; i < int(dataSz); i++ {
-		self.buffer.data[headerSz+i] = data[i]
+		self.buffer.data[dataStart+i] = data[i]
 	}
 	self.buffer.uz = self.buffer.uz + uint32(dataSz)
 	return nil
