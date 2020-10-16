@@ -56,6 +56,48 @@ func TestHelloResponse(t *testing.T) {
 	assert.Equal(t, int32(11), a[0].end)
 }
 
+func TestAck(t *testing.T) {
+	p := newPool("test", 1024, nil)
+	rtt := uint16(332)
+	wm, err := newAck([]ack{{1, 1}, {3, 5}}, 10240, &rtt, p)
+	assert.NoError(t, err)
+	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
+
+	wmOut, err := decodeHeader(wm.buffer)
+	assert.NoError(t, err)
+	a, rxPortalSz, rttOut, err := wmOut.asAck()
+	assert.NoError(t, err)
+	assert.Equal(t, int32(-1), wmOut.seq)
+	assert.Equal(t, ACK, wmOut.messageType())
+	assert.Equal(t, 2, len(a))
+	assert.Equal(t, int32(1), a[0].start)
+	assert.Equal(t, int32(1), a[0].end)
+	assert.Equal(t, int32(3), a[1].start)
+	assert.Equal(t, int32(5), a[1].end)
+	assert.Equal(t, int32(10240), rxPortalSz)
+	assert.NotNil(t, rttOut)
+	assert.Equal(t, rtt, *rttOut)
+}
+
+func TestAckNoRTT(t *testing.T) {
+	p := newPool("test", 1024, nil)
+	wm, err := newAck([]ack{{63, 64}}, 0, nil, p)
+	assert.NoError(t, err)
+	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
+
+	wmOut, err := decodeHeader(wm.buffer)
+	assert.NoError(t, err)
+	a, rxPortalSz, rttOut, err := wmOut.asAck()
+	assert.NoError(t, err)
+	assert.Equal(t, int32(-1), wmOut.seq)
+	assert.Equal(t, ACK, wmOut.messageType())
+	assert.Equal(t, 1, len(a))
+	assert.Equal(t, int32(63), a[0].start)
+	assert.Equal(t, int32(64), a[0].end)
+	assert.Equal(t, int32(0), rxPortalSz)
+	assert.Nil(t, rttOut)
+}
+
 func TestWireMessageInsertData(t *testing.T) {
 	p := newPool("test", 1024, nil)
 	wm := &wireMessage{seq: 0, mt: DATA, buffer: p.get()}

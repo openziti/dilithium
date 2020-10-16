@@ -78,7 +78,7 @@ func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage
 		mt:     ACK,
 		buffer: p.get(),
 	}
-	var rttSz uint32
+	rttSz := uint32(0)
 	if rtt != nil {
 		if wm.buffer.sz < dataStart+2 {
 			return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, dataStart+2)
@@ -87,7 +87,7 @@ func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage
 		util.WriteUint16(wm.buffer.data[dataStart:], *rtt)
 		rttSz = 2
 	}
-	var acksSz uint32
+	acksSz := uint32(0)
 	if len(acks) > 0 {
 		acksSz, err = encodeAcks(acks, wm.buffer.data[dataStart+rttSz:])
 		if err != nil {
@@ -97,8 +97,8 @@ func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage
 	if dataStart+rttSz+acksSz > wm.buffer.sz {
 		return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, dataStart+acksSz)
 	}
-	util.WriteInt32(wm.buffer.data[dataStart+acksSz:], int32(rxPortalSz))
-	return wm.encodeHeader(uint16(acksSz + 4))
+	util.WriteInt32(wm.buffer.data[dataStart+rttSz+acksSz:], rxPortalSz)
+	return wm.encodeHeader(uint16(rttSz + acksSz + 4))
 }
 
 func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err error) {
@@ -110,11 +110,12 @@ func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err er
 		if self.buffer.uz < dataStart+2 {
 			return nil, 0, nil, errors.Errorf("short buffer for ack decode [%d < %d]", self.buffer.uz, dataStart+2)
 		}
-		util.ReadUint16(self.buffer.data[dataStart:])
+		rtt = new(uint16)
+		*rtt = util.ReadUint16(self.buffer.data[dataStart:])
 		i += 2
 	}
 	var acksSz uint32
-	a, acksSz, err = decodeAcks(self.buffer.data[i:])
+	a, acksSz, err = decodeAcks(self.buffer.data[dataStart+i:])
 	if err != nil {
 		return nil, 0, nil, errors.Wrap(err, "error decoding acks")
 	}
@@ -122,7 +123,7 @@ func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err er
 	if self.buffer.uz < i+4 {
 		return nil, 0, nil, errors.Errorf("short buffer for rxPortalSz decode [%d < %d]", self.buffer.uz, i+4)
 	}
-	rxPortalSz = util.ReadInt32(self.buffer.data[i:])
+	rxPortalSz = util.ReadInt32(self.buffer.data[dataStart+i:])
 	return
 }
 
