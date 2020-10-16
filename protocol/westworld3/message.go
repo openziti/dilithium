@@ -23,6 +23,8 @@ const (
 	CLOSE
 )
 
+const messageTypeMask = byte(0x7)
+
 type messageFlag uint8
 
 const (
@@ -52,6 +54,43 @@ func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) 
 	return wm.encodeHeader(uint16(acksSz + helloSz))
 }
 
+func (self *wireMessage) asHello() (h hello, a []ack, err error) {
+	if self.messageType() != HELLO {
+		return hello{}, nil, errors.Errorf("unexpected message type [%d], expected HELLO", self.messageType())
+	}
+	i := uint32(0)
+	if self.hasFlag(INLINE_ACK) {
+		a, i, err = decodeAcks(self.data)
+		if err != nil {
+			return hello{}, nil, errors.Wrap(err, "error decoding acks")
+		}
+	}
+	h, _, err = decodeHello(self.data[i:])
+	if err != nil {
+		return hello{}, nil, errors.Wrap(err, "error decoding hello")
+	}
+	return
+}
+
+func newAck(acks []ack, rxPortalSz int, pool *pool) (wm *wireMessage, err error) {
+	wm = &wireMessage{
+		seq: -1,
+		mt:  ACK,
+	}
+	var acksSz uint32
+	if len(acks) > 0 {
+		acksSz, err = encodeAcks(acks, wm.buffer.data[headerSz:])
+		if err != nil {
+			return nil, errors.Wrap(err, "error encoding acks")
+		}
+	}
+	if headerSz+acksSz > wm.buffer.sz {
+		return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buffer.sz, headerSz+acksSz)
+	}
+	util.WriteInt32(wm.buffer.data[headerSz+acksSz:], int32(rxPortalSz))
+	return wm.encodeHeader(uint16(acksSz + 4))
+}
+
 func (self *wireMessage) encodeHeader(dataSz uint16) (*wireMessage, error) {
 	if self.buffer.sz < uint32(headerSz+dataSz) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", self.buffer.sz, headerSz+dataSz)
@@ -63,7 +102,7 @@ func (self *wireMessage) encodeHeader(dataSz uint16) (*wireMessage, error) {
 	return self, nil
 }
 
-func decode(buffer *buffer) (*wireMessage, error) {
+func decodeHeader(buffer *buffer) (*wireMessage, error) {
 	sz := util.ReadUint16(buffer.data[5:headerSz])
 	if uint32(headerSz+sz) > buffer.uz {
 		return nil, errors.Errorf("short buffer read [%d != %d]", buffer.sz, headerSz+sz)
@@ -102,6 +141,10 @@ func (self *wireMessage) appendData(data []byte) error {
 	}
 	self.buffer.uz = self.buffer.uz + uint32(dataSz)
 	return nil
+}
+
+func (self *wireMessage) messageType() messageType {
+	return messageType(byte(self.mt) & messageTypeMask)
 }
 
 func (self *wireMessage) setFlag(flag messageFlag) {

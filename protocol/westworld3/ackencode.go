@@ -78,31 +78,31 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 	return i, nil
 }
 
-func decodeAcks(data []byte) (acks []ack, err error) {
+func decodeAcks(data []byte) (acks []ack, sz uint32, err error) {
 	dataSz := uint32(len(data))
 	if dataSz < 4 {
-		return nil, errors.Errorf("short ack buffer [%d < 4]", dataSz)
+		return nil, 0, errors.Errorf("short ack buffer [%d < 4]", dataSz)
 	}
 
 	if data[0]&ackSeriesMarker == 0 {
 		seq := util.ReadInt32(data[0:4])
 		acks = append(acks, ack{seq, seq})
-		return acks, nil
+		return acks, 4, nil
 
 	} else {
 		seriesSz := int(data[0] ^ ackSeriesMarker)
-		o := 1
+		sz = 1
 		for i := 0; i < seriesSz; i++ {
-			first := util.ReadInt32(data[o : o+4])
+			first := util.ReadInt32(data[sz : sz+4])
 			if uint32(first)&sequenceRangeMarker == sequenceRangeMarker {
-				o += 4
-				second := util.ReadInt32(data[o : o+4])
+				sz += 4
+				second := util.ReadInt32(data[sz : sz+4])
 				acks = append(acks, ack{int32(uint32(first) & sequenceRangeInvert), int32(uint32(second) & sequenceRangeInvert)})
 
 			} else {
 				acks = append(acks, ack{int32(uint32(first) & sequenceRangeInvert), int32(uint32(first) & sequenceRangeInvert)})
 			}
-			o += 4
+			sz += 4
 		}
 	}
 	return

@@ -15,7 +15,7 @@ func TestHelloEncodeDecode(t *testing.T) {
 
 	fmt.Println(hex.Dump(data))
 
-	outHello, err2 := decodeHello(data)
+	outHello, _, err2 := decodeHello(data)
 	assert.NoError(t, err2)
 	assert.Equal(t, uint32(9006), outHello.version)
 	assert.Equal(t, uint8(0xF), outHello.profile)

@@ -37,7 +37,7 @@ func TestSingleEqualAck(t *testing.T) {
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, err := decodeAcks(data)
+	acksOut, _, err := decodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, acksIn, acksOut)
 }
@@ -53,7 +53,7 @@ func TestSingleRangeAck(t *testing.T) {
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, err := decodeAcks(data)
+	acksOut, _, err := decodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, acksIn, acksOut)
 }
@@ -69,7 +69,7 @@ func TestSingleRangeSingle(t *testing.T) {
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, err := decodeAcks(data)
+	acksOut, _, err := decodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, acksIn, acksOut)
 }
@@ -82,7 +82,7 @@ func TestFull127(t *testing.T) {
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, err := decodeAcks(data)
+	acksOut, _, err := decodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, sampleAcks, acksOut)
 }
@@ -108,7 +108,7 @@ func benchmarkAckEncoderDecoder(sz int, b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-		_, err = decodeAcks(benchmarkData)
+		_, _, err = decodeAcks(benchmarkData)
 		if err != nil {
 			panic(err)
 		}

@@ -20,10 +20,10 @@ func encodeHello(hello hello, data []byte) (n uint32, err error) {
 	return 5, nil
 }
 
-func decodeHello(data []byte) (hello, error) {
+func decodeHello(data []byte) (hello, uint32, error) {
 	dataSz := len(data)
 	if dataSz < 5 {
-		return hello{}, errors.Errorf("short hello buffer [%d < 4]", dataSz)
+		return hello{}, 0, errors.Errorf("short hello buffer [%d < 4]", dataSz)
 	}
-	return hello{util.ReadUint32(data), data[4]}, nil
+	return hello{util.ReadUint32(data), data[4]}, 5, nil
 }

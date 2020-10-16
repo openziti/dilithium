@@ -1,3 +1,3 @@
 package westworld3
 
-const protocolVersion = 1
+const protocolVersion = uint32(1)

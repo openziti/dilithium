@@ -17,12 +17,22 @@ func init() {
 var wireMessageBenchmarkData [16 * 1024]byte
 var wireMessageBenchmarkPool *pool
 
-func TestInitialHello(t *testing.T) {
+func TestHello(t *testing.T) {
 	p := newPool("test", 1024, nil)
 	wm, err := newHello(11, hello{protocolVersion, 6}, nil, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 	assert.Equal(t, uint32(headerSz+5), wm.buffer.uz)
+
+	wmOut, err := decodeHeader(wm.buffer)
+	assert.NoError(t, err)
+	h, a, err := wmOut.asHello()
+	assert.NoError(t, err)
+	assert.Equal(t, int32(11), wmOut.seq)
+	assert.Equal(t, HELLO, wmOut.messageType())
+	assert.Equal(t, protocolVersion, h.version)
+	assert.Equal(t, uint8(6), h.profile)
+	assert.Equal(t, 0, len(a))
 }
 
 func TestHelloResponse(t *testing.T) {
@@ -32,6 +42,18 @@ func TestHelloResponse(t *testing.T) {
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 	assert.Equal(t, uint32(headerSz+4+5), wm.buffer.uz)
 	assert.True(t, wm.hasFlag(INLINE_ACK))
+
+	wmOut, err := decodeHeader(wm.buffer)
+	assert.NoError(t, err)
+	h, a, err := wmOut.asHello()
+	assert.NoError(t, err)
+	assert.Equal(t, int32(12), wmOut.seq)
+	assert.Equal(t, HELLO, wmOut.messageType())
+	assert.Equal(t, protocolVersion, h.version)
+	assert.Equal(t, uint8(6), h.profile)
+	assert.Equal(t, 1, len(a))
+	assert.Equal(t, int32(11), a[0].start)
+	assert.Equal(t, int32(11), a[0].end)
 }
 
 func TestWireMessageInsertData(t *testing.T) {
