@@ -8,7 +8,6 @@ import (
 type wireMessage struct {
 	seq    int32
 	mt     messageType
-	data   []byte
 	buffer *buffer
 }
 
@@ -60,12 +59,12 @@ func (self *wireMessage) asHello() (h hello, a []ack, err error) {
 	}
 	i := uint32(0)
 	if self.hasFlag(INLINE_ACK) {
-		a, i, err = decodeAcks(self.data)
+		a, i, err = decodeAcks(self.buffer.data[dataStart:])
 		if err != nil {
 			return hello{}, nil, errors.Wrap(err, "error decoding acks")
 		}
 	}
-	h, _, err = decodeHello(self.data[i:])
+	h, _, err = decodeHello(self.buffer.data[dataStart+i:])
 	if err != nil {
 		return hello{}, nil, errors.Wrap(err, "error decoding hello")
 	}
@@ -146,7 +145,6 @@ func decodeHeader(buffer *buffer) (*wireMessage, error) {
 	wm := &wireMessage{
 		seq:    util.ReadInt32(buffer.data[0:4]),
 		mt:     messageType(buffer.data[4]),
-		data:   buffer.data[dataStart : dataStart+sz],
 		buffer: buffer,
 	}
 	return wm, nil
