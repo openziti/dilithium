@@ -126,7 +126,7 @@ func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err er
 	return
 }
 
-func (self *wireMessage) newData(seq int32, data []byte, p *pool) (wm *wireMessage, err error) {
+func newData(seq int32, data []byte, p *pool) (wm *wireMessage, err error) {
 	dataSz := uint32(len(data))
 	wm = &wireMessage{
 		seq:    seq,
@@ -136,7 +136,7 @@ func (self *wireMessage) newData(seq int32, data []byte, p *pool) (wm *wireMessa
 	if wm.buffer.sz < dataStart+dataSz {
 		return nil, errors.Errorf("short buffer for data [%d < %d]", wm.buffer.sz, dataStart+dataSz)
 	}
-	copy(wm.buffer.data[:dataStart], data)
+	copy(wm.buffer.data[dataStart:], data)
 	return wm.encodeHeader(uint16(dataSz))
 }
 
