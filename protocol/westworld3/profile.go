@@ -1,5 +1,9 @@
 package westworld3
 
+import "github.com/pkg/errors"
+
+const profileVersion = 1
+
 type Profile struct {
 	seqRandom              bool
 	txPortalStartSz        int
@@ -53,4 +57,19 @@ func NewBaselineProfile() *Profile {
 		listenerRxQueueLen:     1024,
 		acceptQueueLen:         1024,
 	}
+}
+
+func (self *Profile) Load(data map[interface{}]interface{}) error {
+	if v, found := data["profile_version"]; found {
+		if i, ok := v.(int); ok {
+			if i != profileVersion {
+				return errors.Errorf("invalid profile version [%d != %d]", i, profileVersion)
+			}
+		} else {
+			return errors.New("invlaid 'profile_version' value")
+		}
+	} else {
+		return errors.New("missing 'profile_version'")
+	}
+	return nil
 }
