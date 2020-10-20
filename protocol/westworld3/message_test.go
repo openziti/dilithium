@@ -114,6 +114,18 @@ func TestData(t *testing.T) {
 	assert.EqualValues(t, wireMessageBenchmarkData[:], data)
 }
 
+func TestClose(t *testing.T) {
+	p := newPool("test", 64, nil)
+	wm, err := newClose(10233, p)
+	assert.NoError(t, err)
+	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
+
+	wmOut, err := decodeHeader(wm.buffer)
+	assert.NoError(t, err)
+	assert.Equal(t, wm.seq, wmOut.seq)
+	assert.Equal(t, CLOSE, wmOut.mt)
+}
+
 func TestWireMessageInsertData(t *testing.T) {
 	p := newPool("test", 1024, nil)
 	wm := &wireMessage{seq: 0, mt: DATA, buffer: p.get()}

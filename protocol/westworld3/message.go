@@ -147,6 +147,15 @@ func (self *wireMessage) asData() (data []byte, err error) {
 	return self.buffer.data[dataStart:self.buffer.uz], nil
 }
 
+func newClose(seq int32, p *pool) (wm *wireMessage, err error) {
+	wm = &wireMessage{
+		seq:    seq,
+		mt:     CLOSE,
+		buffer: p.get(),
+	}
+	return wm.encodeHeader(0)
+}
+
 func (self *wireMessage) encodeHeader(dataSz uint16) (*wireMessage, error) {
 	if self.buffer.sz < uint32(dataStart+dataSz) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", self.buffer.sz, dataStart+dataSz)
