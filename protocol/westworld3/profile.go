@@ -8,6 +8,22 @@ import (
 
 const profileVersion = 1
 
+var profileRegistry map[byte]*Profile
+
+func init() {
+	profileRegistry = make(map[byte]*Profile)
+	profileRegistry[0] = NewBaselineProfile()
+}
+
+func AddProfile(p *Profile) (byte, error) {
+	nextProfile := len(profileRegistry)
+	if nextProfile > 255 {
+		return 0, errors.New("profile registry full")
+	}
+	profileRegistry[byte(nextProfile)] = p
+	return byte(nextProfile), nil
+}
+
 type Profile struct {
 	RandomizeSeq           bool    `cf:"randomize_seq"`
 	TxPortalStartSz        int     `cf:"tx_portal_start_sz"`

@@ -23,3 +23,13 @@ func TestProfileLoad(t *testing.T) {
 	assert.Equal(t, 4.5, p.TxPortalDupAckScale)
 	fmt.Println(p.Dump())
 }
+
+func TestAddProfile(t *testing.T) {
+	p := NewBaselineProfile()
+	id, err := AddProfile(p)
+	assert.NoError(t, err)
+	assert.Equal(t, byte(1), id)
+	id, err = AddProfile(p)
+	assert.NoError(t, err)
+	assert.Equal(t, byte(2), id)
+}
