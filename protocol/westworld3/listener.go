@@ -97,6 +97,17 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
+	conn, err := newListenerConn(self, self.conn, peer, self.profile)
+	if err != nil {
+		// connect error
+		return
+	}
+
+	self.lock.Lock()
+	self.peers.Put(peer, conn)
+	self.lock.Unlock()
+
+
 }
 
 func addrComparator(i, j interface{}) int {

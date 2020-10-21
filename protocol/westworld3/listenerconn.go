@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"math"
 	"math/big"
 	"net"
@@ -18,9 +19,9 @@ type listenerConn struct {
 	seq      *util.Sequence
 	// txPortal
 	// rxPortal
-	pool     *pool
-	profile  *Profile
-	ii       InstrumentInstance
+	pool    *pool
+	profile *Profile
+	ii      InstrumentInstance
 }
 
 func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*listenerConn, error) {
@@ -52,4 +53,31 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 
 func (self *listenerConn) queue(wm *wireMessage) {
 	self.rxQueue <- wm
+}
+
+func (self *listenerConn) rxer() {
+	logrus.Infof("started")
+	defer logrus.Warn("exited")
+
+	for {
+		wm, ok := <-self.rxQueue
+		if !ok {
+			return
+		}
+
+		if wm.mt == DATA || wm.mt == CLOSE {
+			// self.rxPortal.rx(wm)
+
+		} else if wm.mt == ACK {
+			//acks, rxPortalSz, rtt, err := wm.asAck()
+			// process acks
+			// process rxPortalSz
+			// process rtt
+			wm.buffer.unref()
+
+		} else {
+			// unexpected message type
+			wm.buffer.unref()
+		}
+	}
 }
