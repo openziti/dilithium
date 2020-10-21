@@ -3,6 +3,7 @@ package westworld3
 import (
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"net"
 )
 
 type wireMessage struct {
@@ -33,6 +34,39 @@ const (
 )
 
 const dataStart = 7
+
+func readWireMessage(conn *net.UDPConn, pool *pool) (wm *wireMessage, peer *net.UDPAddr, err error) {
+	buffer := pool.get()
+	var n int
+	n, peer, err = conn.ReadFromUDP(buffer.data)
+	if err != nil {
+		return nil, peer, errors.Wrap(err, "peer read")
+	}
+	buffer.uz = uint32(n)
+
+	wm, err = decodeHeader(buffer)
+	if err != nil {
+		return nil, peer, errors.Wrap(err, "decode")
+	}
+
+	return
+}
+
+func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr) error {
+	if wm.buffer.uz < dataStart {
+		return errors.New("truncated buffer")
+	}
+
+	n, err := conn.WriteToUDP(wm.buffer.data[:wm.buffer.uz], peer)
+	if err != nil {
+		return errors.Wrap(err, "peer write")
+	}
+	if uint32(n) != wm.buffer.uz {
+		return errors.Errorf("short peer write [%d != %d]", n, wm.buffer.uz)
+	}
+
+	return nil
+}
 
 func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) {
 	wm = &wireMessage{
