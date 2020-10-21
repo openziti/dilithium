@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
 )
@@ -72,7 +73,30 @@ func (self *listener) Addr() net.Addr {
 }
 
 func (self *listener) run() {
-	// readWireMessage
+	logrus.Infof("started")
+	defer logrus.Warn("exited")
+
+	for {
+		if wm, peer, err := readWireMessage(self.conn, self.pool); err == nil {
+			conn, found := self.peers.Get(peer)
+			if found {
+				lc := conn.(*listenerConn)
+				lc.queue(wm)
+			} else {
+			if wm.mt == HELLO {
+				go self.hello(wm, peer)
+
+			} else {
+				wm.buffer.unref()
+			}
+		}
+	} else {
+		// read error
+		}
+	}
+}
+
+func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 }
 
 func addrComparator(i, j interface{}) int {
