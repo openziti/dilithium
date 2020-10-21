@@ -1,6 +1,9 @@
 package westworld3
 
-import "github.com/pkg/errors"
+import (
+	"fmt"
+	"github.com/pkg/errors"
+)
 
 const profileVersion = 1
 
@@ -72,4 +75,47 @@ func (self *Profile) Load(data map[interface{}]interface{}) error {
 		return errors.New("missing 'profile_version'")
 	}
 	return nil
+}
+
+func (self *Profile) Dump() string {
+	out := "westworld3.Profile {\n"
+	out += self.dumpValue("seq_random", self.seqRandom)
+	out += self.dumpValue("tx_portal_start_sz", self.txPortalStartSz)
+	out += self.dumpValue("tx_portal_min_sz", self.txPortalMinSz)
+	out += self.dumpValue("tx_portal_max_sz", self.txPortalMaxSz)
+	out += self.dumpValue("tx_portal_increase_thresh", self.txPortalIncreaseThresh)
+	out += self.dumpValue("tx_portal_increase_scale", self.txPortalIncreaseScale)
+	out += self.dumpValue("tx_portal_dup_ack_thresh", self.txPortalDupAckThresh)
+	out += self.dumpValue("tx_portal_retx_thresh", self.txPortalRetxThresh)
+	out += self.dumpValue("tx_portal_retx_scale", self.txPortalRetxScale)
+	out += self.dumpValue("retx_start_ms", self.retxStartMs)
+	out += self.dumpValue("retx_scale", self.retxScale)
+	out += self.dumpValue("retx_add_ms", self.retxAddMs)
+	out += self.dumpValue("rtt_probe_ms", self.rttProbeMs)
+	out += self.dumpValue("rtt_probe_avg", self.rttProbeAvg)
+	out += self.dumpValue("max_segment_sz", self.maxSegmentSz)
+	out += self.dumpValue("pool_buffer_sz", self.poolBufferSz)
+	out += self.dumpValue("rx_buffer_sz", self.rxBufferSz)
+	out += self.dumpValue("tx_buffer_sz", self.txBufferSz)
+	out += self.dumpValue("treeLen", self.treeLen)
+	out += self.dumpValue("readsQueueLen", self.readsQueueLen)
+	out += self.dumpValue("listenerRxQueueLen", self.listenerRxQueueLen)
+	out += self.dumpValue("acceptQueueLen", self.acceptQueueLen)
+	out += "}\n"
+	return out
+}
+
+func (self *Profile) dumpValue(name string, v interface{}) string {
+	var fstr string
+	switch v.(type) {
+	case bool:
+		fstr = "%t"
+	case int:
+		fstr = "%d"
+	case float64:
+		fstr = "%.4f"
+	default:
+		fstr = "%v"
+	}
+	return fmt.Sprintf("\t%-30s "+fstr+"\n", name, v)
 }
