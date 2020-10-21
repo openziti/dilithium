@@ -63,11 +63,7 @@ func Dump(label string, cf interface{}) string {
 	format := fmt.Sprintf("\t%%-%ds %%v\n", maxKeyLength(cfV))
 	for i := 0; i < cfV.NumField(); i++ {
 		if cfV.Field(i).CanInterface() {
-			key := cfV.Type().Field(i).Name
-			tag := cfV.Type().Field(i).Tag.Get("cf")
-			if tag != "" {
-				key = tag
-			}
+			key := keyName(cfV.Type().Field(i))
 			out += fmt.Sprintf(format, key, cfV.Field(i).Interface())
 		}
 	}
