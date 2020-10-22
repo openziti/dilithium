@@ -31,24 +31,14 @@ type txPortal struct {
 	ii           InstrumentInstance
 }
 
-type retxMonitor struct {
-	waiting []*retxSubject
-	ready   *sync.Cond
-}
-
-type retxSubject struct {
-	deadline time.Time
-	wm       *wireMessage
-}
-
 func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, ii InstrumentInstance) *txPortal {
 	p := &txPortal{
 		lock:         new(sync.Mutex),
-		tree:         btree.NewWith(profile.TreeLen, utils.Int32Comparator),
+		tree:         btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
 		capacity:     profile.TxPortalStartSz,
 		rxPortalSz:   -1,
 		retxMs:       profile.RetxStartMs,
-		monitor:      &retxMonitor{},
+		monitor:      nil,
 		closeWaitSeq: -1,
 		closed:       false,
 		conn:         conn,

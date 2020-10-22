@@ -44,7 +44,9 @@ type Profile struct {
 	PoolBufferSz           int     `cf:"pool_buffer_sz"`
 	RxBufferSz             int     `cf:"rx_buffer_sz"`
 	TxBufferSz             int     `cf:"tx_buffer_sz"`
-	TreeLen                int     `cf:"tree_len"`
+	TxPortalTreeLen        int     `cf:"tx_portal_tree_len"`
+	RetxMonitorTreeLen     int     `cf:"retx_monitor_tree_len"`
+	ListenerPeersTreeLen   int     `cf:"listener_peers_tree_len"`
 	ReadsQueueLen          int     `cf:"reads_queue_len"`
 	ListenerRxQueueLen     int     `cf:"listener_rx_queue_len"`
 	AcceptQueueLen         int     `cf:"accept_queue_len"`
@@ -72,7 +74,9 @@ func NewBaselineProfile() *Profile {
 		PoolBufferSz:           64 * 1024,
 		RxBufferSz:             16 * 1024 * 1024,
 		TxBufferSz:             16 * 1024 * 1024,
-		TreeLen:                1024,
+		TxPortalTreeLen:        16 * 1024,
+		RetxMonitorTreeLen:     64 * 1024,
+		ListenerPeersTreeLen:   1024,
 		ReadsQueueLen:          1024,
 		ListenerRxQueueLen:     1024,
 		AcceptQueueLen:         1024,

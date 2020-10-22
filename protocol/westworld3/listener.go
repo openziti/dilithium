@@ -42,7 +42,7 @@ func Listen(addr *net.UDPAddr, profileId byte) (net.Listener, error) {
 		lock:        new(sync.Mutex),
 		profile:     profile,
 		profileId:   profileId,
-		peers:       btree.NewWith(profile.TreeLen, addrComparator),
+		peers:       btree.NewWith(profile.ListenerPeersTreeLen, addrComparator),
 		acceptQueue: make(chan net.Conn, profile.AcceptQueueLen),
 		conn:        conn,
 		addr:        addr,
