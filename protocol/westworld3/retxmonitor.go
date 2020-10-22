@@ -60,8 +60,8 @@ type btreeWaitlist struct {
 
 func newBtreeWaitlist() *btreeWaitlist {
 	return &btreeWaitlist{
-		waitlist: btree.NewWith(1024, utils.TimeComparator),
-		deadlines: btree.NewWith(1024, wireMessageComparator),
+		waitlist: btree.NewWith(64*1024, utils.TimeComparator),
+		deadlines: btree.NewWith(64*1024, wireMessageComparator),
 	}
 }
 

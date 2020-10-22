@@ -5,34 +5,44 @@ import (
 	"time"
 )
 
-var waitlistBenchmarkToAdd []*retxSubject
-func init() {
-	for i := 0; i < 1024; i++ {
-		waitlistBenchmarkToAdd = append(waitlistBenchmarkToAdd, &retxSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+func benchmarkArrayWaitlist(sz int, b *testing.B) {
+	var toAdd []*retxSubject
+	for i := 0; i < sz; i++ {
+		toAdd = append(toAdd, &retxSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
 		time.Sleep(1 * time.Millisecond)
 	}
-}
-
-func BenchmarkArrayWaitlist_Add(b *testing.B) {
 	aw := &arrayWaitlist{}
+	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		for i := 0; i < 1024; i++ {
-			if err := aw.Add(waitlistBenchmarkToAdd[i].wm, waitlistBenchmarkToAdd[i].deadline); err != nil {
+		for i := 0; i < sz; i++ {
+			if err := aw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
 				panic(err)
 			}
 		}
 	}
 }
+func BenchmarkArrayWaitlist_Add_1024(b *testing.B)  { benchmarkArrayWaitlist(1024, b) }
+func BenchmarkArrayWaitlist_Add_4096(b *testing.B)  { benchmarkArrayWaitlist(4096, b) }
+func BenchmarkArrayWaitlist_Add_16384(b *testing.B) { benchmarkArrayWaitlist(16384, b) }
 
-func BenchmarkBtreeWaitlist_Add(b *testing.B) {
+func benchmarkBtreeWaitlist_Add(sz int, b *testing.B) {
+	var toAdd []*retxSubject
+	for i := 0; i < sz; i++ {
+		toAdd = append(toAdd, &retxSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+		time.Sleep(1 * time.Millisecond)
+	}
 	btw := newBtreeWaitlist()
+	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		for i := 0; i < 1024; i++ {
-			if err := btw.Add(waitlistBenchmarkToAdd[i].wm, waitlistBenchmarkToAdd[i].deadline); err != nil {
+		for i := 0; i < sz; i++ {
+			if err := btw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
 				panic(err)
 			}
 		}
 	}
 }
+func BenchmarkBtreeWaitlist_Add_1024(b *testing.B)  { benchmarkBtreeWaitlist_Add(1024, b) }
+func BenchmarkBtreeWaitlist_Add_4096(b *testing.B)  { benchmarkBtreeWaitlist_Add(4096, b) }
+func BenchmarkBtreeWaitlist_Add_16384(b *testing.B) { benchmarkBtreeWaitlist_Add(16384, b) }
