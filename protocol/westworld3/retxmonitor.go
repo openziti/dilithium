@@ -55,10 +55,14 @@ func (self *arrayWaitlist) Next() (*wireMessage, time.Time) {
 
 type btreeWaitlist struct {
 	waitlist *btree.Tree
+	deadlines *btree.Tree
 }
 
 func newBtreeWaitlist() *btreeWaitlist {
-	return &btreeWaitlist{waitlist: btree.NewWith(1024, utils.TimeComparator)}
+	return &btreeWaitlist{
+		waitlist: btree.NewWith(1024, utils.TimeComparator),
+		deadlines: btree.NewWith(1024, wireMessageComparator),
+	}
 }
 
 func (self *btreeWaitlist) Add(wm *wireMessage, t time.Time) error {
@@ -78,6 +82,7 @@ func (self *btreeWaitlist) Add(wm *wireMessage, t time.Time) error {
 			vAsserted.Put(wm, nil)
 		}
 	}
+	self.deadlines.Put(wm, t)
 	return nil
 }
 
