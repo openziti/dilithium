@@ -86,6 +86,51 @@ func (self *btreeWaitlist) Add(wm *wireMessage, t time.Time) error {
 	return nil
 }
 
+func (self *btreeWaitlist) Remove(wm *wireMessage) {
+	if t, found := self.deadlines.Get(wm); found {
+		if v, found := self.waitlist.Get(t); found {
+			switch v.(type) {
+			case *wireMessage:
+				self.waitlist.Remove(t)
+
+			case *btree.Tree:
+				bt := v.(*btree.Tree)
+				bt.Remove(wm)
+				if bt.Size() < 1 {
+					self.waitlist.Remove(t)
+				}
+			}
+			self.deadlines.Remove(wm)
+		}
+	}
+}
+
+func (self *btreeWaitlist) Next() (*wireMessage, time.Time) {
+	t := self.waitlist.LeftKey().(time.Time)
+	v, _ := self.waitlist.Get(t)
+	switch v.(type) {
+	case *wireMessage:
+		wm := v.(*wireMessage)
+		self.waitlist.Remove(t)
+		self.deadlines.Remove(wm)
+		return wm, t
+
+	case *btree.Tree:
+		bt := v.(*btree.Tree)
+		wm := bt.LeftKey().(*wireMessage)
+		if bt.Size() < 2 {
+			self.waitlist.Remove(t)
+		} else {
+			bt.Remove(wm)
+		}
+		self.deadlines.Remove(wm)
+		return wm, t
+
+	default:
+		panic("should not happen")
+	}
+}
+
 func wireMessageComparator(a interface{}, b interface{}) int {
 	aAsserted := a.(*wireMessage)
 	bAsserted := b.(*wireMessage)
