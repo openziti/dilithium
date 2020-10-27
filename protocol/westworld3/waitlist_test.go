@@ -15,7 +15,12 @@ func TestArrayWaitlist_Add_Next(t *testing.T) {
 	assert.NotNil(t, wmOut)
 	assert.Equal(t, int32(99), wmOut.seq)
 	assert.Equal(t, deadline, deadlineOut)
+
+	wmOut, deadlineOut = aw.Next()
+	assert.Nil(t, wmOut)
+	assert.Equal(t, time.Time{}, deadlineOut)
 }
+
 
 func benchmarkArrayWaitlist(sz int, b *testing.B) {
 	toAdd := make([]*waitlistSubject, 0)
