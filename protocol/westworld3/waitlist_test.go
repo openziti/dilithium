@@ -11,6 +11,7 @@ func TestArrayWaitlist_Add_Next(t *testing.T) {
 	deadline := time.Now().Add(200 * time.Millisecond)
 	err := aw.Add(&wireMessage{seq: int32(99)}, deadline)
 	assert.NoError(t, err)
+
 	wmOut, deadlineOut := aw.Next()
 	assert.NotNil(t, wmOut)
 	assert.Equal(t, int32(99), wmOut.seq)
@@ -21,6 +22,18 @@ func TestArrayWaitlist_Add_Next(t *testing.T) {
 	assert.Equal(t, time.Time{}, deadlineOut)
 }
 
+func TestArrayWaitlist_Add_Remove(t *testing.T) {
+	aw := &arrayWaitlist{}
+	wm := &wireMessage{seq: int32(66)}
+	deadline := time.Now().Add(200 * time.Millisecond)
+	err := aw.Add(wm, deadline)
+	assert.NoError(t, err)
+
+	aw.Remove(wm)
+	wmOut, deadlineOut := aw.Next()
+	assert.Nil(t, wmOut)
+	assert.Equal(t, time.Time{}, deadlineOut)
+}
 
 func benchmarkArrayWaitlist(sz int, b *testing.B) {
 	toAdd := make([]*waitlistSubject, 0)
