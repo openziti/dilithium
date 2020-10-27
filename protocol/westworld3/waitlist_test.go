@@ -35,7 +35,7 @@ func TestArrayWaitlist_Add_Remove(t *testing.T) {
 	assert.Equal(t, time.Time{}, deadlineOut)
 }
 
-func benchmarkArrayWaitlist(sz int, b *testing.B) {
+func benchmarkArrayWaitlist_Add_Next(sz int, b *testing.B) {
 	toAdd := make([]*waitlistSubject, 0)
 	for i := 0; i < sz; i++ {
 		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
@@ -54,6 +54,64 @@ func benchmarkArrayWaitlist(sz int, b *testing.B) {
 		}
 	}
 }
-func BenchmarkArrayWaitlist_1024(b *testing.B)  { benchmarkArrayWaitlist(1024, b) }
-func BenchmarkArrayWaitlist_4096(b *testing.B)  { benchmarkArrayWaitlist(4096, b) }
-func BenchmarkArrayWaitlist_16384(b *testing.B) { benchmarkArrayWaitlist(16384, b) }
+func BenchmarkArrayWaitlist_Add_Next_1024(b *testing.B)  { benchmarkArrayWaitlist_Add_Next(1024, b) }
+func BenchmarkArrayWaitlist_Add_Next_4096(b *testing.B)  { benchmarkArrayWaitlist_Add_Next(4096, b) }
+func BenchmarkArrayWaitlist_Add_Next_16384(b *testing.B) { benchmarkArrayWaitlist_Add_Next(16384, b) }
+
+func benchmarkArrayWaitlist_Add_Remove(sz int, b *testing.B) {
+	toAdd := make([]*waitlistSubject, 0)
+	for i := 0; i < sz; i++ {
+		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+	}
+	aw := &arrayWaitlist{}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for i := 0; i < sz; i++ {
+			if err := aw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
+				panic(err)
+			}
+		}
+		for i := 0; i < sz; i++ {
+			aw.Remove(toAdd[i].wm)
+		}
+	}
+}
+func BenchmarkArrayWaitlist_Add_Remove_1024(b *testing.B) {
+	benchmarkArrayWaitlist_Add_Remove(1024, b)
+}
+func BenchmarkArrayWaitlist_Add_Remove_4096(b *testing.B) {
+	benchmarkArrayWaitlist_Add_Remove(4096, b)
+}
+func BenchmarkArrayWaitlist_Add_Remove_16384(b *testing.B) {
+	benchmarkArrayWaitlist_Add_Remove(16384, b)
+}
+
+func benchmarkArrayWaitlist_Add_Remove_Reverse(sz int, b *testing.B) {
+	toAdd := make([]*waitlistSubject, 0)
+	for i := 0; i < sz; i++ {
+		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+	}
+	aw := &arrayWaitlist{}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for i := 0; i < sz; i++ {
+			if err := aw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
+				panic(err)
+			}
+		}
+		for i := sz - 1; i >= 0; i-- {
+			aw.Remove(toAdd[i].wm)
+		}
+	}
+}
+func BenchmarkArrayWaitlist_Add_Remove_Reverse_1024(b *testing.B) {
+	benchmarkArrayWaitlist_Add_Remove_Reverse(1024, b)
+}
+func BenchmarkArrayWaitlist_Add_Remove_Reverse_4096(b *testing.B) {
+	benchmarkArrayWaitlist_Add_Remove_Reverse(4096, b)
+}
+func BenchmarkArrayWaitlist_Add_Remove_Reverse_16384(b *testing.B) {
+	benchmarkArrayWaitlist_Add_Remove_Reverse(16384, b)
+}
