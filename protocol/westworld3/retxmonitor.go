@@ -81,6 +81,8 @@ func (self *btreeWaitlist) Add(wm *wireMessage, t time.Time) error {
 			vAsserted := v.(*btree.Tree)
 			vAsserted.Put(wm, nil)
 		}
+	}  else {
+		self.waitlist.Put(t, wm)
 	}
 	self.deadlines.Put(wm, t)
 	return nil
@@ -107,7 +109,7 @@ func (self *btreeWaitlist) Remove(wm *wireMessage) {
 
 func (self *btreeWaitlist) Next() (*wireMessage, time.Time) {
 	t := self.waitlist.LeftKey().(time.Time)
-	v, _ := self.waitlist.Get(t)
+	v := self.waitlist.LeftValue()
 	switch v.(type) {
 	case *wireMessage:
 		wm := v.(*wireMessage)
@@ -118,10 +120,9 @@ func (self *btreeWaitlist) Next() (*wireMessage, time.Time) {
 	case *btree.Tree:
 		bt := v.(*btree.Tree)
 		wm := bt.LeftKey().(*wireMessage)
-		if bt.Size() < 2 {
+		bt.Remove(wm)
+		if bt.Size() < 1 {
 			self.waitlist.Remove(t)
-		} else {
-			bt.Remove(wm)
 		}
 		self.deadlines.Remove(wm)
 		return wm, t
