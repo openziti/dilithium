@@ -160,29 +160,47 @@ func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err er
 	return
 }
 
-func newData(seq int32, data []byte, p *pool) (wm *wireMessage, err error) {
+func newData(seq int32, rtt *uint16, data []byte, p *pool) (wm *wireMessage, err error) {
 	dataSz := uint32(len(data))
 	wm = &wireMessage{
 		seq:    seq,
 		mt:     DATA,
 		buffer: p.get(),
 	}
-	if wm.buffer.sz < dataStart+dataSz {
-		return nil, errors.Errorf("short buffer for data [%d < %d]", wm.buffer.sz, dataStart+dataSz)
+	rttSz := uint32(0)
+	if rtt != nil {
+		if wm.buffer.sz < dataStart+2 {
+			return nil, errors.Errorf("short buffer for rtt [%d < %d]", wm.buffer.sz, wm.buffer.sz+dataStart+2)
+		}
+		wm.setFlag(RTT)
+		util.WriteUint16(wm.buffer.data[dataStart:], *rtt)
+		rttSz = 2
 	}
-	copy(wm.buffer.data[dataStart:], data)
-	return wm.encodeHeader(uint16(dataSz))
+	if wm.buffer.sz < dataStart+rttSz+dataSz {
+		return nil, errors.Errorf("short buffer for data [%d < %d]", wm.buffer.sz, dataStart+rttSz+dataSz)
+	}
+	copy(wm.buffer.data[dataStart+rttSz:], data)
+	return wm.encodeHeader(uint16(rttSz+dataSz))
 }
 
-func (self *wireMessage) asData() (data []byte, err error) {
+func (self *wireMessage) asData() (data []byte, rtt *uint16, err error) {
 	if self.messageType() != DATA {
-		return nil, errors.Errorf("unexpected message type [%d], expected DATA", self.messageType())
+		return nil, nil, errors.Errorf("unexpected message type [%d], expected DATA", self.messageType())
 	}
-	return self.buffer.data[dataStart:self.buffer.uz], nil
+	rttSz := uint32(0)
+	if self.hasFlag(RTT) {
+		if self.buffer.uz < dataStart+2 {
+			return nil, nil, errors.Errorf("short buffer for data decode [%d < %d]", self.buffer.uz, dataStart+2)
+		}
+		rtt = new(uint16)
+		*rtt = util.ReadUint16(self.buffer.data[dataStart:])
+		rttSz = 2
+	}
+	return self.buffer.data[dataStart+rttSz:self.buffer.uz], rtt, nil
 }
 
 func newKeepalive(p *pool) (wm *wireMessage, err error) {
-	return (&wireMessage{seq: -1, mt: KEEPALIVE, buffer:p.get()}).encodeHeader(0)
+	return (&wireMessage{seq: -1, mt: KEEPALIVE, buffer: p.get()}).encodeHeader(0)
 }
 
 func newClose(seq int32, p *pool) (wm *wireMessage, err error) {

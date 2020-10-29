@@ -100,17 +100,20 @@ func TestAckNoRTT(t *testing.T) {
 
 func TestData(t *testing.T) {
 	p := newPool("tooSmall", 1024, nil)
-	_, err := newData(64, wireMessageBenchmarkData[:], p)
+	_, err := newData(64, nil, wireMessageBenchmarkData[:], p)
 	assert.Error(t, err)
 	p = newPool("test", 24*1024, nil)
-	wm, err2 := newData(64, wireMessageBenchmarkData[:], p)
+	rttIn := new(uint16)
+	*rttIn = 200
+	wm, err2 := newData(64, rttIn, wireMessageBenchmarkData[:], p)
 	assert.NoError(t, err2)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 
 	wmOut, err := decodeHeader(wm.buffer)
 	assert.NoError(t, err)
-	data, err := wmOut.asData()
+	data, rttOut, err := wmOut.asData()
 	assert.NoError(t, err)
+	assert.Equal(t, rttIn, rttOut)
 	assert.EqualValues(t, wireMessageBenchmarkData[:], data)
 }
 
