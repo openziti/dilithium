@@ -38,6 +38,7 @@ type Profile struct {
 	RetxStartMs            int     `cf:"retx_start_ms"`
 	RetxScale              float64 `cf:"retx_scale"`
 	RetxAddMs              int     `cf:"retx_add_ms"`
+	RetxBatchMs            int     `cf:"retx_batch_ms"`
 	RttProbeMs             int     `cf:"rtt_probe_ms"`
 	RttProbeAvg            int     `cf:"rtt_probe_avg"`
 	MaxSegmentSz           int     `cf:"max_segment_sz"`
@@ -68,6 +69,7 @@ func NewBaselineProfile() *Profile {
 		RetxStartMs:            200,
 		RetxScale:              2.0,
 		RetxAddMs:              100,
+		RetxBatchMs:            2,
 		RttProbeMs:             50,
 		RttProbeAvg:            8,
 		MaxSegmentSz:           1420,
