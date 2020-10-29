@@ -5,6 +5,7 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/util"
 	"github.com/pkg/errors"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -65,7 +66,34 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	remaining := len(p)
 	n = 0
 	for remaining > 0 {
-		//segmentSz := int(math.Min(float64(remaining), float64(self.profile.MaxSegmentSz)))
+		segmentSz := int(math.Min(float64(remaining), float64(self.profile.MaxSegmentSz)))
+
+		var rtt *uint16
+		if time.Since(self.lastRttProbe).Milliseconds() > int64(self.profile.RttProbeMs) {
+			rtt = new(uint16)
+			*rtt = uint16(time.Now().UnixNano() / int64(time.Millisecond))
+			segmentSz -= 2
+		}
+
+		for math.Min(float64(self.capacity-(self.txPortalSz+segmentSz)), float64(self.capacity-self.rxPortalSz)) < 0 {
+			self.ready.Wait()
+		}
+
+		wm, err := newData(seq.Next(), rtt, p[n:n+segmentSz], self.pool)
+		if err != nil {
+			return 0, errors.Wrap(err, "new data")
+		}
+		self.tree.Put(wm.seq, wm)
+		self.txPortalSz += segmentSz
+
+		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
+			return 0, errors.Wrap(err, "tx")
+		}
+
+		self.monitor.monitor(wm)
+
+		n += segmentSz
+		remaining -= segmentSz
 	}
 
 	return n, nil

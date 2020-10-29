@@ -1,6 +1,7 @@
 package westworld3
 
 import (
+	"github.com/michaelquigley/dilithium/util"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -84,6 +85,9 @@ func (self *retxMonitor) run() {
 					delta := t.Sub(headline).Milliseconds()
 					if delta <= int64(self.profile.RetxBatchMs) {
 						wm, _ := self.waitlist.Next()
+						if wm.hasFlag(RTT) {
+							util.WriteUint16(wm.buffer.data[dataStart:], uint16(time.Now().UnixNano() / int64(time.Millisecond)))
+						}
 
 						if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 							logrus.Errorf("retx (%v)", err)
