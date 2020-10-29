@@ -19,7 +19,7 @@ type retxMonitor struct {
 }
 
 func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock *sync.Mutex) *retxMonitor {
-	return &retxMonitor{
+	rm := &retxMonitor{
 		profile:  profile,
 		ms:       profile.RetxStartMs,
 		conn:     conn,
@@ -28,10 +28,25 @@ func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock
 		lock:     lock,
 		ready:    sync.NewCond(lock),
 	}
+	go rm.run()
+	return rm
 }
 
 func (self *retxMonitor) setMs(ms int) {
 	self.ms = ms
+}
+
+func (self *retxMonitor) monitor(wm *wireMessage) {
+	self.waitlist.Add(wm, self.deadline())
+	self.ready.Broadcast()
+}
+
+func (self *retxMonitor) cancel(wm *wireMessage) {
+	self.waitlist.Remove(wm)
+}
+
+func (self *retxMonitor) deadline() time.Time {
+	return time.Now().Add(time.Duration(int(float64(self.ms)*self.profile.RetxScale)+self.profile.RetxAddMs) * time.Millisecond)
 }
 
 func (self *retxMonitor) run() {
@@ -74,8 +89,7 @@ func (self *retxMonitor) run() {
 							logrus.Errorf("retx (%v)", err)
 						}
 
-						t = time.Now().Add(time.Duration(int(float64(self.ms)*self.profile.RetxScale)+self.profile.RetxAddMs) * time.Millisecond)
-						self.waitlist.Add(wm, t)
+						self.waitlist.Add(wm, self.deadline())
 
 					} else {
 						break
