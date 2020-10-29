@@ -98,3 +98,56 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 
 	return n, nil
 }
+
+func (self *txPortal) ack(peer *net.UDPAddr, seq int32, rxPortalSz int) error {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	if rxPortalSz > -1 {
+		self.rxPortalSz = rxPortalSz
+	}
+
+	if v, found := self.tree.Get(seq); found {
+		wm := v.(*wireMessage)
+		self.monitor.cancel(wm)
+		self.tree.Remove(seq)
+		sz, err := wm.asDataSize()
+		if err != nil {
+			return errors.Wrap(err, "not data")
+		}
+		self.txPortalSz -= int(sz)
+		wm.buffer.unref()
+
+		if wm.seq == self.closeWaitSeq {
+			self.closed = true
+		}
+
+		self.ready.Broadcast()
+
+	} else {
+		// dupack
+	}
+
+	return nil
+}
+
+func (self *txPortal) close(seq *util.Sequence) error {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	if !self.closed {
+		wm, err := newClose(seq.Next(), self.pool)
+		if err != nil {
+			return errors.Wrap(err, "close")
+		}
+		self.closeWaitSeq = wm.seq
+		self.tree.Put(wm.seq, wm)
+		self.monitor.monitor(wm)
+
+		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
+			return errors.Wrap(err, "tx close")
+		}
+	}
+
+	return nil
+}

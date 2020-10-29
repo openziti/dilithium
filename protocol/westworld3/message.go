@@ -199,6 +199,17 @@ func (self *wireMessage) asData() (data []byte, rtt *uint16, err error) {
 	return self.buffer.data[dataStart+rttSz:self.buffer.uz], rtt, nil
 }
 
+func (self *wireMessage) asDataSize() (sz uint32, err error) {
+	if self.messageType() != DATA {
+		return 0, errors.Errorf("unexpected message type [%d], expected DATA", self.messageType())
+	}
+	rttSz := uint32(0)
+	if self.hasFlag(RTT) {
+		rttSz = 2
+	}
+	return self.buffer.uz - (dataStart + rttSz), nil
+}
+
 func newKeepalive(p *pool) (wm *wireMessage, err error) {
 	return (&wireMessage{seq: -1, mt: KEEPALIVE, buffer: p.get()}).encodeHeader(0)
 }

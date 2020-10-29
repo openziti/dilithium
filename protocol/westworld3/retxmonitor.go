@@ -33,7 +33,7 @@ func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock
 	return rm
 }
 
-func (self *retxMonitor) setMs(ms int) {
+func (self *retxMonitor) updateMs(ms int) {
 	self.ms = ms
 }
 
@@ -46,8 +46,9 @@ func (self *retxMonitor) cancel(wm *wireMessage) {
 	self.waitlist.Remove(wm)
 }
 
-func (self *retxMonitor) deadline() time.Time {
-	return time.Now().Add(time.Duration(int(float64(self.ms)*self.profile.RetxScale)+self.profile.RetxAddMs) * time.Millisecond)
+func (self *retxMonitor) close() {
+	self.closed = true
+	self.ready.Broadcast()
 }
 
 func (self *retxMonitor) run() {
@@ -60,12 +61,12 @@ func (self *retxMonitor) run() {
 
 		self.lock.Lock()
 		{
-			if self.closed {
-				return
+			for self.waitlist.Size() < 1 && !self.closed {
+				self.ready.Wait()
 			}
 
-			for self.waitlist.Size() < 1 {
-				self.ready.Wait()
+			if self.closed {
+				return
 			}
 
 			_, headline = self.waitlist.Peek()
@@ -103,4 +104,8 @@ func (self *retxMonitor) run() {
 		}
 		self.lock.Unlock()
 	}
+}
+
+func (self *retxMonitor) deadline() time.Time {
+	return time.Now().Add(time.Duration(int(float64(self.ms)*self.profile.RetxScale)+self.profile.RetxAddMs) * time.Millisecond)
 }
