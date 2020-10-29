@@ -9,8 +9,7 @@ import (
 func TestArrayWaitlist_Add_Next(t *testing.T) {
 	aw := &arrayWaitlist{}
 	deadline := time.Now().Add(200 * time.Millisecond)
-	err := aw.Add(&wireMessage{seq: int32(99)}, deadline)
-	assert.NoError(t, err)
+	aw.Add(&wireMessage{seq: int32(99)}, deadline)
 
 	wmOut, deadlineOut := aw.Next()
 	assert.NotNil(t, wmOut)
@@ -26,8 +25,7 @@ func TestArrayWaitlist_Add_Remove(t *testing.T) {
 	aw := &arrayWaitlist{}
 	wm := &wireMessage{seq: int32(66)}
 	deadline := time.Now().Add(200 * time.Millisecond)
-	err := aw.Add(wm, deadline)
-	assert.NoError(t, err)
+	aw.Add(wm, deadline)
 
 	aw.Remove(wm)
 	wmOut, deadlineOut := aw.Next()
@@ -45,9 +43,7 @@ func benchmarkArrayWaitlist_Add_Next(sz int, b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for i := 0; i < sz; i++ {
-			if err := aw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
-				panic(err)
-			}
+			aw.Add(toAdd[i].wm, toAdd[i].deadline)
 		}
 		for i := 0; i < sz; i++ {
 			aw.Next()
@@ -68,9 +64,7 @@ func benchmarkArrayWaitlist_Add_Remove(sz int, b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for i := 0; i < sz; i++ {
-			if err := aw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
-				panic(err)
-			}
+			aw.Add(toAdd[i].wm, toAdd[i].deadline)
 		}
 		for i := 0; i < sz; i++ {
 			aw.Remove(toAdd[i].wm)
@@ -97,9 +91,7 @@ func benchmarkArrayWaitlist_Add_Remove_Reverse(sz int, b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for i := 0; i < sz; i++ {
-			if err := aw.Add(toAdd[i].wm, toAdd[i].deadline); err != nil {
-				panic(err)
-			}
+			aw.Add(toAdd[i].wm, toAdd[i].deadline)
 		}
 		for i := sz - 1; i >= 0; i-- {
 			aw.Remove(toAdd[i].wm)
