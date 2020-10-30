@@ -21,9 +21,6 @@ type txPortal struct {
 	successCt    int
 	successAccum int
 	dupAckCt     int
-	retxCt       int
-	rttProbes    []int
-	retxMs       int
 	lastRttProbe time.Time
 	monitor      *retxMonitor
 	closeWaitSeq int32
@@ -41,7 +38,6 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, ii Inst
 		tree:         btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
 		capacity:     profile.TxPortalStartSz,
 		rxPortalSz:   -1,
-		retxMs:       profile.RetxStartMs,
 		closeWaitSeq: -1,
 		closed:       false,
 		conn:         conn,
@@ -51,7 +47,6 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, ii Inst
 	}
 	p.ready = sync.NewCond(p.lock)
 	p.monitor = newRetxMonitor(profile, conn, peer, p.lock)
-	// go p.watchdog
 	return p
 }
 
@@ -70,9 +65,11 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 
 		var rtt *uint16
 		if time.Since(self.lastRttProbe).Milliseconds() > int64(self.profile.RttProbeMs) {
+			now := time.Now()
 			rtt = new(uint16)
-			*rtt = uint16(time.Now().UnixNano() / int64(time.Millisecond))
+			*rtt = uint16(now.UnixNano() / int64(time.Millisecond))
 			segmentSz -= 2
+			self.lastRttProbe = now
 		}
 
 		for math.Min(float64(self.capacity-(self.txPortalSz+segmentSz)), float64(self.capacity-self.rxPortalSz)) < 0 {
@@ -99,7 +96,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	return n, nil
 }
 
-func (self *txPortal) ack(peer *net.UDPAddr, seq int32, rxPortalSz int) error {
+func (self *txPortal) ack(seq int32, rxPortalSz int) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
@@ -129,6 +126,12 @@ func (self *txPortal) ack(peer *net.UDPAddr, seq int32, rxPortalSz int) error {
 	}
 
 	return nil
+}
+
+func (self *txPortal) rtt(rttMs uint16) {
+	self.lock.Lock()
+	self.monitor.updateRttMs(rttMs)
+	self.lock.Unlock()
 }
 
 func (self *txPortal) close(seq *util.Sequence) error {

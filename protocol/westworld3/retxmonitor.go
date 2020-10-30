@@ -10,7 +10,8 @@ import (
 
 type retxMonitor struct {
 	profile  *Profile
-	ms       int
+	rttAvg   []uint16
+	retxMs   int
 	conn     *net.UDPConn
 	peer     *net.UDPAddr
 	waitlist waitlist
@@ -22,7 +23,7 @@ type retxMonitor struct {
 func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock *sync.Mutex) *retxMonitor {
 	rm := &retxMonitor{
 		profile:  profile,
-		ms:       profile.RetxStartMs,
+		retxMs:   profile.RetxStartMs,
 		conn:     conn,
 		peer:     peer,
 		waitlist: newArrayWaitlist(),
@@ -33,8 +34,17 @@ func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock
 	return rm
 }
 
-func (self *retxMonitor) updateMs(ms int) {
-	self.ms = ms
+func (self *retxMonitor) updateRttMs(rttMs uint16) {
+	self.rttAvg = append(self.rttAvg, rttMs)
+	if len(self.rttAvg) > self.profile.RttProbeAvg {
+		self.rttAvg = self.rttAvg[1:]
+	}
+	accum := 0
+	for _, rttMs := range self.rttAvg {
+		accum += int(rttMs)
+	}
+	accum /= len(self.rttAvg)
+	self.retxMs = int(float64(accum) * self.profile.RetxScale) + self.profile.RetxAddMs
 }
 
 func (self *retxMonitor) monitor(wm *wireMessage) {
@@ -87,7 +97,7 @@ func (self *retxMonitor) run() {
 					if delta <= int64(self.profile.RetxBatchMs) {
 						wm, _ := self.waitlist.Next()
 						if wm.hasFlag(RTT) {
-							util.WriteUint16(wm.buffer.data[dataStart:], uint16(time.Now().UnixNano() / int64(time.Millisecond)))
+							util.WriteUint16(wm.buffer.data[dataStart:], uint16(time.Now().UnixNano()/int64(time.Millisecond)))
 						}
 
 						if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
@@ -107,5 +117,5 @@ func (self *retxMonitor) run() {
 }
 
 func (self *retxMonitor) deadline() time.Time {
-	return time.Now().Add(time.Duration(int(float64(self.ms)*self.profile.RetxScale)+self.profile.RetxAddMs) * time.Millisecond)
+	return time.Now().Add(time.Duration(self.retxMs) * time.Millisecond)
 }
