@@ -20,9 +20,9 @@ type listenerConn struct {
 	seq      *util.Sequence
 	txPortal *txPortal
 	rxPortal *rxPortal
-	pool    *pool
-	profile *Profile
-	ii      InstrumentInstance
+	pool     *pool
+	profile  *Profile
+	ii       InstrumentInstance
 }
 
 func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*listenerConn, error) {
@@ -123,5 +123,58 @@ func (self *listenerConn) rxer() {
 			// unexpected message type
 			wm.buffer.unref()
 		}
+	}
+}
+
+func (self *listenerConn) hello(wm *wireMessage) error {
+	// Receive Hello
+	if hello, _, err := wm.asHello(); err == nil {
+		self.rxPortal.setAccepted(wm.seq)
+		wm.buffer.unref()
+
+		helloAckSeq := self.seq.Next()
+		helloAck, err := newHello(helloAckSeq, hello, &ack{wm.seq, wm.seq}, self.pool)
+		if err != nil {
+			return errors.Wrap(err, "new hello")
+		}
+		defer helloAck.buffer.unref()
+
+		for i := 0; i < 5; i++ {
+			// Send Hello Ack
+			if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
+				return errors.Wrap(err, "write hello ack")
+			}
+
+			// Receive Response Ack
+			select {
+			case ackWm, ok := <-self.rxQueue:
+				if !ok {
+					return errors.New("rx queue closed")
+				}
+				defer ackWm.buffer.unref()
+
+				if ackWm.mt != ACK {
+					logrus.Errorf("expected ACK, got [%d]", ackWm.mt)
+					continue
+				}
+				if ack, _, _, err := ackWm.asAck(); err == nil {
+					if len(ack) == 1 {
+						if ack[0].start != helloAckSeq {
+							logrus.Errorf("invalid hello ack sequence (%d != %d)", ack[0].start, helloAckSeq)
+							continue
+						}
+						return nil
+					}
+				}
+
+			case <-time.After(5 * time.Second):
+				logrus.Infof("timeout")
+			}
+		}
+
+		return errors.New("connection failed")
+
+	} else {
+		return errors.Wrap(err, "expected hello")
 	}
 }
