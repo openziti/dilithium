@@ -82,16 +82,17 @@ func (self *listener) run() {
 			if found {
 				lc := conn.(*listenerConn)
 				lc.queue(wm)
-			} else {
-			if wm.mt == HELLO {
-				go self.hello(wm, peer)
 
 			} else {
-				wm.buffer.unref()
+				if wm.mt == HELLO {
+					go self.hello(wm, peer)
+
+				} else {
+					wm.buffer.unref()
+				}
 			}
-		}
-	} else {
-		// read error
+		} else {
+			// read error
 		}
 	}
 }
@@ -107,7 +108,12 @@ func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
 	self.peers.Put(peer, conn)
 	self.lock.Unlock()
 
+	if err := conn.hello(hello); err != nil {
+		logrus.Errorf("error connecting (%v)", err)
+		return
+	}
 
+	self.acceptQueue <- conn
 }
 
 func addrComparator(i, j interface{}) int {

@@ -49,6 +49,7 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
 	lc.txPortal = newTxPortal(conn, peer, profile, lc.ii)
 	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile)
+	go lc.rxer()
 	return lc, nil
 }
 
