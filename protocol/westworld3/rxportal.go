@@ -5,7 +5,9 @@ import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io"
 	"math"
 	"net"
 	"sync"
@@ -54,6 +56,69 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 	}
 	go rx.run()
 	return rx
+}
+
+func (self *rxPortal) read(p []byte) (int, error) {
+preread:
+	for {
+		select {
+		case read, ok := <- self.reads:
+			if !ok {
+				return 0, io.EOF
+			}
+			if !read.eof {
+				n, err := self.readBuffer.Write(read.buf[:read.sz])
+				if err != nil {
+					return 0, errors.Wrap(err, "buffer")
+				}
+				if n != read.sz {
+
+				}
+			}
+
+		default:
+			break preread
+		}
+	}
+	if self.readBuffer.Len() > 0 {
+		return self.readBuffer.Read(p)
+	} else {
+		read, ok := <- self.reads
+		if !ok {
+			return 0, io.EOF
+		}
+		if !read.eof {
+			n, err := self.readBuffer.Write(read.buf[:read.sz])
+			if err != nil {
+				return 0, errors.Wrap(err, "buffer")
+			}
+			if n != read.sz {
+				return 0, errors.Wrap(err, "short buffer")
+			}
+			self.readPool.Put(read.buf)
+
+			return self.readBuffer.Read(p)
+
+		} else {
+			logrus.Infof("close notified")
+			close(self.reads)
+			return 0, io.EOF
+		}
+	}
+}
+
+func (self *rxPortal) rx(wm *wireMessage) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Wrap(err, "send on closed rxs")
+		}
+	}()
+	self.rxs <- wm
+	return err
+}
+
+func (self *rxPortal) setAccepted(accepted int32) {
+	self.accepted = accepted
 }
 
 func (self *rxPortal) run() {
