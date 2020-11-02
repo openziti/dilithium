@@ -5,6 +5,8 @@ import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/michaelquigley/dilithium/util"
+	"github.com/sirupsen/logrus"
+	"math"
 	"net"
 	"sync"
 )
@@ -55,4 +57,89 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 }
 
 func (self *rxPortal) run() {
+	logrus.Infof("started")
+	defer logrus.Warn("exited")
+
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Errorf("recovered (%v)", r)
+		}
+	}()
+
+	for {
+		wm, ok := <-self.rxs
+		if !ok {
+			return
+		}
+
+		if wm.mt == DATA {
+			_, found := self.tree.Get(wm.seq)
+			if !found && (wm.seq > self.accepted || (wm.seq == 0 && self.accepted == math.MaxInt32)) {
+				if sz, err := wm.asDataSize(); err == nil {
+					self.tree.Put(wm.seq, wm)
+					self.rxPortalSz += int(sz)
+				} else {
+					logrus.Errorf("unexpected mt [%d]", wm.mt)
+				}
+			} else {
+				// duplicate
+				wm.buffer.unref()
+			}
+
+			var rtt *uint16
+			if wm.hasFlag(RTT) {
+				if _, rttIn, err := wm.asData(); err == nil {
+					rtt = rttIn
+				} else {
+					logrus.Errorf("unexpected mt [%d]", wm.mt)
+				}
+			}
+
+			if ack, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
+				if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
+					logrus.Errorf("error sending ack (%v)", err)
+				}
+				ack.buffer.unref()
+			}
+
+			if self.tree.Size() > 0 {
+				var next int32
+				if self.accepted < math.MaxInt32 {
+					next = self.accepted + 1
+				} else {
+					next = 0
+				}
+
+				keys := self.tree.Keys()
+				for _, key := range keys {
+					if key.(int32) == next {
+						v, _ := self.tree.Get(key)
+						wm := v.(*wireMessage)
+						buf := self.readPool.Get().([]byte)
+						if data, _, err := wm.asData(); err == nil {
+							n := copy(buf, data)
+							self.reads <- &rxRead{buf, n, false}
+
+							self.tree.Remove(key)
+							self.rxPortalSz -= len(data)
+							wm.buffer.unref()
+							self.accepted = next
+							if next < math.MaxInt32 {
+								next++
+							} else {
+								next = 0
+							}
+						} else {
+							logrus.Errorf("unexpected mt [%d]", wm.mt)
+						}
+					}
+				}
+			}
+		} else if wm.mt == CLOSE && !self.closed {
+			self.txPortal.close(self.seq)
+			self.reads <- &rxRead{nil, 0, true}
+			self.closed = true
+			close(self.rxs)
+		}
+	}
 }
