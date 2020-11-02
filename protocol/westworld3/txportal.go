@@ -96,13 +96,9 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	return n, nil
 }
 
-func (self *txPortal) ack(seq int32, rxPortalSz int) error {
+func (self *txPortal) ack(seq int32) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-
-	if rxPortalSz > -1 {
-		self.rxPortalSz = rxPortalSz
-	}
 
 	if v, found := self.tree.Get(seq); found {
 		wm := v.(*wireMessage)
@@ -126,6 +122,12 @@ func (self *txPortal) ack(seq int32, rxPortalSz int) error {
 	}
 
 	return nil
+}
+
+func (self *txPortal) updateRxPortalSz(rxPortalSz int) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.rxPortalSz = rxPortalSz
 }
 
 func (self *txPortal) rtt(rttMs uint16) {

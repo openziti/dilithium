@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/big"
 	"net"
+	"time"
 )
 
 type listenerConn struct {
@@ -17,8 +18,8 @@ type listenerConn struct {
 	peer     *net.UDPAddr
 	rxQueue  chan *wireMessage
 	seq      *util.Sequence
-	// txPortal
-	// rxPortal
+	txPortal *txPortal
+	rxPortal *rxPortal
 	pool    *pool
 	profile *Profile
 	ii      InstrumentInstance
@@ -46,9 +47,42 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 		lc.ii = profile.i.newInstance(id, peer)
 	}
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
-	// txPortal
-	// rxPortal
+	lc.txPortal = newTxPortal(conn, peer, profile, lc.ii)
+	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile)
 	return lc, nil
+}
+
+func (self *listenerConn) Read(p []byte) (int, error) {
+	return self.rxPortal.read(p)
+}
+
+func (self *listenerConn) Write(p []byte) (int, error) {
+	return self.txPortal.tx(p, self.seq)
+}
+
+func (self *listenerConn) Close() error {
+	logrus.Warnf("close requested")
+	return self.txPortal.close(self.seq)
+}
+
+func (self *listenerConn) RemoteAddr() net.Addr {
+	return self.peer
+}
+
+func (self *listenerConn) LocalAddr() net.Addr {
+	return self.conn.LocalAddr()
+}
+
+func (self *listenerConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (self *listenerConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (self *listenerConn) SetWriteDeadline(t time.Time) error {
+	return nil
 }
 
 func (self *listenerConn) queue(wm *wireMessage) {
@@ -66,14 +100,24 @@ func (self *listenerConn) rxer() {
 		}
 
 		if wm.mt == DATA || wm.mt == CLOSE {
-			// self.rxPortal.rx(wm)
+			self.rxPortal.rx(wm)
 
 		} else if wm.mt == ACK {
-			//acks, rxPortalSz, rtt, err := wm.asAck()
-			// process acks
-			// process rxPortalSz
-			// process rtt
-			wm.buffer.unref()
+			if acks, rxPortalSz, rtt, err := wm.asAck(); err == nil {
+				for _, ack := range acks {
+					for i := ack.start; i <= ack.end; i++ {
+						self.txPortal.ack(i)
+					}
+				}
+				self.txPortal.updateRxPortalSz(int(rxPortalSz))
+				if rtt != nil {
+					self.txPortal.rtt(*rtt)
+				}
+				wm.buffer.unref()
+
+			} else {
+				logrus.Errorf("error unmarshaling ack (%v)", err)
+			}
 
 		} else {
 			// unexpected message type
