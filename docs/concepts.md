@@ -1,5 +1,7 @@
 # Dilithium Framework Concepts
 
+The following are a collection of orthogonal concepts, which together comprise much of the core footprint of what the `dilithium` framework does. Understanding each individually, and then combined in aggregate will give a pretty clear picture of how `dilithium`-based protocols function.
+
 ## Directional txPortal/rxPortal Pair
 
 ![Directional txPortal/rxPortal Pair](images/directional_rxtx_pair.png)
@@ -73,6 +75,18 @@ Retransmissions (`retx`) are counted. When the number of retransmitted payloads 
 Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `retx` counters reach their thresholds, in addition to multiplying the portal capacity by their `scale` values, they also multiply the successful transmission accumulator by a scale value (current implementations hardcode this scale to `0.0`), allowing them to clear or adjust the successful transmission accumulator.
 
 ## Profiles
+
+![Profiles](images/profiles.png)
+
+`dilithium` provides a mechanism for externally configuring all of the tunable parameters. Everything discussed previously in this concepts guide is tunable through the _profile_ mechanism.
+
+When dealing with a pair of `txPortal`&rarr;`rxPortal` instances, there are effectively 2 profiles in use, one for each of the instances.
+
+`dilithium` implementations can take advantages of asymmetric tunings, supporting asymmetric message-passing underlays. This means when implementing internet protocols on top of `dilithium`, a completely different profile can be used to tune the "upstream" versus the downstream.
+
+As of version `0.3`, profile information is exchanged through the `HELLO` connection setup process. Future versions of `dilithium` will allow for dynamic profile exchange at any point in the lifecycle of a communications connection.
+
+The current profile concept is a sealed set of knobs to tune the infrastructure for various operational and performance needs. Future iterations of the profile concept will likely expose extension points in the framework, allowing downstream code to participate in most of these framework concepts directly, chaning their behavior to even deeper degrees.
 
 ## Concepts in Progress
 
