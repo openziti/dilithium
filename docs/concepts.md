@@ -56,17 +56,28 @@ In order to achieve the tightest retransmission timing possible, `dilithium` use
 
 `rtt` probes are sent according to a configurable period, and the resulting `rtt` value is averaged over a configurable number of previous times. That averaged value is then scaled using a configurable _scale_ value, and can have additional milliseconds of time added to it. That value is output as `retxMs`, which is the number of milliseconds that the `retx` monitor should use in computing retransmission deadlines.
 
+## Portal Scaling
+
+![Portal Scaling](images/portal_scaling.png)
+
+The flow rate is controlled by the _capacity_ of the portal (window). Finding the ideal sending rate, which results in the most productive data transfer with the least unnecessary retransmission requires the continual adjustment of the portal capacity.
+
+In `dilithium` protocols, there are currently 3 main factors which contribute to scaling the portal capacity value.
+
+Successfully acked transmissions have the size of their productive payloads added to an _accumulator_. When the number of successfully acked transmissions reaches a configurable threshold value, the size of that accumulator is scaled according to a `scale` value and the result is added to the `capacity`. This is intended to be the primary mechanism that allows the window size to grow.
+
+Duplicate acks (`dupack`) are counted. When the number of duplicate acks reaches a configurable threshold value, the portal capacity is multiplied by a configurable `scale` value.
+
+Retransmissions (`retx`) are counted. When the number of retransmitted payloads reaches a configurable threshold value, the portal capacity is multiplied by a configurable `scale` value.
+
+Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `retx` counters reach their thresholds, in addition to multiplying the portal capacity by their `scale` values, they also multiply the successful transmission accumulator by a scale value (current implementations hardcode this scale to `0.0`), allowing them to clear or adjust the successful transmission accumulator.
+
 ## Rx/Tx Components Overview
 
 ![Rx/Tx Components Overview](images/rxtx_components.png)
 
 ## Concepts in Progress
 
-* Round-Trip Time Probes
-* Portal Scaling
-	+ Successful Transmission
-	+ Duplicate Acknowledgement
-	+ Retransmission
 * Profiles
 * Protocol Manifestations
 	+ westworld3
