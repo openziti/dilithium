@@ -72,13 +72,10 @@ Retransmissions (`retx`) are counted. When the number of retransmitted payloads 
 
 Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `retx` counters reach their thresholds, in addition to multiplying the portal capacity by their `scale` values, they also multiply the successful transmission accumulator by a scale value (current implementations hardcode this scale to `0.0`), allowing them to clear or adjust the successful transmission accumulator.
 
-## Rx/Tx Components Overview
-
-![Rx/Tx Components Overview](images/rxtx_components.png)
+## Profiles
 
 ## Concepts in Progress
 
-* Profiles
 * Protocol Manifestations
 	+ westworld3
 * Write Buffer (txPortal)

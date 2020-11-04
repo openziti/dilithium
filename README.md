@@ -12,4 +12,4 @@ _Dilithium_ feeds into the [OpenZiti](https://github.com/openziti) project, in s
 
 Here's a picture of some things. This is a work im progress. For a more detailed tour of _Dilithium_ and the framework components it provides, see the [Concepts Guide](docs/concepts.md)
 
-![Rx/Tx Components](docs/images/rxtx_components.png)
+![Loss Handling](docs/images/loss_handling.png)
