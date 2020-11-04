@@ -26,9 +26,6 @@ The `txPortal` will only admit data from its client into the link when the minim
 
 ## Concepts in Progress
 
-* Rate Limiting Flow Control
-	+ Portal Size (capacity/txPortalSz/rxPortalSz)
-	+ Capacity
 * Loss Handling
 	+ Acknowledgement (ack)
 	+ Retransmission (retx)
