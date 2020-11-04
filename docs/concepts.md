@@ -40,7 +40,21 @@ In cases where the `ACK` message went missing, the retransmission mechanism will
 
 Inside the `txPortal` the _retransmission monitor_ maintains a list of payloads, ordered by their retransmission deadlines. It runs in a loop, sending the next payload again whenever the payload's deadline is reached. Once a payload is retransmitted, the next deadline for retransmission is computed and the payload is appended to the end of the list.
 
-Deadline computation is performed according to the `txPortal`'s observed _round trip time_ (`rtt`).
+Deadline computation is performed according to the `txPortal`'s observed _round-trip time_ (`rtt`).
+
+## Round-Trip Time Probes
+
+![Round-Trip Time Probes](images/rtt_probes.png)
+
+A critical component in achieving high performance is retransmission of lost payloads with the correct timing. 
+
+Payloads that are retransmitted to early are in danger of being an un-needed retransmission (the corresponding `ACK` may be in transit). Un-needed retransmissions consume bandwidth that could be used for productive data movement. 
+
+Payloads that are retransmitted too late reduce the overall perceived performance of the link. When a retransmission is necessary it often fills in a "hole" in the `rxPortal` buffer like a Tetris piece, allowing a number of payloads to be released at once. The more payloads are pending, waiting on a retransmission, the more performance impact will be felt by late retransmissions.
+
+In order to achieve the tightest retransmission timing possible, `dilithium` uses configurable `rtt` _probes_. Probing is accomplished by the `txPortal` capturing the current high-resolution wall clock time, and inserting that into an outbound payload. When the `rxPortal` receives a payload with an embedded `rtt` probe, it embeds that probe back into its outbound `ack` for that payload. When the `txPortal` receives an `ack` with an `rtt` probe embedded, it can compare that probe to the current wall clock time to determine how long it took to get a response to that payload from the other side.
+
+`rtt` probes are sent according to a configurable period, and the resulting `rtt` value is averaged over a configurable number of previous times. That averaged value is then scaled using a configurable _scale_ value, and can have additional milliseconds of time added to it. That value is output as `retxMs`, which is the number of milliseconds that the `retx` monitor should use in computing retransmission deadlines.
 
 ## Rx/Tx Components Overview
 
