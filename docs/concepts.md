@@ -32,7 +32,15 @@ And, to keep it interesting... the control messages (`ACK`) can also go missing 
 
 In the diagram above, we see the 3 typical types of communications that happen between the `txPortal`&rarr;`rxPortal` pair. The first type of messages are the _nominal transmission_ messages, which are portions of the stream data that have been assigned a _sequence identifier_. Typically when the `rxPortal` receives these messages it sends back an _acknowledgement_ (`ACK`) message, notifying the `txPortal` that it received the payload. If the `txPortal` does not receive an `ACK` within a timeout period (see section below on _Round-Trip Time Probes_), it will retransmit the payload again. It will continue retransmitting at the end of the expiry period, until it receives an `ACK` from the `rxPortal`.
 
-In cases where the `ACK` message went missing, the retransmission mechanism will ultimately re-synchronize the state of the message between the `txPortal`->`rxPortal` pair.
+In cases where the `ACK` message went missing, the retransmission mechanism will ultimately re-synchronize the state of the message between the `txPortal`&rarr;`rxPortal` pair.
+
+## Retransmission Monitor
+
+![Retransmission Monitor](images/retx_monitor.png)
+
+Inside the `txPortal` the _retransmission monitor_ maintains a list of payloads, ordered by their retransmission deadlines. It runs in a loop, sending the next payload again whenever the payload's deadline is reached. Once a payload is retransmitted, the next deadline for retransmission is computed and the payload is appended to the end of the list.
+
+Deadline computation is performed according to the `txPortal`'s observed _round trip time_ (`rtt`).
 
 ## Rx/Tx Components Overview
 
@@ -40,10 +48,6 @@ In cases where the `ACK` message went missing, the retransmission mechanism will
 
 ## Concepts in Progress
 
-* Loss Handling
-	+ Acknowledgement (ack)
-	+ Retransmission (retx)
-	+ Retransmission Monitor
 * Round-Trip Time Probes
 * Portal Scaling
 	+ Successful Transmission
