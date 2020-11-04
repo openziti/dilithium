@@ -6,7 +6,7 @@ Initially, we're focusing on the development of `westworld2` and `westworld3`, w
 
 Ultimately, _Dilithium_ will become an extensible framework (implemented in `golang`) for the development of high-performance streaming over any arbitrary unreliable message passing system. 
 
-_Dilithium_ feeds into the [OpenZiti](https://github.com/openziti]) project, in support of it's high-performance _Transwarp_ data plane implementation. In this role, _Dilithium_ provides both the high-performance UDP-based implementation, and also manages the higher-level overlay abstractions implemented as messages on top of existing streaming protocols.
+_Dilithium_ feeds into the [OpenZiti](https://github.com/openziti) project, in support of it's high-performance _Transwarp_ data plane implementation. In this role, _Dilithium_ provides both the high-performance UDP-based implementation, and also manages the higher-level overlay abstractions implemented as messages on top of existing streaming protocols.
 
 ## Concepts
 
