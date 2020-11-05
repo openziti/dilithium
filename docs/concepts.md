@@ -106,14 +106,18 @@ As of version `0.3`, profile information is exchanged through the `HELLO` connec
 
 The current profile concept is a sealed set of knobs to tune the infrastructure for various operational and performance needs. Future iterations of the profile concept will likely expose extension points in the framework, allowing downstream code to participate in most of these framework concepts directly, chaning their behavior to even deeper degrees.
 
+## Extensible Framework
+
+![Extensible Framework](images/concepts/extensible_framework.png)
+
+`dilithium` differs from traditional protocol stacks in that it is constructed as a _framework_ for implementing reliable/streaming protocols on top of unreliable message-passing infrastructures.
+
+Like most frameworks, `dilithium` provides a number of _hotspots_ or _extension points_ (_interfaces_) that can be extended using code specific to your application.
+
+This provides a number of benefits beyond just implementing custom protocols. By providing extension points around the major _orthogonal concerns_ of the framework, it means that even existing implementations can be tuned and adjusted to meet specific requirements. 
+
 ## Concepts in Progress
 
-* Write Buffer (txPortal)
-	+ Back-pressure
-* Read Buffer (rxPortal)
-	+ Ordering
-	+ Back-pressure
-* Extensible Framework
 * Protocol Manifestations
 	+ westworld3
 	+ Ziti Transwarp
