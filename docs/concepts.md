@@ -4,7 +4,7 @@ The following are a collection of orthogonal concepts, which together comprise m
 
 ## Directional txPortal/rxPortal Pair
 
-![Directional txPortal/rxPortal Pair](images/directional_rxtx_pair.png)
+![Directional txPortal/rxPortal Pair](images/concepts/directional_rxtx_pair.png)
 
 The message-oriented components are typically described here as one half of a bi-directional communications implementation. A single `txPortal`&rarr;`rxPortal` pair manifests a single direction of communication. To realize a bi-directional communications link, a pair of `txPortal`&rarr;`rxPortal` components will be required, one for each direction.
 
@@ -14,7 +14,7 @@ The message-passing infrastructure is assumed to be unreliable.
 
 ## Rate Limiting Flow Control
 
-![Rate Limiting Inputs](images/rate_limiting_inputs.png)
+![Rate Limiting Inputs](images/concepts/rate_limiting_inputs.png)
 
 An important goal for these components is to simultaneously maximize the throughput of a message-passing system, while also limiting the flow such that the system is not overwhelmed. There's a delicate balance to be maintained, which must automatically adjust to changing backpressures and weather conditions.
 
@@ -24,7 +24,7 @@ The `txPortal` will only admit data from its client into the link when the minim
 
 ## Loss Handling
 
-![Loss Handling](images/loss_handling.png)
+![Loss Handling](images/concepts/loss_handling.png)
 
 `dilithium`-based implementations operate over unreliable message-passing infrastructures (primarily, UDP datagrams across the internet). In order to turn these unreliable message-passing systems into a reliable stream of communications, `dilithium` must implement loss handling and mitigation.
 
@@ -38,7 +38,7 @@ In cases where the `ACK` message went missing, the retransmission mechanism will
 
 ## Retransmission Monitor
 
-![Retransmission Monitor](images/retx_monitor.png)
+![Retransmission Monitor](images/concepts/retx_monitor.png)
 
 Inside the `txPortal` the _retransmission monitor_ maintains a list of payloads, ordered by their retransmission deadlines. It runs in a loop, sending the next payload again whenever the payload's deadline is reached. Once a payload is retransmitted, the next deadline for retransmission is computed and the payload is appended to the end of the list.
 
@@ -46,7 +46,7 @@ Deadline computation is performed according to the `txPortal`'s observed _round-
 
 ## Round-Trip Time Probes
 
-![Round-Trip Time Probes](images/rtt_probes.png)
+![Round-Trip Time Probes](images/concepts/rtt_probes.png)
 
 A critical component in achieving high performance is retransmission of lost payloads with the correct timing. 
 
@@ -60,7 +60,7 @@ In order to achieve the tightest retransmission timing possible, `dilithium` use
 
 ## Portal Scaling
 
-![Portal Scaling](images/portal_scaling.png)
+![Portal Scaling](images/concepts/portal_scaling.png)
 
 The flow rate is controlled by the _capacity_ of the portal (window). Finding the ideal sending rate, which results in the most productive data transfer with the least unnecessary retransmission requires the continual adjustment of the portal capacity.
 
@@ -76,7 +76,7 @@ Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `re
 
 ## Profiles
 
-![Profiles](images/profiles.png)
+![Profiles](images/concepts/profiles.png)
 
 `dilithium` provides a mechanism for externally configuring all of the tunable parameters. Everything discussed previously in this concepts guide is tunable through the _profile_ mechanism.
 
@@ -90,12 +90,12 @@ The current profile concept is a sealed set of knobs to tune the infrastructure 
 
 ## Concepts in Progress
 
-* Protocol Manifestations
-	+ westworld3
 * Write Buffer (txPortal)
 	+ Back-pressure
 * Read Buffer (rxPortal)
 	+ Ordering
 	+ Back-pressure
 * Extensible Framework
+* Protocol Manifestations
+	+ westworld3
 	+ Ziti Transwarp
