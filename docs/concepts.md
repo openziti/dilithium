@@ -74,6 +74,14 @@ Retransmissions (`retx`) are counted. When the number of retransmitted payloads 
 
 Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `retx` counters reach their thresholds, in addition to multiplying the portal capacity by their `scale` values, they also multiply the successful transmission accumulator by a scale value (current implementations hardcode this scale to `0.0`), allowing them to clear or adjust the successful transmission accumulator.
 
+## Write Buffer (txPortal)
+
+![Write Buffer](images/concepts/write_buffer.png)
+
+The `dilithium` framework implements the golang `net.Conn` interface (and `io.WriteCloser`). The `txPortal` client sends a stream of data to the `dilithium`-based protocol by invoking multiple `Write` calls, each providing a `[]byte` for the next chunk of the client's data stream.
+
+The `txPortal` will block that `Write` call according to the flow control semantics described above. When the available `capacity` of the link is smaller than `len(data []byte)` the `txPortal` will block the client until the `capacity` becomes available.
+
 ## Profiles
 
 ![Profiles](images/concepts/profiles.png)
