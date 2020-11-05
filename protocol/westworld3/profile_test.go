@@ -2,7 +2,7 @@ package westworld3
 
 import (
 	"fmt"
-	"github.com/michaelquigley/dilithium/cf"
+	"github.com/openziti/dilithium/cf"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

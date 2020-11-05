@@ -3,7 +3,7 @@ package westworld2
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/michaelquigley/dilithium/util"
+	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"math"

@@ -2,7 +2,7 @@ package influx
 
 import (
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/michaelquigley/dilithium/util"
+	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"os"

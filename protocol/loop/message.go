@@ -1,7 +1,7 @@
 package loop
 
 import (
-	"github.com/michaelquigley/dilithium/util"
+	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"io"
 )

@@ -2,7 +2,7 @@ package westworld2
 
 import (
 	"crypto/rand"
-	"github.com/michaelquigley/dilithium/util"
+	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"math"

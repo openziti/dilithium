@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"github.com/lucas-clemente/quic-go"
-	"github.com/michaelquigley/dilithium/protocol/westworld2"
+	"github.com/openziti/dilithium/protocol/westworld2"
 	"github.com/pkg/errors"
 	"math/big"
 	"net"

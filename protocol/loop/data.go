@@ -2,7 +2,7 @@ package loop
 
 import (
 	"crypto/sha512"
-	"github.com/michaelquigley/dilithium/util"
+	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"math/rand"

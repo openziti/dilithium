@@ -1,7 +1,7 @@
 package dilithium
 
 import (
-	"github.com/michaelquigley/dilithium/protocol/westworld2"
+	"github.com/openziti/dilithium/protocol/westworld2"
 	"github.com/pkg/profile"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

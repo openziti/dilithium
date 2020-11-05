@@ -1,7 +1,7 @@
 package loop
 
 import (
-	"github.com/michaelquigley/dilithium/cmd/dilithium/dilithium"
+	"github.com/openziti/dilithium/cmd/dilithium/dilithium"
 	"github.com/spf13/cobra"
 )
 

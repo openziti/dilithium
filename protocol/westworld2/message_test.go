@@ -1,7 +1,7 @@
 package westworld2
 
 import (
-	"github.com/michaelquigley/dilithium/util"
+	"github.com/openziti/dilithium/util"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"

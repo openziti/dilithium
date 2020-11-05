@@ -1,6 +1,6 @@
-module github.com/michaelquigley/dilithium
+module github.com/openziti/dilithium
 
-go 1.14
+go 1.15
 
 require (
 	github.com/deepmap/oapi-codegen v1.3.12 // indirect

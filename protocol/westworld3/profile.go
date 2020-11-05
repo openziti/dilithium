@@ -1,7 +1,7 @@
 package westworld3
 
 import (
-	"github.com/michaelquigley/dilithium/cf"
+	"github.com/openziti/dilithium/cf"
 	"github.com/pkg/errors"
 	"reflect"
 )
