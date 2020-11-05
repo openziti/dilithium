@@ -82,6 +82,16 @@ The `dilithium` framework implements the golang `net.Conn` interface (and `io.Wr
 
 The `txPortal` will block that `Write` call according to the flow control semantics described above. When the available `capacity` of the link is smaller than `len(data []byte)` the `txPortal` will block the client until the `capacity` becomes available.
 
+## ReadBuffer (rxPortal)
+
+![Read Buffer](images/concepts/read_buffer.png)
+
+`dilithium` includes a configurable posture for read buffering in the `rxPortal` implementation. The default configuration (as implemented in the `dilithium` `v0.2` UDP protocol `westworld2`) is to allow the `rxPortal`'s read buffer to grow unbounded. Or, more precisely, bounded by admission of payloads to the link by the `txPortal`. This is the simplest, most performant choice for systems without significant memory constraints.
+
+`dilithium` `v0.3` includes support for upper buffer size bounds. When this bound is configured, a downstream client that is slow to consume outbound stream data through the `net.Conn`/`io.Reader` method `Read` will cause the `rxPortal` to drop inbound payloads that do not fill gaps in its internal buffers. Payloads that would progress the stream forward will be discarded, until the downstream client consumes enough data to clear space in the buffer for those new payloads.
+
+This has performance impacts, obviously. But in cases where an unconstrained `rxPortal` buffer is a concern, this capability can be engaged. This capability is implemented to support `Payload` dropping based on Xgress `Read` rates in the `ziti-fabric`.
+
 ## Profiles
 
 ![Profiles](images/concepts/profiles.png)
