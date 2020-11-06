@@ -1,16 +1,20 @@
 # Dilithium Framework Concepts
 
-The following are a collection of orthogonal concepts, which together comprise much of the core footprint of what the `dilithium` framework does. Understanding each individually, and then combined in aggregate will give a pretty clear picture of how `dilithium`-based protocols function.
+The `dilithium` framework is a software library for creating reliable, stream-oriented protocols built on top of unreliable message-passing facilities. A classic example of this type of protocol is TCP.
+
+The `dilithium` framework includes the `westworld` protocol, which is conceptually similar to TCP but focused on WAN performance optimization in adverse scenarios. `westworld` connections exhibit the same kinds of properties as a TCP connection in that it's a reliable, bi-directional data stream. `westworld` uses UDP datagrams as its unreliable message-passing infrastructure.
+
+This concepts guide provides a high-level tour of the major concepts implemented in `dilithium` components. Understanding each of these concepts orthogonally will help provide a clear understanding of how these features combine to solve performance and reliability issues.
 
 ## Directional txPortal/rxPortal Pair
 
+The `dilithium` framework sees a bi-directional communications link as a pair of uni-directional communications links. Each link uses a symmetrical pair of components to facilitate that communications direction.
+
 ![Directional txPortal/rxPortal Pair](images/concepts/directional_rxtx_pair.png)
 
-The message-oriented components are typically described here as one half of a bi-directional communications implementation. A single `txPortal`&rarr;`rxPortal` pair manifests a single direction of communication. To realize a bi-directional communications link, a pair of `txPortal`&rarr;`rxPortal` components will be required, one for each direction.
+The top-level `dilithium` components include a `txPortal`, which manages the transmitting side of a link, and the `rxPortal`, which manages the receiving side.
 
 The `txPortal` admits data as an array of octets from another software layer, which it then turns into messages that are transmitted across the message-passing infrastructure. The `rxPortal` receives messages from the message-passing infrastructure and reconstructs these as a stream of octets, which are delivered to its client.
-
-The message-passing infrastructure is assumed to be unreliable.
 
 ## Rate Limiting Flow Control
 
