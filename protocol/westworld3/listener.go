@@ -48,9 +48,6 @@ func Listen(addr *net.UDPAddr, profileId byte) (net.Listener, error) {
 		addr:        addr,
 	}
 	listenerId := fmt.Sprintf("listener_%s", addr)
-	if profile.i != nil {
-		l.ii = profile.i.newInstance(listenerId, addr)
-	}
 	l.pool = newPool(listenerId, uint32(dataStart+profile.MaxSegmentSz), l.ii)
 	go l.run()
 	return l, nil

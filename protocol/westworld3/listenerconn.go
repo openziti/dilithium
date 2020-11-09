@@ -43,9 +43,6 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 		profile:  profile,
 	}
 	id := fmt.Sprintf("listenerConn_%s", conn.LocalAddr())
-	if profile.i != nil {
-		lc.ii = profile.i.newInstance(id, peer)
-	}
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
 	lc.txPortal = newTxPortal(conn, peer, profile, lc.pool, lc.ii)
 	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile)
