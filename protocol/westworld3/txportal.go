@@ -32,7 +32,7 @@ type txPortal struct {
 	ii           InstrumentInstance
 }
 
-func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, ii InstrumentInstance) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, pool *pool, ii InstrumentInstance) *txPortal {
 	p := &txPortal{
 		lock:         new(sync.Mutex),
 		tree:         btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
@@ -42,6 +42,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, ii Inst
 		closed:       false,
 		conn:         conn,
 		peer:         peer,
+		pool:         pool,
 		profile:      profile,
 		ii:           ii,
 	}

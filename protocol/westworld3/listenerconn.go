@@ -47,7 +47,7 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 		lc.ii = profile.i.newInstance(id, peer)
 	}
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
-	lc.txPortal = newTxPortal(conn, peer, profile, lc.ii)
+	lc.txPortal = newTxPortal(conn, peer, profile, lc.pool, lc.ii)
 	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile)
 	go lc.rxer()
 	return lc, nil
@@ -124,6 +124,9 @@ func (self *listenerConn) rxer() {
 }
 
 func (self *listenerConn) hello(wm *wireMessage) error {
+	logrus.Infof("starting hello process")
+	defer logrus.Infof("completed hello process")
+
 	// Receive Hello
 	if hello, _, err := wm.asHello(); err == nil {
 		self.rxPortal.setAccepted(wm.seq)

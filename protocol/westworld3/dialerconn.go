@@ -37,7 +37,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 		profile: profile,
 	}
 	dc.pool = newPool("dialerConn", uint32(dataStart+profile.MaxSegmentSz), nil)
-	dc.txPortal = newTxPortal(conn, peer, profile, nil)
+	dc.txPortal = newTxPortal(conn, peer, profile, dc.pool, nil)
 	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, profile)
 	go dc.rxer()
 	return dc, nil
@@ -126,6 +126,9 @@ func (self *dialerConn) rxer() {
 }
 
 func (self *dialerConn) hello() error {
+	logrus.Infof("starting hello process")
+	defer logrus.Infof("completed hello process")
+
 	helloSeq := self.seq.Next()
 	hello, err := newHello(helloSeq, hello{protocolVersion, 0}, nil, self.pool)
 	if err != nil {
