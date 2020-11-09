@@ -78,7 +78,50 @@ func (self *dialerConn) SetWriteDeadline(_ time.Time) error {
 func (self *dialerConn) rxer() {
 	logrus.Infof("started")
 	defer logrus.Warn("exited")
-	//
+
+	for {
+		wm, _, err := readWireMessage(self.conn, self.pool)
+		if err != nil {
+			logrus.Errorf("error reading (%v)", err)
+			continue
+		}
+
+		switch wm.mt {
+		case DATA:
+			_, rttTs, err := wm.asData()
+			if err != nil {
+				logrus.Errorf("as data error (%v)", err)
+				continue
+			}
+			if rttTs != nil {
+				self.txPortal.rtt(*rttTs)
+			}
+			if err := self.rxPortal.rx(wm); err != nil {
+				logrus.Errorf("error rx-ing (%v)", err)
+				continue
+			}
+
+		case ACK:
+			acks, rxPortalSz, rttTs, err := wm.asAck()
+			if err != nil {
+				logrus.Errorf("as ack error (%v)", err)
+				continue
+			}
+			if rttTs != nil {
+				self.txPortal.rtt(*rttTs)
+			}
+			self.txPortal.updateRxPortalSz(int(rxPortalSz))
+			if err := self.txPortal.ack(acks); err != nil {
+				logrus.Errorf("error acking (%v)", err)
+				continue
+			}
+
+		case CLOSE:
+			if err := self.rxPortal.rx(wm); err != nil {
+				logrus.Errorf("error rx-ing close (%v)", err)
+			}
+		}
+	}
 }
 
 func (self *dialerConn) hello() error {

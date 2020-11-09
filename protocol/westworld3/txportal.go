@@ -27,7 +27,7 @@ type txPortal struct {
 	closed       bool
 	conn         *net.UDPConn
 	peer         *net.UDPAddr
-	pool *pool
+	pool         *pool
 	profile      *Profile
 	ii           InstrumentInstance
 }
@@ -96,31 +96,31 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	return n, nil
 }
 
-func (self *txPortal) ack(seq int32) error {
+func (self *txPortal) ack(acks []ack) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if v, found := self.tree.Get(seq); found {
-		wm := v.(*wireMessage)
-		self.monitor.cancel(wm)
-		self.tree.Remove(seq)
-		sz, err := wm.asDataSize()
-		if err != nil {
-			return errors.Wrap(err, "not data")
+	for _, ack := range acks {
+		for seq := ack.start; seq <= ack.end; seq++ {
+			if v, found := self.tree.Get(seq); found {
+				wm := v.(*wireMessage)
+				self.monitor.cancel(wm)
+				self.tree.Remove(seq)
+				sz, err := wm.asDataSize()
+				if err != nil {
+					return errors.Wrap(err, "internal tree error")
+				}
+				self.txPortalSz -= int(sz)
+				wm.buffer.unref()
+
+				if wm.seq == self.closeWaitSeq {
+					self.closed = true
+				}
+			}
 		}
-		self.txPortalSz -= int(sz)
-		wm.buffer.unref()
-
-		if wm.seq == self.closeWaitSeq {
-			self.closed = true
-		}
-
-		self.ready.Broadcast()
-
-	} else {
-		// dupack
 	}
 
+	self.ready.Broadcast()
 	return nil
 }
 
@@ -130,9 +130,12 @@ func (self *txPortal) updateRxPortalSz(rxPortalSz int) {
 	self.rxPortalSz = rxPortalSz
 }
 
-func (self *txPortal) rtt(rttMs uint16) {
+func (self *txPortal) rtt(rttTs uint16) {
+	now := time.Now().UnixNano()
 	self.lock.Lock()
-	self.monitor.updateRttMs(rttMs)
+	clock := uint16(now / int64(time.Millisecond))
+	delta := clock - rttTs
+	self.monitor.updateRttMs(delta)
 	self.lock.Unlock()
 }
 

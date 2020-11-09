@@ -105,16 +105,12 @@ func (self *listenerConn) rxer() {
 
 		} else if wm.mt == ACK {
 			if acks, rxPortalSz, rtt, err := wm.asAck(); err == nil {
-				for _, ack := range acks {
-					for i := ack.start; i <= ack.end; i++ {
-						self.txPortal.ack(i)
-					}
-				}
 				self.txPortal.updateRxPortalSz(int(rxPortalSz))
 				if rtt != nil {
 					self.txPortal.rtt(*rtt)
 				}
 				wm.buffer.unref()
+				self.txPortal.ack(acks)
 
 			} else {
 				logrus.Errorf("error unmarshaling ack (%v)", err)
