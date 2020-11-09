@@ -4,7 +4,7 @@ import "net"
 
 type nilInstrument struct{}
 
-func NewNilInstrument(id string) Instrument {
+func NewNilInstrument() Instrument {
 	return &nilInstrument{}
 }
 

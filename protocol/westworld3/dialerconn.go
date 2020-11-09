@@ -2,6 +2,7 @@ package westworld3
 
 import (
 	"crypto/rand"
+	"fmt"
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -19,6 +20,7 @@ type dialerConn struct {
 	rxPortal *rxPortal
 	pool     *pool
 	profile  *Profile
+	ii       InstrumentInstance
 }
 
 func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dialerConn, error) {
@@ -36,8 +38,10 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 		seq:     util.NewSequence(int32(sSeq)),
 		profile: profile,
 	}
-	dc.pool = newPool("dialerConn", uint32(dataStart+profile.MaxSegmentSz), nil)
-	dc.txPortal = newTxPortal(conn, peer, profile, dc.pool, nil)
+	id := fmt.Sprintf("dialerConn_%s", peer)
+	dc.ii = profile.i.NewInstance(id, peer)
+	dc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), dc.ii)
+	dc.txPortal = newTxPortal(conn, peer, profile, dc.pool, dc.ii)
 	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, profile)
 	go dc.rxer()
 	return dc, nil
