@@ -31,9 +31,10 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 		sSeq = randSeq.Int64()
 	}
 	dc := &dialerConn{
-		conn: conn,
-		peer: peer,
-		seq:  util.NewSequence(int32(sSeq)),
+		conn:    conn,
+		peer:    peer,
+		seq:     util.NewSequence(int32(sSeq)),
+		profile: profile,
 	}
 	dc.pool = newPool("dialerConn", uint32(dataStart+profile.MaxSegmentSz), nil)
 	dc.txPortal = newTxPortal(conn, peer, profile, nil)
