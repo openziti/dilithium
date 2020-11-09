@@ -63,16 +63,16 @@ func (self *dialerConn) LocalAddr() net.Addr {
 	return self.conn.LocalAddr()
 }
 
-func (self *dialerConn) SetDeadline(t time.Time) error {
-	return nil
+func (self *dialerConn) SetDeadline(_ time.Time) error {
+	return errors.New("not implemented")
 }
 
-func (self *dialerConn) SetReadDeadline(t time.Time) error {
-	return nil
+func (self *dialerConn) SetReadDeadline(_ time.Time) error {
+	return errors.New("not implemented")
 }
 
-func (self *dialerConn) SetWriteDeadline(t time.Time) error {
-	return nil
+func (self *dialerConn) SetWriteDeadline(_ time.Time) error {
+	return errors.New("not implemented")
 }
 
 func (self *dialerConn) rxer() {
