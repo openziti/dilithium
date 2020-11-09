@@ -125,5 +125,62 @@ func (self *dialerConn) rxer() {
 }
 
 func (self *dialerConn) hello() error {
-	return errors.New("not implemented")
+	helloSeq := self.seq.Next()
+	hello, err := newHello(helloSeq, hello{protocolVersion, 0}, nil, self.pool)
+	if err != nil {
+		return errors.Wrap(err, "error creating hello message")
+	}
+	defer hello.buffer.unref()
+
+	count := 0
+	for {
+		if err := writeWireMessage(hello, self.conn, self.peer); err != nil {
+			return errors.Wrap(err, "write hello")
+		}
+
+		if err := self.conn.SetReadDeadline(time.Now().Add(time.Duration(self.profile.ConnectionTimeoutMs) * time.Millisecond)); err != nil {
+			return errors.Wrap(err, "set read deadline")
+		}
+
+		helloAck, _, err := readWireMessage(self.conn, self.pool)
+		if err != nil {
+			return errors.Wrap(err, "read hello ack")
+		}
+		defer helloAck.buffer.unref()
+
+		if err := self.conn.SetReadDeadline(time.Time{}); err != nil {
+			return errors.Wrap(err, "clear read deadline")
+		}
+
+		h, acks, err := helloAck.asHello()
+		if err != nil {
+			return errors.Wrap(err, "unexpected response")
+		}
+
+		if h.version != protocolVersion {
+			return errors.New("unexpected protocol version")
+		}
+
+		if len(acks) == 1 && acks[0].start == acks[0].end && acks[0].start == helloSeq {
+			// Set next highest sequence
+			self.rxPortal.setAccepted(helloAck.seq)
+
+			finalAcks := []ack{{helloAck.seq, helloAck.seq}}
+			finalAck, err := newAck(finalAcks, 0, nil, self.pool)
+			if err != nil {
+				return errors.Wrap(err, "new final ack")
+			}
+			if err := writeWireMessage(finalAck, self.conn, self.peer); err != nil {
+				return errors.Wrap(err, "write final ack")
+			}
+
+			go self.rxer()
+			return nil
+		}
+
+		count++
+		if count > 5 {
+			return errors.New("connection timeout")
+		}
+	}
 }

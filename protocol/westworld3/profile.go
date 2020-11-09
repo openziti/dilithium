@@ -26,6 +26,7 @@ func AddProfile(p *Profile) (byte, error) {
 
 type Profile struct {
 	RandomizeSeq           bool    `cf:"randomize_seq"`
+	ConnectionTimeoutMs	   int     `cf:"connection_timeout_ms"`
 	TxPortalStartSz        int     `cf:"tx_portal_start_sz"`
 	TxPortalMinSz          int     `cf:"tx_portal_min_sz"`
 	TxPortalMaxSz          int     `cf:"tx_portal_max_sz"`
@@ -58,6 +59,7 @@ type Profile struct {
 func NewBaselineProfile() *Profile {
 	return &Profile{
 		RandomizeSeq:           true,
+		ConnectionTimeoutMs:    5000,
 		TxPortalStartSz:        16 * 1024,
 		TxPortalMinSz:          16 * 1024,
 		TxPortalMaxSz:          4 * 1024 * 1024,
