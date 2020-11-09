@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/openziti/dilithium/protocol/westworld2"
+	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/pkg/errors"
 	"math/big"
 	"net"
@@ -125,6 +126,32 @@ func ProtocolFor(protocol string) (Protocol, error) {
 				return nil, errors.Wrap(err, "resolve address")
 			}
 			conn, err := westworld2.Dial(dialAddress, WestworldConfig)
+			if err != nil {
+				return nil, errors.Wrap(err, "dial")
+			}
+			return conn, nil
+		}
+		return impl, nil
+
+	case "westworld3":
+		impl := struct{ ProtoProtocol }{}
+		impl.listen = func(address string) (Accepter, error) {
+			listenAddress, err := net.ResolveUDPAddr("udp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve address")
+			}
+			listener, err := westworld3.Listen(listenAddress, 0)
+			if err != nil {
+				return nil, errors.Wrap(err, "listen")
+			}
+			return listener, nil
+		}
+		impl.dial = func(address string) (net.Conn, error) {
+			dialAddress, err := net.ResolveUDPAddr("udp", address)
+			if err != nil {
+				return nil, errors.Wrap(err, "resolve address")
+			}
+			conn, err := westworld3.Dial(dialAddress, 0)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}

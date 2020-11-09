@@ -17,7 +17,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&doCpuProfile, "cpu", false, "Enable CPU profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMemoryProfile, "memory", false, "Enable memory profiling")
 	RootCmd.PersistentFlags().BoolVar(&doMutexProfile, "mutex", false, "Enable mutex profiling")
-	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld2", "Select underlying protocol (tcp, tls, quic, westworld2)")
+	RootCmd.PersistentFlags().StringVarP(&SelectedProtocol, "protocol", "p", "westworld3", "Select underlying protocol (tcp, tls, quic, westworld2, westworld3)")
 	RootCmd.PersistentFlags().StringVarP(&westworldConfigPath, "westworld2", "w", "", "Config file path for westworld2")
 	RootCmd.PersistentFlags().BoolVarP(&westworldConfigDump, "dump", "d", false, "Dump the westworld2 config")
 }
