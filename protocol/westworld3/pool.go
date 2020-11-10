@@ -31,5 +31,6 @@ func (self *pool) put(buffer *buffer) {
 }
 
 func (self *pool) allocate() interface{} {
+	self.ii.Allocate(self.id)
 	return newBuffer(self)
 }

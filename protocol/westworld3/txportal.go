@@ -47,7 +47,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, pool *p
 		ii:           ii,
 	}
 	p.ready = sync.NewCond(p.lock)
-	p.monitor = newRetxMonitor(profile, conn, peer, p.lock)
+	p.monitor = newRetxMonitor(profile, conn, peer, p.lock, p.ii)
 	return p
 }
 
@@ -101,6 +101,7 @@ func (self *txPortal) ack(acks []ack) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
+	lastTxPortalSz := self.txPortalSz
 	for _, ack := range acks {
 		for seq := ack.start; seq <= ack.end; seq++ {
 			if v, found := self.tree.Get(seq); found {
@@ -121,6 +122,10 @@ func (self *txPortal) ack(acks []ack) error {
 		}
 	}
 
+	if self.txPortalSz != lastTxPortalSz {
+		self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
+	}
+
 	self.ready.Broadcast()
 	return nil
 }
@@ -129,6 +134,7 @@ func (self *txPortal) updateRxPortalSz(rxPortalSz int) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.rxPortalSz = rxPortalSz
+	self.ii.TxPortalRxSzChanged(self.peer, rxPortalSz)
 }
 
 func (self *txPortal) rtt(rttTs uint16) {
@@ -156,6 +162,7 @@ func (self *txPortal) close(seq *util.Sequence) error {
 		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			return errors.Wrap(err, "tx close")
 		}
+		self.ii.WireMessageTx(self.peer, wm)
 	}
 
 	return nil

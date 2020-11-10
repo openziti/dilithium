@@ -46,7 +46,7 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 	lc.ii = profile.i.NewInstance(id, peer)
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
 	lc.txPortal = newTxPortal(conn, peer, profile, lc.pool, lc.ii)
-	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile)
+	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile, lc.ii)
 	go lc.rxer()
 	return lc, nil
 }
@@ -115,7 +115,7 @@ func (self *listenerConn) rxer() {
 			}
 
 		} else {
-			// unexpected message type
+			self.ii.UnexpectedMessageType(self.peer, wm.mt)
 			wm.buffer.unref()
 		}
 	}
@@ -133,21 +133,28 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 		helloAckSeq := self.seq.Next()
 		helloAck, err := newHello(helloAckSeq, hello, &ack{wm.seq, wm.seq}, self.pool)
 		if err != nil {
-			return errors.Wrap(err, "new hello")
+			err = errors.Wrap(err, "new hello")
+			self.ii.ConnectionError(self.peer, err)
+			return err
 		}
 		defer helloAck.buffer.unref()
 
 		for i := 0; i < 5; i++ {
 			// Send Hello Ack
 			if err := writeWireMessage(helloAck, self.conn, self.peer); err != nil {
-				return errors.Wrap(err, "write hello ack")
+				err = errors.Wrap(err, "write hello ack")
+				self.ii.ConnectionError(self.peer, err)
+				return err
 			}
+			self.ii.WireMessageTx(self.peer, helloAck)
 
 			// Receive Response Ack
 			select {
 			case ackWm, ok := <-self.rxQueue:
 				if !ok {
-					return errors.New("rx queue closed")
+					err = errors.New("rx queue closed")
+					self.ii.ConnectionError(self.peer, err)
+					return err
 				}
 				defer ackWm.buffer.unref()
 
@@ -170,9 +177,13 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 			}
 		}
 
-		return errors.New("connection failed")
+		err = errors.New("connection failed")
+		self.ii.ConnectionError(self.peer, err)
+		return err
 
 	} else {
-		return errors.Wrap(err, "expected hello")
+		err = errors.Wrap(err, "expected hello")
+		self.ii.ConnectionError(self.peer, err)
+		return err
 	}
 }

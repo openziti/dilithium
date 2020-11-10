@@ -42,7 +42,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 	dc.ii = profile.i.NewInstance(id, peer)
 	dc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), dc.ii)
 	dc.txPortal = newTxPortal(conn, peer, profile, dc.pool, dc.ii)
-	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, profile)
+	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, profile, dc.ii)
 	go dc.rxer()
 	return dc, nil
 }
@@ -85,11 +85,13 @@ func (self *dialerConn) rxer() {
 	defer logrus.Warn("exited")
 
 	for {
-		wm, _, err := readWireMessage(self.conn, self.pool)
+		wm, peer, err := readWireMessage(self.conn, self.pool)
 		if err != nil {
 			logrus.Errorf("error reading (%v)", err)
+			self.ii.ReadError(self.peer, err)
 			continue
 		}
+		self.ii.WireMessageRx(peer, wm)
 
 		switch wm.mt {
 		case DATA:
@@ -125,6 +127,10 @@ func (self *dialerConn) rxer() {
 			if err := self.rxPortal.rx(wm); err != nil {
 				logrus.Errorf("error rx-ing close (%v)", err)
 			}
+
+		default:
+			self.ii.UnexpectedMessageType(peer, wm.mt)
+			wm.buffer.unref()
 		}
 	}
 }
@@ -145,15 +151,17 @@ func (self *dialerConn) hello() error {
 		if err := writeWireMessage(hello, self.conn, self.peer); err != nil {
 			return errors.Wrap(err, "write hello")
 		}
+		self.ii.WireMessageTx(self.peer, hello)
 
 		if err := self.conn.SetReadDeadline(time.Now().Add(time.Duration(self.profile.ConnectionTimeoutMs) * time.Millisecond)); err != nil {
 			return errors.Wrap(err, "set read deadline")
 		}
 
-		helloAck, _, err := readWireMessage(self.conn, self.pool)
+		helloAck, peer, err := readWireMessage(self.conn, self.pool)
 		if err != nil {
 			return errors.Wrap(err, "read hello ack")
 		}
+		self.ii.WireMessageRx(peer, helloAck)
 		defer helloAck.buffer.unref()
 
 		if err := self.conn.SetReadDeadline(time.Time{}); err != nil {
@@ -181,6 +189,7 @@ func (self *dialerConn) hello() error {
 			if err := writeWireMessage(finalAck, self.conn, self.peer); err != nil {
 				return errors.Wrap(err, "write final ack")
 			}
+			self.ii.WireMessageTx(self.peer, finalAck)
 
 			go self.rxer()
 			return nil
@@ -188,7 +197,9 @@ func (self *dialerConn) hello() error {
 
 		count++
 		if count > 5 {
-			return errors.New("connection timeout")
+			err := errors.New("connection timeout")
+			self.ii.ConnectionError(self.peer, err)
+			return err
 		}
 	}
 }

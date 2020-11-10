@@ -28,6 +28,7 @@ type rxPortal struct {
 	seq        *util.Sequence
 	profile    *Profile
 	closed     bool
+	ii         InstrumentInstance
 }
 
 type rxRead struct {
@@ -36,7 +37,7 @@ type rxRead struct {
 	eof bool
 }
 
-func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, profile *Profile) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, profile *Profile, ii InstrumentInstance) *rxPortal {
 	rx := &rxPortal{
 		tree:       btree.NewWith(profile.RxPortalTreeLen, utils.Int32Comparator),
 		accepted:   -1,
@@ -50,6 +51,7 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		txPortal:   txPortal,
 		seq:        seq,
 		profile:    profile,
+		ii:         ii,
 	}
 	rx.readPool.New = func() interface{} {
 		return make([]byte, profile.PoolBufferSz)
@@ -62,7 +64,7 @@ func (self *rxPortal) read(p []byte) (int, error) {
 preread:
 	for {
 		select {
-		case read, ok := <- self.reads:
+		case read, ok := <-self.reads:
 			if !ok {
 				return 0, io.EOF
 			}
@@ -83,7 +85,7 @@ preread:
 	if self.readBuffer.Len() > 0 {
 		return self.readBuffer.Read(p)
 	} else {
-		read, ok := <- self.reads
+		read, ok := <-self.reads
 		if !ok {
 			return 0, io.EOF
 		}
@@ -147,7 +149,7 @@ func (self *rxPortal) run() {
 					logrus.Errorf("unexpected mt [%d]", wm.mt)
 				}
 			} else {
-				// duplicate
+				self.ii.DuplicateRx(self.peer, wm)
 				wm.buffer.unref()
 			}
 
@@ -164,6 +166,7 @@ func (self *rxPortal) run() {
 				if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 					logrus.Errorf("error sending ack (%v)", err)
 				}
+				self.ii.WireMessageTx(self.peer, ack)
 				ack.buffer.unref()
 			}
 
