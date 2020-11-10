@@ -45,7 +45,7 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		reads:      make(chan *rxRead, profile.ReadsQueueLen),
 		readBuffer: new(bytes.Buffer),
 		readPool:   new(sync.Pool),
-		ackPool:    newPool("ackPool", uint32(profile.PoolBufferSz), nil),
+		ackPool:    newPool("ackPool", uint32(profile.PoolBufferSz), ii),
 		conn:       conn,
 		peer:       peer,
 		txPortal:   txPortal,
@@ -127,11 +127,13 @@ func (self *rxPortal) run() {
 	logrus.Infof("started")
 	defer logrus.Warn("exited")
 
+	/*
 	defer func() {
 		if r := recover(); r != nil {
 			logrus.Errorf("recovered (%v)", r)
 		}
 	}()
+	*/
 
 	for {
 		wm, ok := <-self.rxs
