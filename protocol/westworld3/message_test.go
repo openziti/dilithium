@@ -11,14 +11,14 @@ func init() {
 	for i := 0; i < 16*1024; i++ {
 		wireMessageBenchmarkData[i] = uint8(i)
 	}
-	wireMessageBenchmarkPool = newPool("wireMessageBenchmark", dataStart+(16*1024), nil)
+	wireMessageBenchmarkPool = newPool("wireMessageBenchmark", dataStart+(16*1024), NewNilInstrument().NewInstance("", nil))
 }
 
 var wireMessageBenchmarkData [16 * 1024]byte
 var wireMessageBenchmarkPool *pool
 
 func TestHello(t *testing.T) {
-	p := newPool("test", 1024, nil)
+	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	wm, err := newHello(11, hello{protocolVersion, 6}, nil, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
@@ -36,7 +36,7 @@ func TestHello(t *testing.T) {
 }
 
 func TestHelloResponse(t *testing.T) {
-	p := newPool("test", 1024, nil)
+	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	wm, err := newHello(12, hello{protocolVersion, 6}, &ack{11, 11}, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
@@ -57,7 +57,7 @@ func TestHelloResponse(t *testing.T) {
 }
 
 func TestAck(t *testing.T) {
-	p := newPool("test", 1024, nil)
+	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	rtt := uint16(332)
 	wm, err := newAck([]ack{{1, 1}, {3, 5}}, 10240, &rtt, p)
 	assert.NoError(t, err)
@@ -80,7 +80,7 @@ func TestAck(t *testing.T) {
 }
 
 func TestAckNoRTT(t *testing.T) {
-	p := newPool("test", 1024, nil)
+	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	wm, err := newAck([]ack{{63, 64}}, 0, nil, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
@@ -99,10 +99,10 @@ func TestAckNoRTT(t *testing.T) {
 }
 
 func TestData(t *testing.T) {
-	p := newPool("tooSmall", 1024, nil)
+	p := newPool("tooSmall", 1024, NewNilInstrument().NewInstance("", nil))
 	_, err := newData(64, nil, wireMessageBenchmarkData[:], p)
 	assert.Error(t, err)
-	p = newPool("test", 24*1024, nil)
+	p = newPool("test", 24*1024, NewNilInstrument().NewInstance("", nil))
 	rttIn := new(uint16)
 	*rttIn = 200
 	wm, err2 := newData(64, rttIn, wireMessageBenchmarkData[:], p)
@@ -118,7 +118,7 @@ func TestData(t *testing.T) {
 }
 
 func TestKeepalive(t *testing.T) {
-	p := newPool("test", dataStart, nil)
+	p := newPool("test", dataStart, NewNilInstrument().NewInstance("", nil))
 	wm, err := newKeepalive(p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
@@ -130,7 +130,7 @@ func TestKeepalive(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	p := newPool("test", dataStart, nil)
+	p := newPool("test", dataStart, NewNilInstrument().NewInstance("", nil))
 	wm, err := newClose(10233, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
@@ -142,7 +142,7 @@ func TestClose(t *testing.T) {
 }
 
 func TestWireMessageInsertData(t *testing.T) {
-	p := newPool("test", 1024, nil)
+	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	wm := &wireMessage{seq: 0, mt: DATA, buffer: p.get()}
 	copy(wm.buffer.data[dataStart:], []byte{0x01, 0x02, 0x03, 0x04})
 	wmOut, err := wm.encodeHeader(4)
@@ -175,7 +175,7 @@ func BenchmarkWireMessageInsertData1024(b *testing.B) { benchmarkWireMessageInse
 func BenchmarkWireMessageinsertData4096(b *testing.B) { benchmarkWireMessageInsertData(4096, 8, b) }
 
 func TestWireMessageAppendData(t *testing.T) {
-	p := newPool("test", 1024, nil)
+	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	wm := &wireMessage{seq: 0, mt: DATA, buffer: p.get()}
 	copy(wm.buffer.data[dataStart:], []byte{0x01, 0x02, 0x03, 0x04})
 	wmOut, err := wm.encodeHeader(4)

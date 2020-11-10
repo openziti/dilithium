@@ -18,6 +18,7 @@ type retxMonitor struct {
 	lock     *sync.Mutex
 	ready    *sync.Cond
 	closed   bool
+	retxF    func()
 	ii       InstrumentInstance
 }
 
@@ -34,6 +35,10 @@ func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock
 	}
 	go rm.run()
 	return rm
+}
+
+func (self *retxMonitor) setRetxF(f func()) {
+	self.retxF = f
 }
 
 func (self *retxMonitor) updateRttMs(rttMs uint16) {
@@ -107,6 +112,9 @@ func (self *retxMonitor) run() {
 							logrus.Errorf("retx (%v)", err)
 						} else {
 							self.ii.WireMessageRetx(self.peer, wm)
+						}
+						if self.retxF != nil {
+							self.retxF()
 						}
 
 						self.waitlist.Add(wm, self.deadline())

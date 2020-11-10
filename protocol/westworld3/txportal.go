@@ -21,6 +21,7 @@ type txPortal struct {
 	successCt    int
 	successAccum int
 	dupAckCt     int
+	retxCt       int
 	lastRttProbe time.Time
 	monitor      *retxMonitor
 	closeWaitSeq int32
@@ -48,6 +49,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, pool *p
 	}
 	p.ready = sync.NewCond(p.lock)
 	p.monitor = newRetxMonitor(profile, conn, peer, p.lock, p.ii)
+	p.monitor.setRetxF(p.retx)
 	return p
 }
 
@@ -115,9 +117,13 @@ func (self *txPortal) ack(acks []ack) error {
 				self.txPortalSz -= int(sz)
 				wm.buffer.unref()
 
+				self.successfulAck(int(sz))
+
 				if wm.seq == self.closeWaitSeq {
 					self.closed = true
 				}
+			} else {
+				self.duplicateAck(seq)
 			}
 		}
 	}
@@ -166,4 +172,52 @@ func (self *txPortal) close(seq *util.Sequence) error {
 	}
 
 	return nil
+}
+
+func (self *txPortal) successfulAck(sz int) {
+	self.successCt++
+	self.successAccum += sz
+	if self.successCt == self.profile.TxPortalIncreaseThresh {
+		newCapacity := self.capacity + int(float64(self.successAccum)*self.profile.TxPortalIncreaseScale)
+		self.updatePortalCapacity(newCapacity)
+		self.successCt = 0
+		self.successAccum = 0
+	}
+}
+
+func (self *txPortal) duplicateAck(seq int32) {
+	self.dupAckCt++
+	self.successCt = 0
+	if self.dupAckCt >= self.profile.TxPortalDupAckThresh {
+		newCapacity := int(float64(self.capacity) * self.profile.TxPortalDupAckCapacityScale)
+		self.updatePortalCapacity(newCapacity)
+		self.dupAckCt = 0
+		self.successAccum = int(float64(self.successAccum) * self.profile.TxPortalDupAckSuccessScale)
+	}
+	self.ii.DuplicateAck(self.peer, seq)
+}
+
+func (self *txPortal) retx() {
+	self.retxCt++
+	self.successCt = 0
+	if self.retxCt >= self.profile.TxPortalRetxThresh {
+		newCapacity := int(float64(self.capacity) * self.profile.TxPortalRetxCapacityScale)
+		self.updatePortalCapacity(newCapacity)
+		self.retxCt = 0
+		self.successAccum = int(float64(self.successAccum) * self.profile.TxPortalRetxSuccessScale)
+	}
+}
+
+func (self *txPortal) updatePortalCapacity(newCapacity int) {
+	oldCapacity := self.capacity
+	self.capacity = newCapacity
+	if self.capacity < self.profile.TxPortalMinSz {
+		self.capacity = self.profile.TxPortalMinSz
+	}
+	if self.capacity > self.profile.TxPortalMaxSz {
+		self.capacity = self.profile.TxPortalMaxSz
+	}
+	if self.capacity != oldCapacity {
+		self.ii.TxPortalCapacityChanged(self.peer, self.capacity)
+	}
 }
