@@ -55,12 +55,12 @@ func (self *retxMonitor) updateRttMs(rttMs uint16) {
 	self.ii.NewRetxMs(self.peer, self.retxMs)
 }
 
-func (self *retxMonitor) monitor(wm *wireMessage) {
+func (self *retxMonitor) add(wm *wireMessage) {
 	self.waitlist.Add(wm, self.deadline())
 	self.ready.Broadcast()
 }
 
-func (self *retxMonitor) cancel(wm *wireMessage) {
+func (self *retxMonitor) remove(wm *wireMessage) {
 	self.waitlist.Remove(wm)
 }
 
@@ -84,6 +84,7 @@ func (self *retxMonitor) run() {
 			}
 
 			if self.closed {
+				self.ii.Closed(self.peer)
 				return
 			}
 

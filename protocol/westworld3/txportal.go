@@ -85,12 +85,14 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		}
 		self.tree.Put(wm.seq, wm)
 		self.txPortalSz += segmentSz
+		self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
 
 		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			return 0, errors.Wrap(err, "tx")
 		}
+		self.ii.WireMessageTx(self.peer, wm)
 
-		self.monitor.monitor(wm)
+		self.monitor.add(wm)
 
 		n += segmentSz
 		remaining -= segmentSz
@@ -108,13 +110,14 @@ func (self *txPortal) ack(acks []ack) error {
 		for seq := ack.start; seq <= ack.end; seq++ {
 			if v, found := self.tree.Get(seq); found {
 				wm := v.(*wireMessage)
-				self.monitor.cancel(wm)
+				self.monitor.remove(wm)
 				self.tree.Remove(seq)
 				sz, err := wm.asDataSize()
 				if err != nil {
 					return errors.Wrap(err, "internal tree error")
 				}
 				self.txPortalSz -= int(sz)
+				self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
 				wm.buffer.unref()
 
 				self.successfulAck(int(sz))
@@ -143,12 +146,12 @@ func (self *txPortal) updateRxPortalSz(rxPortalSz int) {
 	self.ii.TxPortalRxSzChanged(self.peer, rxPortalSz)
 }
 
-func (self *txPortal) rtt(rttTs uint16) {
+func (self *txPortal) rtt(probeTs uint16) {
 	now := time.Now().UnixNano()
 	self.lock.Lock()
-	clock := uint16(now / int64(time.Millisecond))
-	delta := clock - rttTs
-	self.monitor.updateRttMs(delta)
+	clockTs := uint16(now / int64(time.Millisecond))
+	rttMs := clockTs - probeTs
+	self.monitor.updateRttMs(rttMs)
 	self.lock.Unlock()
 }
 
@@ -163,7 +166,7 @@ func (self *txPortal) close(seq *util.Sequence) error {
 		}
 		self.closeWaitSeq = wm.seq
 		self.tree.Put(wm.seq, wm)
-		self.monitor.monitor(wm)
+		self.monitor.add(wm)
 
 		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			return errors.Wrap(err, "tx close")
