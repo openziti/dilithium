@@ -45,15 +45,15 @@ func (self *traceInstrumentInstance) Closed(peer *net.UDPAddr) {
  * wire
  */
 func (self *traceInstrumentInstance) WireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
-	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s", self.id, "TX", wm.seq, wm.messageType())
+	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s}", self.id, "TX", wm.seq, wm.messageType(), wm.mt.FlagsString())
 }
 
 func (self *traceInstrumentInstance) WireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
-	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s", self.id, "RETX", wm.seq, wm.messageType())
+	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s}", self.id, "RETX", wm.seq, wm.messageType(), wm.mt.FlagsString())
 }
 
 func (self *traceInstrumentInstance) WireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s", self.id, "RX", wm.seq, wm.messageType())
+	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s}", self.id, "RX", wm.seq, wm.messageType(), wm.mt.FlagsString())
 }
 
 func (self *traceInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {

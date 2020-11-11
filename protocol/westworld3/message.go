@@ -4,6 +4,7 @@ import (
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"net"
+	"strings"
 )
 
 type wireMessage struct {
@@ -22,23 +23,6 @@ const (
 	KEEPALIVE
 	CLOSE
 )
-
-func (mt messageType) String() string {
-	switch mt {
-	case HELLO:
-		return "HELLO"
-	case ACK:
-		return "ACK"
-	case DATA:
-		return "DATA"
-	case KEEPALIVE:
-		return "KEEPALIVE"
-	case CLOSE:
-		return "CLOSE"
-	default:
-		return "???"
-	}
-}
 
 const messageTypeMask = byte(0x7)
 
@@ -303,4 +287,32 @@ func (self *wireMessage) hasFlag(flag messageFlag) bool {
 		return true
 	}
 	return false
+}
+
+func (mt messageType) String() string {
+	switch mt {
+	case HELLO:
+		return "HELLO"
+	case ACK:
+		return "ACK"
+	case DATA:
+		return "DATA"
+	case KEEPALIVE:
+		return "KEEPALIVE"
+	case CLOSE:
+		return "CLOSE"
+	default:
+		return "???"
+	}
+}
+
+func (mt messageType) FlagsString() string {
+	flags := ""
+	if messageFlag(mt) & INLINE_ACK == INLINE_ACK {
+		flags += " INLINE_ACK"
+	}
+	if messageFlag(mt) & RTT == RTT {
+		flags += " RTT"
+	}
+	return strings.TrimSpace(flags)
 }
