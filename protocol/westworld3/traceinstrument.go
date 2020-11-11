@@ -131,19 +131,19 @@ func (self *traceInstrumentInstance) decode(wm *wireMessage) (string, error) {
 		}
 		return fmt.Sprintf("{v:%d, p:%d} |%s|", h.version, h.profile, self.decodeAcks(acks)), nil
 
-	case DATA:
-		sz, err := wm.asDataSize()
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf(":%d", sz), nil
-
 	case ACK:
 		a, rxPortalSz, _, err := wm.asAck()
 		if err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("|%s| %%%d", self.decodeAcks(a), rxPortalSz), nil
+
+	case DATA:
+		sz, err := wm.asDataSize()
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf(":%d", sz), nil
 
 	default:
 		return out, nil
