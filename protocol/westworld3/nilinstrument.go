@@ -52,3 +52,8 @@ func (self *nilInstrumentInstance) DuplicateRx(*net.UDPAddr, *wireMessage) {}
  * allocation
  */
 func (self *nilInstrumentInstance) Allocate(string) {}
+
+/*
+ * instrument lifecycle
+ */
+func (self *nilInstrumentInstance) Shutdown() {}

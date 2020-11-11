@@ -73,6 +73,7 @@ func (self *listener) Addr() net.Addr {
 func (self *listener) run() {
 	logrus.Infof("started")
 	defer logrus.Warn("exited")
+	defer func() { self.ii.Shutdown() }()
 
 	for {
 		if wm, peer, err := readWireMessage(self.conn, self.pool); err == nil {

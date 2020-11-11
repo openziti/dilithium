@@ -91,6 +91,7 @@ func (self *listenerConn) queue(wm *wireMessage) {
 func (self *listenerConn) rxer() {
 	logrus.Infof("started")
 	defer logrus.Warn("exited")
+	defer func() { self.ii.Shutdown() }()
 
 	for {
 		wm, ok := <-self.rxQueue

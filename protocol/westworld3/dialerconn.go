@@ -83,6 +83,7 @@ func (self *dialerConn) SetWriteDeadline(_ time.Time) error {
 func (self *dialerConn) rxer() {
 	logrus.Infof("started")
 	defer logrus.Warn("exited")
+	defer func() { self.ii.Shutdown() }()
 
 	for {
 		wm, peer, err := readWireMessage(self.conn, self.pool)

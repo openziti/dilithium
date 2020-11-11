@@ -1,6 +1,9 @@
 package westworld3
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 type traceInstrument struct{}
 
@@ -15,7 +18,9 @@ func newTraceInstrument() Instrument {
 }
 
 func (self *traceInstrument) NewInstance(id string, peer *net.UDPAddr) InstrumentInstance {
-	return &traceInstrumentInstance{id, peer, make(chan string, 1024)}
+	tii := &traceInstrumentInstance{id, peer, make(chan string, 1024)}
+	go tii.run()
+	return tii
 }
 
 /*
@@ -88,4 +93,23 @@ func (self *traceInstrumentInstance) DuplicateRx(peer *net.UDPAddr, wm *wireMess
  * allocation
  */
 func (self *traceInstrumentInstance) Allocate(id string) {
+}
+
+/*
+ * instrument lifecycle
+ */
+func (self *traceInstrumentInstance) Shutdown() {
+	close(self.queue)
+}
+
+func (self *traceInstrumentInstance) run() {
+	for {
+		select {
+		case l, ok := <-self.queue:
+			if !ok {
+				return
+			}
+			fmt.Println(l)
+		}
+	}
 }

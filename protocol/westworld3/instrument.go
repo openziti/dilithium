@@ -35,4 +35,7 @@ type InstrumentInstance interface {
 
 	// allocation
 	Allocate(id string)
+
+	// instrument lifecycle
+	Shutdown()
 }
