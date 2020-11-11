@@ -60,7 +60,7 @@ type Profile struct {
 
 func NewBaselineProfile() *Profile {
 	return &Profile{
-		RandomizeSeq:                true,
+		RandomizeSeq:                false,
 		ConnectionTimeoutMs:         5000,
 		TxPortalStartSz:             16 * 1024,
 		TxPortalMinSz:               16 * 1024,
@@ -90,7 +90,7 @@ func NewBaselineProfile() *Profile {
 		ReadsQueueLen:               1024,
 		ListenerRxQueueLen:          1024,
 		AcceptQueueLen:              1024,
-		i:                           NewNilInstrument(),
+		i:                           NewTraceInstrument(),
 	}
 }
 

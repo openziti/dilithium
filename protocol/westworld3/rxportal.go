@@ -127,13 +127,11 @@ func (self *rxPortal) run() {
 	logrus.Infof("started")
 	defer logrus.Warn("exited")
 
-	/*
 	defer func() {
 		if r := recover(); r != nil {
 			logrus.Errorf("recovered (%v)", r)
 		}
 	}()
-	*/
 
 	for {
 		wm, ok := <-self.rxs
@@ -142,6 +140,7 @@ func (self *rxPortal) run() {
 		}
 
 		if wm.mt == DATA {
+			logrus.Warnf("got into data")
 			_, found := self.tree.Get(wm.seq)
 			if !found && (wm.seq > self.accepted || (wm.seq == 0 && self.accepted == math.MaxInt32)) {
 				if sz, err := wm.asDataSize(); err == nil {

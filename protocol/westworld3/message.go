@@ -23,6 +23,23 @@ const (
 	CLOSE
 )
 
+func (mt messageType) String() string {
+	switch mt {
+	case HELLO:
+		return "HELLO"
+	case ACK:
+		return "ACK"
+	case DATA:
+		return "DATA"
+	case KEEPALIVE:
+		return "KEEPALIVE"
+	case CLOSE:
+		return "CLOSE"
+	default:
+		return "???"
+	}
+}
+
 const messageTypeMask = byte(0x7)
 
 type messageFlag uint8
