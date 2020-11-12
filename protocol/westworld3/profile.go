@@ -32,7 +32,7 @@ type Profile struct {
 	TxPortalMaxSz               int     `cf:"tx_portal_max_sz"`
 	TxPortalIncreaseThresh      int     `cf:"tx_portal_increase_thresh"`
 	TxPortalIncreaseScale       float64 `cf:"tx_portal_increase_scale"`
-	TxPortalDupAckThresh        int     `cf:"tx_portal_dup_ack_thresh"`
+	TxPortalDupAckThresh        int     `cf:"tx_portal_dupack_thresh"`
 	TxPortalDupAckCapacityScale float64 `cf:"tx_portal_dupack_capacity_scale"`
 	TxPortalDupAckSuccessScale  float64 `cf:"tx_portal_dupack_success_scale"`
 	TxPortalRetxThresh          int     `cf:"tx_portal_retx_thresh"`
