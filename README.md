@@ -2,7 +2,7 @@
 
 _The Dilithium Project_ is a software framework and a set of tooling that supports the development of high-performance streaming protocols over unreliable message-passing systems (UDP datagrams for example).
 
-Initially, we're focusing on the development of `westworld`, which is a high-performance streaming protocol designed to maximize throughput across non-ideal wide-area network links.
+Initially, we're focusing on the development of `westworld`, which is a reliable streaming protocol designed to maximize throughput across non-ideal wide-area network links.
 
 Ultimately, _Dilithium_ will become an extensible framework (implemented in `golang`) for the development of high-performance communication over any arbitrary unreliable message passing system. 
 
