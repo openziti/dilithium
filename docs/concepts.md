@@ -144,4 +144,6 @@ This provides a number of benefits beyond just implementing custom protocols. By
 
 ![Transwarp](images/concepts/transwarp.png)
 
-`dilithium` will be used to implement the _Transwarp_ capabilities within the [Ziti Fabric](https://github.com/openziti/fabric). The Ziti Fabric is an overlay network with advanced smart routing, designed for true programmable networking. `dilithium` is used to implement optimized "underlay" protocol support for the data plane in this stack. `dilithium` is useful, because it provides a single set of pluggable components that can be configured to work with message-oriented TCP connections between Ziti routers, or directly with UDP datagrams (i.e. `westworld`).
+`dilithium` will be used to implement the _Transwarp_ capabilities within the [Ziti Fabric](https://github.com/openziti/fabric). The Ziti Fabric is an overlay network with advanced smart routing, designed for true programmable networking. `dilithium` is used to implement optimized "underlay" protocol support for the data plane in the Ziti architecture. `dilithium` is useful in this scenario, because it provides a single set of pluggable components that can be configured to work with message-oriented TCP connections between Ziti routers, or directly with UDP datagrams (i.e. `westworld`).
+
+Ziti supports operation directly over UDP datagrams, or through encapsulating its data plane inside of a TCP connection. `dilithium` manages the reliability and protocol implementation on top of both of these message transports.
