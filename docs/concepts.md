@@ -1,44 +1,46 @@
 # Dilithium Framework Concepts
 
-The `dilithium` framework is a software library for creating reliable, stream-oriented protocols built on top of unreliable message-passing facilities. A classic example of this type of protocol is TCP.
+The `dilithium` framework is a software library for creating reliable, stream-oriented protocols built on top of unreliable message-passing facilities. TCP is an obvious example of this type of protocol.
 
-The `dilithium` framework includes the `westworld` protocol, which is conceptually similar to TCP but focused on WAN performance optimization in adverse scenarios. `westworld` connections exhibit the same kinds of properties as a TCP connection in that it's a reliable, bi-directional data stream. `westworld` uses UDP datagrams as its unreliable message-passing infrastructure.
+The `dilithium` framework includes the `westworld` protocol, which is conceptually similar to TCP but focused on WAN performance optimization in challenging network weather conditions. `westworld` connections exhibit the same kinds of properties as a TCP connection in that it's a reliable, bi-directional data stream. `westworld` uses UDP datagrams as its unreliable message-passing infrastructure.
 
-This concepts guide provides a high-level tour of the major concepts implemented in `dilithium` components. Understanding each of these concepts orthogonally will help provide a clear understanding of how these features combine to solve performance and reliability issues.
+This guide provides a high-level tour of the major concepts implemented within `dilithium` components. Understanding each of these concepts orthogonally will help provide a clear understanding of how these features combine to solve performance and reliability issues.
 
 ## Directional txPortal/rxPortal Pair
 
-The `dilithium` framework sees a bi-directional communications link as a pair of uni-directional communications links. Each link uses a symmetrical pair of components to facilitate that communications direction.
+The `dilithium` framework sees bi-directional communications as a pair of uni-directional communications links. Each link uses a symmetrical pair of components to facilitate communications for a single direction.
 
 ![Directional txPortal/rxPortal Pair](images/concepts/directional_rxtx_pair.png)
 
 The top-level `dilithium` components include a `txPortal`, which manages the transmitting side of a link, and the `rxPortal`, which manages the receiving side.
 
-The `txPortal` admits data as an array of octets from another software layer, which it then turns into messages that are transmitted across the message-passing infrastructure. The `rxPortal` receives messages from the message-passing infrastructure and reconstructs these as a stream of octets, which are delivered to its client.
+The `txPortal` admits data as an array of octets from another software layer, which it then turns into messages that are transmitted across the message-passing infrastructure. The `rxPortal` receives messages from the message-passing infrastructure and reconstructs the stream of octets, which is delivered to its client.
 
 ## Rate Limiting Flow Control
 
 ![Rate Limiting Inputs](images/concepts/rate_limiting_inputs.png)
 
-An important goal for these components is to simultaneously maximize the throughput of a message-passing system, while also limiting the flow such that the system is not overwhelmed. There's a delicate balance to be maintained, which must automatically adjust to changing backpressures and weather conditions.
+An important goal for these components is to simultaneously maximize the throughput of a message-passing system, while also limiting the flow such that the system is not overwhelmed. There's a delicate balance to be maintained, and the implementation has to automatically adjust to changing backpressures and network weather conditions.
 
-`dilithium`-based protocols use a traditional _windowing_ model to manage the communication rate. In this framework, we call the window a _portal_ (because we're cheeky). The portal _capacity_ represents the total size of the data that is allowed to be present in the link, transiting between the `txPortal` and the `rxPortal` at the current point in time. the `txPortalSz` represents the amount of data managed in the transmitting side of the communication. The `rxPortalSz` represents the amount of data buffered in the receiving side.
+`dilithium`-based protocols use a traditional _windowing_ model to manage the message rate. In this implementation, we call the window a _portal_ (because we're cheeky). The portal _capacity_ represents the total size of the data that is allowed to be present in the link, transiting between the `txPortal` and the `rxPortal` at the current point in time. the `txPortalSz` represents the amount of data managed in the transmitting side of the communication. The `rxPortalSz` represents the amount of data buffered in the receiving side.
 
-The `txPortal` will only admit data from its client into the link when the minimum of the `(capacity - txPortalSz)` or `(capacity - rxPortalSz)` is equal to or larger than the size of the data the client wants to transmit. Until that amount of capacity becomes available, the `txPortal` will block its client, providing backpressure. 
+The `txPortal` will only admit data from its client into the link when the minimum of `(capacity - txPortalSz)` or `(capacity - rxPortalSz)` is equal to or larger than the size of the data the client wants to transmit. Until that amount of capacity becomes available, the `txPortal` will block its client, providing backpressure. While the `txPortal` is limiting the admission of new data, the `txPortal` and `rxPortal` collaborate through retransmission and acknowledgements to free up space in both the sending and receiving buffers. This will eventually un-block the admission of new data into the link.
 
 ## Loss Handling
 
 ![Loss Handling](images/concepts/loss_handling.png)
 
-`dilithium`-based implementations operate over unreliable message-passing infrastructures (primarily, UDP datagrams across the internet). In order to turn these unreliable message-passing systems into a reliable stream of communications, `dilithium` must implement loss handling and mitigation.
+`dilithium`-based implementations operate over unreliable message-passing infrastructures (primarily UDP datagrams across the internet). In order to convert these unreliable message-passing systems into a reliable stream of communications, `dilithium` must implement packet loss mitigation.
 
-Also, unreliable message-passing infrastructures usually do not guarantee message ordering, and `dilithium` must also handle these cases as well.
+Also, unreliable message-passing infrastructures usually do not guarantee message ordering, and `dilithium` must also handle cases where messages arrive unordered.
 
-And, to keep it interesting... the control messages (`ACK`) can also go missing or arrive in unusual orders. `dilithium` must also operate correctly in these cases.
+And, to keep it interesting... the control messages (`ACK`) can also go missing or arrive in unusual orders. `dilithium` deals with these cases as well.
 
-In the diagram above, we see the 3 typical types of communications that happen between the `txPortal`&rarr;`rxPortal` pair. The first type of messages are the _nominal transmission_ messages, which are portions of the stream data that have been assigned a _sequence identifier_. Typically when the `rxPortal` receives these messages it sends back an _acknowledgement_ (`ACK`) message, notifying the `txPortal` that it received the payload. If the `txPortal` does not receive an `ACK` within a timeout period (see section below on _Round-Trip Time Probes_), it will retransmit the payload again. It will continue retransmitting at the end of the expiry period, until it receives an `ACK` from the `rxPortal`.
+In the diagram above, we see the 3 typical types of communications that happen between the `txPortal`&rarr;`rxPortal` pair. The first type of messages are the _(nominal) transmission_ messages, which are portions of the stream data that have been assigned a _sequence identifier_, and contribute directly to the forward transmission of new data. When the `rxPortal` receives these messages it sends back an _acknowledgement_ (`ACK`) message, notifying the `txPortal` that it received the payload. If the `txPortal` does not receive an `ACK` within a timeout period (see section below on _Round-Trip Time Probes_), it will retransmit the payload again. It will continue retransmitting at the end of the expiry period, until it receives an `ACK` from the `rxPortal`.
 
-In cases where the `ACK` message went missing, the retransmission mechanism will ultimately re-synchronize the state of the message between the `txPortal`&rarr;`rxPortal` pair.
+When the `txPortal` receives an `ACK` for a message, it will remove that message from its buffers freeing up space to deal with the next chunk of data from its client.
+
+In cases where the `ACK` messages go missing, the retransmission mechanism will ultimately re-synchronize the state of the message between the `txPortal`&rarr;`rxPortal` pair. Retransmission will occur until the sender finally receives an `ACK` for that message from the `rxPortal`.
 
 ## Retransmission Monitor
 
@@ -54,29 +56,29 @@ Deadline computation is performed according to the `txPortal`'s observed _round-
 
 A critical component in achieving high performance is retransmission of lost payloads with the correct timing. 
 
-Payloads that are retransmitted to early are in danger of being an un-needed retransmission (the corresponding `ACK` may be in transit). Un-needed retransmissions consume bandwidth that could be used for productive data movement. 
+Payloads that are retransmitted too early are in danger of being unnecessary (the corresponding `ACK` for a successfully received payload may still be in transit). Un-needed retransmissions consume bandwidth that could be used for productive data movement. 
 
-Payloads that are retransmitted too late reduce the overall perceived performance of the link. When a retransmission is necessary it often fills in a "hole" in the `rxPortal` buffer like a Tetris piece, allowing a number of payloads to be released at once. The more payloads are pending, waiting on a retransmission, the more performance impact will be felt by late retransmissions.
+Payloads that are retransmitted too late reduce the overall perceived performance of the link. When a retransmission is necessary it often fills in a "hole" in the `rxPortal` buffer (like a Tetris piece), allowing a number of payloads to be released to the receiving client at once. The more payloads that are pending, waiting on a retransmission, the more performance impact will be felt by late retransmissions.
 
-In order to achieve the tightest retransmission timing possible, `dilithium` uses configurable `rtt` _probes_. Probing is accomplished by the `txPortal` capturing the current high-resolution wall clock time, and inserting that into an outbound payload. When the `rxPortal` receives a payload with an embedded `rtt` probe, it embeds that probe back into its outbound `ack` for that payload. When the `txPortal` receives an `ack` with an `rtt` probe embedded, it can compare that probe to the current wall clock time to determine how long it took to get a response to that payload from the other side.
+In order to achieve the tightest retransmission timing possible, `dilithium` uses configurable _round-trip time probes_. Probing is accomplished by capturing the current high-resolution wall clock time, and inserting that into an outbound payload. When the `rxPortal` receives a payload with an embedded `rtt` probe, it embeds that probe back into its outbound `ack` for that payload. When the `txPortal` receives an `ack` with an `rtt` probe embedded, it compares that probe timestamp to the current wall clock time to determine how long it took to get a response to that payload from the receiver.
 
-`rtt` probes are sent according to a configurable period, and the resulting `rtt` value is averaged over a configurable number of previous times. That averaged value is then scaled using a configurable _scale_ value, and can have additional milliseconds of time added to it. That value is output as `retxMs`, which is the number of milliseconds that the `retx` monitor should use in computing retransmission deadlines.
+`rtt` probes are sent according to a configurable period, and the resulting `rtt` value is averaged over a configurable number of previous probed time deltas. That averaged value is then scaled using configurable scaling and adjustment factors. The final value is output as `retxMs`, which is the number of milliseconds that the `retx` monitor should use in computing retransmission deadlines.
 
 ## Portal Scaling
 
 ![Portal Scaling](images/concepts/portal_scaling.png)
 
-The flow rate is controlled by the _capacity_ of the portal (window). Finding the ideal sending rate, which results in the most productive data transfer with the least unnecessary retransmission requires the continual adjustment of the portal capacity.
+The message flow rate is controlled by the _capacity_ of the portal (window). Finding the ideal sending rate, which results in the most productive data transfer with the least unnecessary retransmissions requires continual adjustment of the portal capacity.
 
 In `dilithium` protocols, there are currently 3 main factors which contribute to scaling the portal capacity value.
 
-Successfully acked transmissions have the size of their productive payloads added to an _accumulator_. When the number of successfully acked transmissions reaches a configurable threshold value, the size of that accumulator is scaled according to a `scale` value and the result is added to the `capacity`. This is intended to be the primary mechanism that allows the window size to grow.
+Successfully acknowledged transmissions have the size of their productive payloads added to an _accumulator_. When the number of successfully acked transmissions reaches a configurable threshold value, the size of that accumulator is scaled (`tx_portal_increase_scale`) and the result is added to the `capacity` (window) size of the link. This is the primary mechanism that allows the window size to grow.
 
-Duplicate acks (`dupack`) are counted. When the number of duplicate acks reaches a configurable threshold value, the portal capacity is multiplied by a configurable `scale` value.
+Duplicate acks (`dupack`) are counted. When the number of duplicate acks reaches a configurable threshold value, the portal capacity is scaled by a configurable value (`tx_portal_dupack_capacity_scale`).
 
-Retransmissions (`retx`) are counted. When the number of retransmitted payloads reaches a configurable threshold value, the portal capacity is multiplied by a configurable `scale` value.
+Retransmissions (`retx`) are counted. When the number of retransmitted payloads reaches a configurable threshold value, the portal capacity is multiplied by a configurable value (`tx_portal_retx_capacity_scale`).
 
-Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `retx` counters reach their thresholds, in addition to multiplying the portal capacity by their `scale` values, they also multiply the successful transmission accumulator by a scale value (current implementations hardcode this scale to `0.0`), allowing them to clear or adjust the successful transmission accumulator.
+Whenever a counter reaches a threshold it is reset to zero. When `dupack` or `retx` counters reach their thresholds, in addition to multiplying the portal capacity by their `scale` values, they also multiply the successful transmission accumulator by a scale value (`tx_portal_dupack_success_scale`, `tx_portal_retx_success_scale`), allowing them to clear or adjust the successful transmission accumulator.
 
 ## Write Buffer (txPortal)
 
@@ -116,7 +118,7 @@ The current profile concept is a sealed set of knobs to tune the infrastructure 
 
 `dilithium` differs from traditional protocol stacks in that it is constructed as a _framework_ for implementing reliable/streaming protocols on top of unreliable message-passing infrastructures.
 
-Like most frameworks, `dilithium` provides a number of _hotspots_ or _extension points_ (_interfaces_) that can be extended using code specific to your application.
+Like most frameworks, `dilithium` provides a number of _hotspots_ or _extension points_ (_interfaces_) that can be extended using code specific to your protocol implementation or application.
 
 This provides a number of benefits beyond just implementing custom protocols. By providing extension points around the major _orthogonal concerns_ of the framework, it means that even existing implementations can be tuned and adjusted to meet specific requirements. 
 
@@ -124,7 +126,7 @@ This provides a number of benefits beyond just implementing custom protocols. By
 
 ![Westworld](images/concepts/westworld.png)
 
-`dilithium` ships with an optimized, UDP-based protocol for WAN optimization scenarios. It works similarly to TCP, but with a different congestion control and fairness model. It is designed to work well in challenging (lossy, latent, jittery) network weather conditions. It is also designed to be highly tunable, capable of supporting assymetric profiles (for link with different upstream and downstream characteristics), and real-time profile adjustments.
+`dilithium` ships with an optimized, UDP-based protocol for WAN optimization scenarios. It works similarly to TCP, but with a different congestion control and fairness model. It is designed to work well in challenging (lossy, latent, jittery) network weather conditions. It is also designed to be highly tunable, capable of supporting assymetric profiles (for links with different upstream and downstream characteristics), and real-time profile adjustments.
 
 ## Protocol Implementation: Transwarp
 
