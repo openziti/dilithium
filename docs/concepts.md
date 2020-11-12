@@ -112,6 +112,18 @@ As of version `0.3`, profile information is exchanged through the `HELLO` connec
 
 The current profile concept is a sealed set of knobs to tune the infrastructure for various operational and performance needs. Future iterations of the profile concept will likely expose extension points in the framework, allowing downstream code to participate in most of these framework concepts directly, chaning their behavior to even deeper degrees.
 
+## HELLO (Connection Setup)
+
+![HELLO](images/concepts/hello.png)
+
+`dilithium` uses a traditional _3-way handshake_ to establish communications.
+
+A `HELLO` message is sent from the _dialer (initiator)_ of the connection to the _listener_. The `HELLO` message provides the starting sequence number for the communication, and also identifies the protocol version and the dialer's profile selection.
+
+The listener responds to the `HELLO` message with a `HELLO (ACK)` message. The `HELLO` message identifies the starting sequence number, the protocol version, and the profile selection for the listener. The `ACK` portion of the message acknowledges the reception of the dialer's `HELLO` by the listener. When the dialer receives the `HELLO (ACK)` from the listener, it responds with a final `ACK` message, and the communication starts.
+
+`dilithium` includes configurable support for starting from a random sequence number, or for starting from a fixed sequence number (`0` for example), which makes protocol development and troubleshooting simpler.
+
 ## Extensible Framework
 
 ![Extensible Framework](images/concepts/extensible_framework.png)
