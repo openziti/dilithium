@@ -173,9 +173,19 @@ func (self *traceInstrumentInstance) DuplicateAck(peer *net.UDPAddr, seq int32) 
  * rxPortal
  */
 func (self *traceInstrumentInstance) RxPortalSzChanged(peer *net.UDPAddr, sz int) {
+	if self.i.rxPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s RX PORTAL SZ: %d", self.id, sz))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) DuplicateRx(peer *net.UDPAddr, wm *wireMessage) {
+	if self.i.rxPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE RX: #%d", self.id, wm.seq))
+		self.lock.Unlock()
+	}
 }
 
 /*

@@ -145,6 +145,7 @@ func (self *rxPortal) run() {
 				if sz, err := wm.asDataSize(); err == nil {
 					self.tree.Put(wm.seq, wm)
 					self.rxPortalSz += int(sz)
+					self.ii.RxPortalSzChanged(self.peer, self.rxPortalSz)
 				} else {
 					logrus.Errorf("unexpected mt [%d]", wm.mt)
 				}
@@ -190,6 +191,7 @@ func (self *rxPortal) run() {
 
 							self.tree.Remove(key)
 							self.rxPortalSz -= len(data)
+							self.ii.RxPortalSzChanged(self.peer, self.rxPortalSz)
 							wm.buffer.unref()
 							self.accepted = next
 							if next < math.MaxInt32 {
