@@ -209,7 +209,7 @@ func (self *rxPortal) run() {
 				}
 
 				if removals > 1 {
-					if ack, err := newAck([]ack{{-1, -1}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
+					if ack, err := newAck([]ack{{-33, -33}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
 						if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 							logrus.Errorf("error sending pacing ack (%v)", err)
 						}

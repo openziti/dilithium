@@ -121,7 +121,7 @@ func (self *traceInstrumentInstance) ReadError(peer *net.UDPAddr, err error) {
 func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt messageType) {
 	if self.i.error {
 		self.lock.Lock()
-		fmt.Println(fmt.Sprintf("&& %-24s UNEXPECTED MESSAGE TYPE: ", self.id, mt.String()))
+		fmt.Println(fmt.Sprintf("&& %-24s UNEXPECTED MESSAGE TYPE: %s", self.id, mt.String()))
 		self.lock.Unlock()
 	}
 }
