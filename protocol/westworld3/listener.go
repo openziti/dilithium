@@ -80,22 +80,19 @@ func (self *listener) run() {
 			conn, found := self.peers.Get(peer)
 			if found {
 				lc := conn.(*listenerConn)
-				lc.ii.WireMessageRx(peer, wm)
 				lc.queue(wm)
 
 			} else {
+				self.ii.WireMessageRx(peer, wm)
 				if wm.mt == HELLO {
-					self.ii.WireMessageRx(peer, wm)
 					go self.hello(wm, peer)
 
 				} else {
 					self.ii.UnknownPeer(peer)
-					self.ii.WireMessageRx(peer, wm)
 					wm.buffer.unref()
 				}
 			}
 		} else {
-			self.ii.WireMessageRx(peer, wm)
 			self.ii.ReadError(peer, err)
 		}
 	}

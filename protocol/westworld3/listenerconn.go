@@ -98,24 +98,45 @@ func (self *listenerConn) rxer() {
 		if !ok {
 			return
 		}
+		self.ii.WireMessageRx(self.peer, wm)
 
-		if wm.mt == DATA || wm.mt == CLOSE {
-			self.rxPortal.rx(wm)
-
-		} else if wm.mt == ACK {
-			if acks, rxPortalSz, rtt, err := wm.asAck(); err == nil {
-				self.txPortal.updateRxPortalSz(int(rxPortalSz))
-				if rtt != nil {
-					self.txPortal.rtt(*rtt)
-				}
-				wm.buffer.unref()
-				self.txPortal.ack(acks)
-
-			} else {
-				logrus.Errorf("error unmarshaling ack (%v)", err)
+		switch wm.mt {
+		case DATA:
+			logrus.Warnf("wm.seq: %d", wm.seq)
+			_, rttTs, err := wm.asData()
+			if err != nil {
+				logrus.Errorf("as data error (%v)", err)
+				continue
+			}
+			if rttTs != nil {
+				self.txPortal.rtt(*rttTs)
+			}
+			if err := self.rxPortal.rx(wm); err != nil {
+				logrus.Errorf("error rx-ing (%v)", err)
+				continue
 			}
 
-		} else {
+		case ACK:
+			acks, rxPortalSz, rttTs, err := wm.asAck()
+			if err != nil {
+				logrus.Errorf("as ack error (%v)", err)
+				continue
+			}
+			if rttTs != nil {
+				self.txPortal.rtt(*rttTs)
+			}
+			self.txPortal.updateRxPortalSz(int(rxPortalSz))
+			if err := self.txPortal.ack(acks); err != nil {
+				logrus.Errorf("error acking (%v)", err)
+				continue
+			}
+
+		case CLOSE:
+			if err := self.rxPortal.rx(wm); err != nil {
+				logrus.Errorf("error rx-ing close (%v)", err)
+			}
+
+		default:
 			self.ii.UnexpectedMessageType(self.peer, wm.mt)
 			wm.buffer.unref()
 		}
