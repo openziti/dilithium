@@ -90,7 +90,7 @@ func NewBaselineProfile() *Profile {
 		ReadsQueueLen:               1024,
 		ListenerRxQueueLen:          1024,
 		AcceptQueueLen:              1024,
-		i:                           NewTraceInstrument(),
+		i:                           NewNilInstrument(),
 	}
 }
 
@@ -105,6 +105,39 @@ func (self *Profile) Load(data map[interface{}]interface{}) error {
 		}
 	} else {
 		return errors.New("missing 'profile_version'")
+	}
+	if v, found := data["instrument"]; found {
+		submap, oks := v.(map[string]interface{})
+		if !oks {
+			if subi, oki := v.(map[interface{}]interface{}); oki {
+				submap = make(map[string]interface{})
+				oks = true
+				for k, v := range subi {
+					if s, ok := k.(string); ok {
+						submap[s] = v
+					} else {
+						oks = false
+					}
+				}
+			}
+		}
+		if oks {
+			if v, found := submap["name"]; found {
+				if name, ok := v.(string); ok {
+					if i, err := NewInstrument(name, submap); err == nil {
+						self.i = i
+					} else {
+						return errors.Wrap(err, "error configuring instrument")
+					}
+				} else {
+					return errors.New("invalid 'name' field")
+				}
+			} else {
+				return errors.New("instrument missing 'name' field")
+			}
+		} else {
+			return errors.New("invalid instrument map")
+		}
 	}
 	return cf.Load(data, self)
 }
