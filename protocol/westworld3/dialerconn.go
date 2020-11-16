@@ -94,7 +94,7 @@ func (self *dialerConn) rxer() {
 		}
 		self.ii.WireMessageRx(peer, wm)
 
-		switch wm.mt {
+		switch wm.messageType() {
 		case DATA:
 			_, rttTs, err := wm.asData()
 			if err != nil {

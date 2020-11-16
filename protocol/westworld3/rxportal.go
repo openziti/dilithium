@@ -138,10 +138,8 @@ func (self *rxPortal) run() {
 		if !ok {
 			return
 		}
-		logrus.Warnf("wm.seq: #%d", wm.seq)
 
-		if wm.mt == DATA {
-			logrus.Warnf("got into data (#%d)", wm.seq)
+		if wm.messageType() == DATA {
 			_, found := self.tree.Get(wm.seq)
 			if !found && (wm.seq > self.accepted || (wm.seq == 0 && self.accepted == math.MaxInt32)) {
 				if sz, err := wm.asDataSize(); err == nil {
@@ -164,7 +162,6 @@ func (self *rxPortal) run() {
 				}
 			}
 
-			logrus.Infof("sending ack for #%d", wm.seq)
 			if ack, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
 				if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 					logrus.Errorf("error sending ack (%v)", err)
@@ -206,7 +203,7 @@ func (self *rxPortal) run() {
 					}
 				}
 			}
-		} else if wm.mt == CLOSE && !self.closed {
+		} else if wm.messageType() == CLOSE && !self.closed {
 			if err := self.txPortal.close(self.seq); err != nil {
 				logrus.Errorf("error closing (%v)", err)
 			}

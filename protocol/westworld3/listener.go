@@ -84,7 +84,7 @@ func (self *listener) run() {
 
 			} else {
 				self.ii.WireMessageRx(peer, wm)
-				if wm.mt == HELLO {
+				if wm.messageType() == HELLO {
 					go self.hello(wm, peer)
 
 				} else {

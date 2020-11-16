@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 )
 
 type traceInstrument struct{}
 
 type traceInstrumentInstance struct {
-	id    string
-	peer  *net.UDPAddr
-	queue chan string
+	id   string
+	peer *net.UDPAddr
+	lock *sync.Mutex
 }
 
 func NewTraceInstrument() Instrument {
@@ -19,9 +20,7 @@ func NewTraceInstrument() Instrument {
 }
 
 func (self *traceInstrument) NewInstance(id string, peer *net.UDPAddr) InstrumentInstance {
-	tii := &traceInstrumentInstance{id, peer, make(chan string, 1024)}
-	go tii.run()
-	return tii
+	return &traceInstrumentInstance{id, peer, new(sync.Mutex)}
 }
 
 /*
@@ -47,17 +46,23 @@ func (self *traceInstrumentInstance) Closed(peer *net.UDPAddr) {
  */
 func (self *traceInstrumentInstance) WireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
 	decode, _ := self.decode(wm)
-	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "TX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode)
+	self.lock.Lock()
+	fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "TX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
+	self.lock.Unlock()
 }
 
 func (self *traceInstrumentInstance) WireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
 	decode, _ := self.decode(wm)
-	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RETX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode)
+	self.lock.Lock()
+	fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RETX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
+	self.lock.Unlock()
 }
 
 func (self *traceInstrumentInstance) WireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
 	decode, _ := self.decode(wm)
-	self.queue <- fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode)
+	self.lock.Lock()
+	fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
+	self.lock.Unlock()
 }
 
 func (self *traceInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {
@@ -106,19 +111,6 @@ func (self *traceInstrumentInstance) Allocate(id string) {
  * instrument lifecycle
  */
 func (self *traceInstrumentInstance) Shutdown() {
-	close(self.queue)
-}
-
-func (self *traceInstrumentInstance) run() {
-	for {
-		select {
-		case l, ok := <-self.queue:
-			if !ok {
-				return
-			}
-			fmt.Println(l)
-		}
-	}
 }
 
 func (self *traceInstrumentInstance) decode(wm *wireMessage) (string, error) {

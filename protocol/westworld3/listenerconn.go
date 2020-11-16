@@ -100,9 +100,8 @@ func (self *listenerConn) rxer() {
 		}
 		self.ii.WireMessageRx(self.peer, wm)
 
-		switch wm.mt {
+		switch wm.messageType() {
 		case DATA:
-			logrus.Warnf("wm.seq: %d", wm.seq)
 			_, rttTs, err := wm.asData()
 			if err != nil {
 				logrus.Errorf("as data error (%v)", err)
@@ -179,6 +178,7 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 					return err
 				}
 				defer ackWm.buffer.unref()
+				self.ii.WireMessageRx(self.peer, ackWm)
 
 				if ackWm.mt != ACK {
 					logrus.Errorf("expected ACK, got [%d]", ackWm.mt)
