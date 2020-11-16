@@ -2,4 +2,7 @@ profile_version: 1
 
 instrument:
   name: trace
-  wire: true
+  wire: false
+  tx_portal: true
+  rx_portal: true
+  errors: true

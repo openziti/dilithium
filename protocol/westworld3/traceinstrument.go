@@ -12,6 +12,7 @@ type traceInstrument struct {
 	wire     bool
 	txPortal bool
 	rxPortal bool
+	error    bool
 }
 
 type traceInstrumentInstance struct {
@@ -102,30 +103,70 @@ func (self *traceInstrumentInstance) WireMessageRx(peer *net.UDPAddr, wm *wireMe
 }
 
 func (self *traceInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {
+	if self.i.error {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("&& %-24s UNKNOWN PEER: %s", self.id, peer))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) ReadError(peer *net.UDPAddr, err error) {
+	if self.i.error {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("&& %-24s READ ERROR: %v", self.id, err))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt messageType) {
+	if self.i.error {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("&& %-24s UNEXPECTED MESSAGE TYPE: ", self.id, mt.String()))
+		self.lock.Unlock()
+	}
 }
 
 /*
  * txPortal
  */
 func (self *traceInstrumentInstance) TxPortalCapacityChanged(peer *net.UDPAddr, capacity int) {
+	if self.i.txPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s TX PORTAL CAPACITY: %d", self.id, capacity))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) TxPortalSzChanged(peer *net.UDPAddr, sz int) {
+	if self.i.txPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s TX PORTAL SZ: %d", self.id, sz))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) TxPortalRxSzChanged(peer *net.UDPAddr, sz int) {
+	if self.i.txPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s TX PORTAL RX SZ: %d", self.id, sz))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) NewRetxMs(peer *net.UDPAddr, retxMs int) {
+	if self.i.txPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s RETX MS: %d", self.id, retxMs))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) DuplicateAck(peer *net.UDPAddr, seq int32) {
+	if self.i.txPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE ACK", self.id))
+		self.lock.Unlock()
+	}
 }
 
 /*
