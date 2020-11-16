@@ -11,6 +11,9 @@ import (
 	"github.com/openziti/dilithium/protocol/westworld2"
 	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"math/big"
 	"net"
 	"time"
@@ -32,8 +35,6 @@ type Accepter interface {
 
 func (self ProtoProtocol) Listen(address string) (Accepter, error) { return self.listen(address) }
 func (self ProtoProtocol) Dial(address string) (net.Conn, error)   { return self.dial(address) }
-
-var WestworldConfig *westworld2.Config
 
 func ProtocolFor(protocol string) (Protocol, error) {
 	switch protocol {
@@ -108,13 +109,31 @@ func ProtocolFor(protocol string) (Protocol, error) {
 		return impl, nil
 
 	case "westworld2":
+		cfg := westworld2.NewDefaultConfig()
+		if configPath != "" {
+			data, err := ioutil.ReadFile(configPath)
+			if err != nil {
+				return nil, errors.Wrapf(err, "unable to read config file [%s]", configPath)
+			}
+			dataMap := make(map[interface{}]interface{})
+			if err = yaml.Unmarshal(data, dataMap); err != nil {
+				return nil, errors.Wrapf(err, "unable to unmarshal config data [%s]", configPath)
+			}
+			if err = cfg.Load(dataMap); err != nil {
+				return nil, errors.Wrapf(err, "unable to load westworld2 config [%s]", configPath)
+			}
+		}
+		if configDump {
+			logrus.Infof(cfg.Dump())
+		}
+
 		impl := struct{ ProtoProtocol }{}
 		impl.listen = func(address string) (Accepter, error) {
 			listenAddress, err := net.ResolveUDPAddr("udp", address)
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			listener, err := westworld2.Listen(listenAddress, WestworldConfig)
+			listener, err := westworld2.Listen(listenAddress, cfg)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
@@ -125,7 +144,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			conn, err := westworld2.Dial(dialAddress, WestworldConfig)
+			conn, err := westworld2.Dial(dialAddress, cfg)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
@@ -134,13 +153,37 @@ func ProtocolFor(protocol string) (Protocol, error) {
 		return impl, nil
 
 	case "westworld3":
+		p := westworld3.NewBaselineProfile()
+		if configPath != "" {
+			if configPath != "" {
+				data, err := ioutil.ReadFile(configPath)
+				if err != nil {
+					return nil, errors.Wrapf(err, "unable to read config file [%s]", configPath)
+				}
+				dataMap := make(map[interface{}]interface{})
+				if err = yaml.Unmarshal(data, dataMap); err != nil {
+					return nil, errors.Wrapf(err, "unable to unmarshal config data [%s]", configPath)
+				}
+				if err = p.Load(dataMap); err != nil {
+					return nil, errors.Wrapf(err, "unable to load westworld3 profile [%s]", configPath)
+				}
+			}
+		}
+		profileId, err := westworld3.AddProfile(p)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to register westworld3 profile")
+		}
+		if configDump {
+			logrus.Infof(p.Dump())
+		}
+
 		impl := struct{ ProtoProtocol }{}
 		impl.listen = func(address string) (Accepter, error) {
 			listenAddress, err := net.ResolveUDPAddr("udp", address)
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			listener, err := westworld3.Listen(listenAddress, 0)
+			listener, err := westworld3.Listen(listenAddress, profileId)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
@@ -151,7 +194,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			conn, err := westworld3.Dial(dialAddress, 0)
+			conn, err := westworld3.Dial(dialAddress, profileId)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}

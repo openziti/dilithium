@@ -1,6 +1,9 @@
 package westworld3
 
-import "net"
+import (
+	"github.com/pkg/errors"
+	"net"
+)
 
 type Instrument interface {
 	NewInstance(id string, peer *net.UDPAddr) InstrumentInstance
@@ -38,4 +41,15 @@ type InstrumentInstance interface {
 
 	// instrument lifecycle
 	Shutdown()
+}
+
+func NewInstrument(name string, config map[string]interface{}) (i Instrument, err error) {
+	switch name {
+	case "nil":
+		return NewNilInstrument(), nil
+	case "trace":
+		return NewTraceInstrument(), nil
+	default:
+		return nil, errors.Errorf("unknown instrument '%s'", name)
+	}
 }
