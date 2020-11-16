@@ -48,7 +48,7 @@ func NewInstrument(name string, config map[string]interface{}) (i Instrument, er
 	case "nil":
 		return NewNilInstrument(), nil
 	case "trace":
-		return NewTraceInstrument(), nil
+		return NewTraceInstrument(config)
 	default:
 		return nil, errors.Errorf("unknown instrument '%s'", name)
 	}

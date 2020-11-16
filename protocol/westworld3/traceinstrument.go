@@ -2,25 +2,55 @@ package westworld3
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"net"
 	"strings"
 	"sync"
 )
 
-type traceInstrument struct{}
+type traceInstrument struct {
+	wire     bool
+	txPortal bool
+	rxPortal bool
+}
 
 type traceInstrumentInstance struct {
 	id   string
 	peer *net.UDPAddr
 	lock *sync.Mutex
+	i    *traceInstrument
 }
 
-func NewTraceInstrument() Instrument {
-	return &traceInstrument{}
+func NewTraceInstrument(config map[string]interface{}) (Instrument, error) {
+	i := &traceInstrument{}
+	if config != nil {
+		if v, found := config["wire"]; found {
+			if wire, ok := v.(bool); ok {
+				i.wire = wire
+			} else {
+				return nil, errors.New("invalid 'wire' value")
+			}
+		}
+		if v, found := config["tx_portal"]; found {
+			if txPortal, ok := v.(bool); ok {
+				i.txPortal = txPortal
+			} else {
+				return nil, errors.New("invalid 'tx_portal' value")
+			}
+		}
+		if v, found := config["rx_portal"]; found {
+			if rxPortal, ok := v.(bool); ok {
+				i.rxPortal = rxPortal
+			} else {
+				return nil, errors.New("invalid 'rx_portal' value")
+			}
+		}
+	}
+	return i, nil
 }
 
 func (self *traceInstrument) NewInstance(id string, peer *net.UDPAddr) InstrumentInstance {
-	return &traceInstrumentInstance{id, peer, new(sync.Mutex)}
+	return &traceInstrumentInstance{id, peer, new(sync.Mutex), self}
 }
 
 /*
@@ -45,24 +75,30 @@ func (self *traceInstrumentInstance) Closed(peer *net.UDPAddr) {
  * wire
  */
 func (self *traceInstrumentInstance) WireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
-	decode, _ := self.decode(wm)
-	self.lock.Lock()
-	fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "TX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
-	self.lock.Unlock()
+	if self.i.wire {
+		decode, _ := self.decode(wm)
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "TX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) WireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
-	decode, _ := self.decode(wm)
-	self.lock.Lock()
-	fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RETX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
-	self.lock.Unlock()
+	if self.i.wire {
+		decode, _ := self.decode(wm)
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RETX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) WireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	decode, _ := self.decode(wm)
-	self.lock.Lock()
-	fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
-	self.lock.Unlock()
+	if self.i.wire {
+		decode, _ := self.decode(wm)
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
+		self.lock.Unlock()
+	}
 }
 
 func (self *traceInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {
