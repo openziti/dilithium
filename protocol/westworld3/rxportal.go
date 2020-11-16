@@ -172,6 +172,8 @@ func (self *rxPortal) run() {
 			}
 
 			if self.tree.Size() > 0 {
+				removals := 0
+
 				var next int32
 				if self.accepted < math.MaxInt32 {
 					next = self.accepted + 1
@@ -191,6 +193,7 @@ func (self *rxPortal) run() {
 
 							self.tree.Remove(key)
 							self.rxPortalSz -= len(data)
+							removals++
 							self.ii.RxPortalSzChanged(self.peer, self.rxPortalSz)
 							wm.buffer.unref()
 							self.accepted = next
@@ -202,6 +205,17 @@ func (self *rxPortal) run() {
 						} else {
 							logrus.Errorf("unexpected mt [%d]", wm.mt)
 						}
+					}
+				}
+
+				if removals > 1 {
+					if ack, err := newAck([]ack{{-1, -1}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
+						if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
+							logrus.Errorf("error sending pacing ack (%v)", err)
+						}
+						self.ii.WireMessageTx(self.peer, ack)
+						ack.buffer.unref()
+						logrus.Warnf("sent pacing ack")
 					}
 				}
 			}

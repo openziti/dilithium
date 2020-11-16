@@ -164,7 +164,7 @@ func (self *traceInstrumentInstance) NewRetxMs(peer *net.UDPAddr, retxMs int) {
 func (self *traceInstrumentInstance) DuplicateAck(peer *net.UDPAddr, seq int32) {
 	if self.i.txPortal {
 		self.lock.Lock()
-		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE ACK", self.id))
+		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE ACK: #%d", self.id, seq))
 		self.lock.Unlock()
 	}
 }
