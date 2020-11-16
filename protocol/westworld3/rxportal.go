@@ -147,7 +147,7 @@ func (self *rxPortal) run() {
 					self.rxPortalSz += int(sz)
 					self.ii.RxPortalSzChanged(self.peer, self.rxPortalSz)
 				} else {
-					logrus.Errorf("unexpected mt [%d]", wm.mt)
+					logrus.Errorf("unexpected mt [%d] (%v)", wm.mt, err)
 				}
 			} else {
 				self.ii.DuplicateRx(self.peer, wm)
@@ -159,7 +159,7 @@ func (self *rxPortal) run() {
 				if _, rttIn, err := wm.asData(); err == nil {
 					rtt = rttIn
 				} else {
-					logrus.Errorf("unexpected mt [%d]", wm.mt)
+					logrus.Errorf("unexpected mt [%d] (%v)", wm.mt, err)
 				}
 			}
 
