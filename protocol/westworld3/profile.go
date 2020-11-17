@@ -44,6 +44,7 @@ type Profile struct {
 	RetxBatchMs                 int     `cf:"retx_batch_ms"`
 	RttProbeMs                  int     `cf:"rtt_probe_ms"`
 	RttProbeAvg                 int     `cf:"rtt_probe_avg"`
+	RxPortalSzPacingThresh      float64 `cf:"rx_portal_sz_pacing_thresh"`
 	MaxSegmentSz                int     `cf:"max_segment_sz"`
 	PoolBufferSz                int     `cf:"pool_buffer_sz"`
 	RxBufferSz                  int     `cf:"rx_buffer_sz"`
@@ -79,6 +80,7 @@ func NewBaselineProfile() *Profile {
 		RetxBatchMs:                 2,
 		RttProbeMs:                  50,
 		RttProbeAvg:                 8,
+		RxPortalSzPacingThresh:		 0.5,
 		MaxSegmentSz:                1420,
 		PoolBufferSz:                64 * 1024,
 		RxBufferSz:                  16 * 1024 * 1024,

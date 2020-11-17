@@ -172,7 +172,7 @@ func (self *rxPortal) run() {
 			}
 
 			if self.tree.Size() > 0 {
-				removals := 0
+				startingRxPortalSz := self.rxPortalSz
 
 				var next int32
 				if self.accepted < math.MaxInt32 {
@@ -193,7 +193,6 @@ func (self *rxPortal) run() {
 
 							self.tree.Remove(key)
 							self.rxPortalSz -= len(data)
-							removals++
 							self.ii.RxPortalSzChanged(self.peer, self.rxPortalSz)
 							wm.buffer.unref()
 							self.accepted = next
@@ -208,17 +207,20 @@ func (self *rxPortal) run() {
 					}
 				}
 
-				if removals > 1 {
+				/*
+				 * Send "pacing" ACK when buffer size changes more than RxPortalSzPacingThresh.
+				 */
+				if float64(self.rxPortalSz) / float64(startingRxPortalSz) < self.profile.RxPortalSzPacingThresh {
 					if ack, err := newAck([]ack{{-33, -33}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
 						if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 							logrus.Errorf("error sending pacing ack (%v)", err)
 						}
 						self.ii.WireMessageTx(self.peer, ack)
 						ack.buffer.unref()
-						logrus.Warnf("sent pacing ack")
 					}
 				}
 			}
+
 		} else if wm.messageType() == CLOSE && !self.closed {
 			if err := self.txPortal.close(self.seq); err != nil {
 				logrus.Errorf("error closing (%v)", err)
