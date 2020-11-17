@@ -198,6 +198,9 @@ func (self *traceInstrumentInstance) Allocate(id string) {
  * instrument lifecycle
  */
 func (self *traceInstrumentInstance) Shutdown() {
+	self.lock.Lock()
+	fmt.Println(fmt.Sprintf("@@ %-24s SHUTDOWN", self.id))
+	self.lock.Unlock()
 }
 
 func (self *traceInstrumentInstance) decode(wm *wireMessage) (string, error) {
