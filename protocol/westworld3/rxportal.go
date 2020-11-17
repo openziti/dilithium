@@ -208,15 +208,15 @@ func (self *rxPortal) run() {
 				}
 
 				/*
-				 * Send "pacing" ACK when buffer size changes more than RxPortalSzPacingThresh.
+				 * Send "pacing" KEEPALIVE when buffer size changes more than RxPortalSzPacingThresh.
 				 */
 				if float64(self.rxPortalSz) / float64(startingRxPortalSz) < self.profile.RxPortalSzPacingThresh {
-					if ack, err := newAck([]ack{{-33, -33}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
-						if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
-							logrus.Errorf("error sending pacing ack (%v)", err)
+					if keepalive, err := newKeepalive(self.rxPortalSz, self.ackPool); err == nil {
+						if err := writeWireMessage(keepalive, self.conn, self.peer); err != nil {
+							logrus.Errorf("error sending pacing keepalive (%v)", err)
 						}
-						self.ii.WireMessageTx(self.peer, ack)
-						ack.buffer.unref()
+						self.ii.WireMessageTx(self.peer, keepalive)
+						keepalive.buffer.unref()
 					}
 				}
 			}
@@ -227,6 +227,7 @@ func (self *rxPortal) run() {
 			}
 			self.reads <- &rxRead{nil, 0, true}
 			self.closed = true
+			wm.buffer.unref()
 			close(self.rxs)
 		}
 	}

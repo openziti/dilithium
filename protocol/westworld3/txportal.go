@@ -143,6 +143,7 @@ func (self *txPortal) updateRxPortalSz(rxPortalSz int) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.rxPortalSz = rxPortalSz
+	self.ready.Broadcast()
 	self.ii.TxPortalRxSzChanged(self.peer, rxPortalSz)
 }
 

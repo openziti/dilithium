@@ -129,6 +129,16 @@ func (self *listenerConn) rxer() {
 				logrus.Errorf("error acking (%v)", err)
 				continue
 			}
+			wm.buffer.unref()
+
+		case KEEPALIVE:
+			rxPortalSz, err := wm.asKeepalive()
+			if err != nil {
+				logrus.Errorf("as keepalive error (%v)", err)
+				continue
+			}
+			self.txPortal.updateRxPortalSz(rxPortalSz)
+			wm.buffer.unref()
 
 		case CLOSE:
 			if err := self.rxPortal.rx(wm); err != nil {
@@ -136,6 +146,7 @@ func (self *listenerConn) rxer() {
 			}
 
 		default:
+			logrus.Errorf("unexpected message type: %d", wm.mt)
 			self.ii.UnexpectedMessageType(self.peer, wm.mt)
 			wm.buffer.unref()
 		}
