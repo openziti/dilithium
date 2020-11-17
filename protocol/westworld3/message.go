@@ -211,8 +211,25 @@ func (self *wireMessage) asDataSize() (sz uint32, err error) {
 	return self.buffer.uz - (dataStart + rttSz), nil
 }
 
-func newKeepalive(p *pool) (wm *wireMessage, err error) {
-	return (&wireMessage{seq: -1, mt: KEEPALIVE, buffer: p.get()}).encodeHeader(0)
+func newKeepalive(rxPortalSz int, p *pool) (wm *wireMessage, err error) {
+	wm = &wireMessage{
+		seq: -1,
+		mt: KEEPALIVE,
+		buffer: p.get(),
+	}
+	util.WriteInt32(wm.buffer.data[dataStart:], int32(rxPortalSz))
+	return wm.encodeHeader(4)
+}
+
+func (self *wireMessage) asKeepalive() (rxPortalSz int, err error) {
+	if self.messageType() != KEEPALIVE {
+		return 0, errors.Errorf("unexpected message type [%d], expected KEEPALIVE", self.messageType())
+	}
+	if self.buffer.uz < dataStart+4 {
+		return 0, errors.Errorf("short buffer for keepalive decode [%d < %d]", self.buffer.uz, dataStart+4)
+	}
+	rxPortalSz = int(util.ReadInt32(self.buffer.data[dataStart:]))
+	return rxPortalSz, nil
 }
 
 func newClose(seq int32, p *pool) (wm *wireMessage, err error) {

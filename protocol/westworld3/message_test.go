@@ -118,8 +118,8 @@ func TestData(t *testing.T) {
 }
 
 func TestKeepalive(t *testing.T) {
-	p := newPool("test", dataStart, NewNilInstrument().NewInstance("", nil))
-	wm, err := newKeepalive(p)
+	p := newPool("test", dataStart+4, NewNilInstrument().NewInstance("", nil))
+	wm, err := newKeepalive(23411, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 
@@ -127,6 +127,9 @@ func TestKeepalive(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, wm.seq, wmOut.seq)
 	assert.Equal(t, KEEPALIVE, wmOut.mt)
+	rxPortalSz, err := wmOut.asKeepalive()
+	assert.NoError(t, err)
+	assert.Equal(t, 23411, rxPortalSz)
 }
 
 func TestClose(t *testing.T) {
