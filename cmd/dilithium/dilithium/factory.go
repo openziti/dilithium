@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"github.com/lucas-clemente/quic-go"
+	"github.com/openziti/dilithium/cf"
 	"github.com/openziti/dilithium/protocol/westworld2"
 	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/pkg/errors"
@@ -164,7 +165,7 @@ func ProtocolFor(protocol string) (Protocol, error) {
 				if err = yaml.Unmarshal(data, dataMap); err != nil {
 					return nil, errors.Wrapf(err, "unable to unmarshal config data [%s]", configPath)
 				}
-				if err = p.Load(dataMap); err != nil {
+				if err = p.Load(cf.MapIToMapS(dataMap)); err != nil {
 					return nil, errors.Wrapf(err, "unable to load westworld3 profile [%s]", configPath)
 				}
 			}

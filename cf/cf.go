@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func Load(data map[interface{}]interface{}, cf interface{}) error {
+func Load(data map[string]interface{}, cf interface{}) error {
 	cfV := reflect.ValueOf(cf)
 	if cfV.Kind() == reflect.Ptr {
 		cfV = cfV.Elem()

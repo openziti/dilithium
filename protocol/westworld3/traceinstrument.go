@@ -2,17 +2,23 @@ package westworld3
 
 import (
 	"fmt"
+	"github.com/openziti/dilithium/cf"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 	"sync"
 )
 
 type traceInstrument struct {
-	wire     bool
-	txPortal bool
-	rxPortal bool
-	error    bool
+	config *traceInstrumentConfig
+}
+
+type traceInstrumentConfig struct {
+	Wire     bool `cf:"wire"`
+	TxPortal bool `cf:"tx_portal"`
+	RxPortal bool `cf:"rx_portal"`
+	Error    bool `cf:"error"`
 }
 
 type traceInstrumentInstance struct {
@@ -23,30 +29,13 @@ type traceInstrumentInstance struct {
 }
 
 func NewTraceInstrument(config map[string]interface{}) (Instrument, error) {
-	i := &traceInstrument{}
-	if config != nil {
-		if v, found := config["wire"]; found {
-			if wire, ok := v.(bool); ok {
-				i.wire = wire
-			} else {
-				return nil, errors.New("invalid 'wire' value")
-			}
-		}
-		if v, found := config["tx_portal"]; found {
-			if txPortal, ok := v.(bool); ok {
-				i.txPortal = txPortal
-			} else {
-				return nil, errors.New("invalid 'tx_portal' value")
-			}
-		}
-		if v, found := config["rx_portal"]; found {
-			if rxPortal, ok := v.(bool); ok {
-				i.rxPortal = rxPortal
-			} else {
-				return nil, errors.New("invalid 'rx_portal' value")
-			}
-		}
+	i := &traceInstrument{
+		config: new(traceInstrumentConfig),
 	}
+	if err := cf.Load(config, i.config); err != nil {
+		return nil, errors.Wrap(err, "unable to load config")
+	}
+	logrus.Infof(cf.Dump("config", i.config))
 	return i, nil
 }
 
@@ -76,7 +65,7 @@ func (self *traceInstrumentInstance) Closed(peer *net.UDPAddr) {
  * wire
  */
 func (self *traceInstrumentInstance) WireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
-	if self.i.wire {
+	if self.i.config.Wire {
 		decode, _ := self.decode(wm)
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "TX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
@@ -85,7 +74,7 @@ func (self *traceInstrumentInstance) WireMessageTx(peer *net.UDPAddr, wm *wireMe
 }
 
 func (self *traceInstrumentInstance) WireMessageRetx(peer *net.UDPAddr, wm *wireMessage) {
-	if self.i.wire {
+	if self.i.config.Wire {
 		decode, _ := self.decode(wm)
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RETX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
@@ -94,7 +83,7 @@ func (self *traceInstrumentInstance) WireMessageRetx(peer *net.UDPAddr, wm *wire
 }
 
 func (self *traceInstrumentInstance) WireMessageRx(peer *net.UDPAddr, wm *wireMessage) {
-	if self.i.wire {
+	if self.i.config.Wire {
 		decode, _ := self.decode(wm)
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("&& %-24s %-8s #%-8d %s {%s} -> %s", self.id, "RX", wm.seq, wm.messageType(), wm.mt.FlagsString(), decode))
@@ -103,7 +92,7 @@ func (self *traceInstrumentInstance) WireMessageRx(peer *net.UDPAddr, wm *wireMe
 }
 
 func (self *traceInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {
-	if self.i.error {
+	if self.i.config.Error {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("&& %-24s UNKNOWN PEER: %s", self.id, peer))
 		self.lock.Unlock()
@@ -111,7 +100,7 @@ func (self *traceInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {
 }
 
 func (self *traceInstrumentInstance) ReadError(peer *net.UDPAddr, err error) {
-	if self.i.error {
+	if self.i.config.Error {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("&& %-24s READ ERROR: %v", self.id, err))
 		self.lock.Unlock()
@@ -119,7 +108,7 @@ func (self *traceInstrumentInstance) ReadError(peer *net.UDPAddr, err error) {
 }
 
 func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt messageType) {
-	if self.i.error {
+	if self.i.config.Error {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("&& %-24s UNEXPECTED MESSAGE TYPE: %s", self.id, mt.String()))
 		self.lock.Unlock()
@@ -130,7 +119,7 @@ func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt
  * txPortal
  */
 func (self *traceInstrumentInstance) TxPortalCapacityChanged(peer *net.UDPAddr, capacity int) {
-	if self.i.txPortal {
+	if self.i.config.TxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s TX PORTAL CAPACITY: %d", self.id, capacity))
 		self.lock.Unlock()
@@ -138,7 +127,7 @@ func (self *traceInstrumentInstance) TxPortalCapacityChanged(peer *net.UDPAddr, 
 }
 
 func (self *traceInstrumentInstance) TxPortalSzChanged(peer *net.UDPAddr, sz int) {
-	if self.i.txPortal {
+	if self.i.config.TxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s TX PORTAL SZ: %d", self.id, sz))
 		self.lock.Unlock()
@@ -146,7 +135,7 @@ func (self *traceInstrumentInstance) TxPortalSzChanged(peer *net.UDPAddr, sz int
 }
 
 func (self *traceInstrumentInstance) TxPortalRxSzChanged(peer *net.UDPAddr, sz int) {
-	if self.i.txPortal {
+	if self.i.config.TxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s TX PORTAL RX SZ: %d", self.id, sz))
 		self.lock.Unlock()
@@ -154,7 +143,7 @@ func (self *traceInstrumentInstance) TxPortalRxSzChanged(peer *net.UDPAddr, sz i
 }
 
 func (self *traceInstrumentInstance) NewRetxMs(peer *net.UDPAddr, retxMs int) {
-	if self.i.txPortal {
+	if self.i.config.TxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s RETX MS: %d", self.id, retxMs))
 		self.lock.Unlock()
@@ -162,7 +151,7 @@ func (self *traceInstrumentInstance) NewRetxMs(peer *net.UDPAddr, retxMs int) {
 }
 
 func (self *traceInstrumentInstance) DuplicateAck(peer *net.UDPAddr, seq int32) {
-	if self.i.txPortal {
+	if self.i.config.TxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE ACK: #%d", self.id, seq))
 		self.lock.Unlock()
@@ -173,7 +162,7 @@ func (self *traceInstrumentInstance) DuplicateAck(peer *net.UDPAddr, seq int32) 
  * rxPortal
  */
 func (self *traceInstrumentInstance) RxPortalSzChanged(peer *net.UDPAddr, sz int) {
-	if self.i.rxPortal {
+	if self.i.config.RxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s RX PORTAL SZ: %d", self.id, sz))
 		self.lock.Unlock()
@@ -181,7 +170,7 @@ func (self *traceInstrumentInstance) RxPortalSzChanged(peer *net.UDPAddr, sz int
 }
 
 func (self *traceInstrumentInstance) DuplicateRx(peer *net.UDPAddr, wm *wireMessage) {
-	if self.i.rxPortal {
+	if self.i.config.RxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE RX: #%d", self.id, wm.seq))
 		self.lock.Unlock()

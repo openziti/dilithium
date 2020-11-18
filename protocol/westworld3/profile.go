@@ -96,7 +96,7 @@ func NewBaselineProfile() *Profile {
 	}
 }
 
-func (self *Profile) Load(data map[interface{}]interface{}) error {
+func (self *Profile) Load(data map[string]interface{}) error {
 	if v, found := data["profile_version"]; found {
 		if i, ok := v.(int); ok {
 			if i != profileVersion {

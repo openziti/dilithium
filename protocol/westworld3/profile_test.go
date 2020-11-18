@@ -9,7 +9,7 @@ import (
 
 func TestProfileLoad(t *testing.T) {
 	p := NewBaselineProfile()
-	d := make(map[interface{}]interface{})
+	d := make(map[string]interface{})
 	d["randomize_seq"] = true
 	d["tx_portal_start_sz"] = 17 * 1024
 	d["tx_portal_dupack_capacity_scale"] = 4.5
