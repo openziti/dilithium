@@ -111,17 +111,8 @@ func (self *Profile) Load(data map[string]interface{}) error {
 	if v, found := data["instrument"]; found {
 		submap, oks := v.(map[string]interface{})
 		if !oks {
-			if subi, oki := v.(map[interface{}]interface{}); oki {
-				submap = make(map[string]interface{})
-				oks = true
-				for k, v := range subi {
-					if s, ok := k.(string); ok {
-						submap[s] = v
-					} else {
-						oks = false
-					}
-				}
-			}
+			submap = cf.MapIToMapS(v.(map[interface{}]interface{}))
+			oks = true
 		}
 		if oks {
 			if v, found := submap["name"]; found {
