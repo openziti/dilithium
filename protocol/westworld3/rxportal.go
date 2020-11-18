@@ -147,11 +147,10 @@ func (self *rxPortal) run() {
 					self.rxPortalSz += int(sz)
 					self.ii.RxPortalSzChanged(self.peer, self.rxPortalSz)
 				} else {
-					logrus.Errorf("unexpected mt [%d] (%v)", wm.mt, err)
+					logrus.Errorf("unexpected mt [%d] (%v)", wm.messageType(), err)
 				}
 			} else {
 				self.ii.DuplicateRx(self.peer, wm)
-				wm.buffer.unref()
 			}
 
 			var rtt *uint16
@@ -159,7 +158,7 @@ func (self *rxPortal) run() {
 				if _, rttIn, err := wm.asData(); err == nil {
 					rtt = rttIn
 				} else {
-					logrus.Errorf("unexpected mt [%d] (%v)", wm.mt, err)
+					logrus.Errorf("unexpected mt [%d] (%v)", wm.messageType(), err)
 				}
 			}
 
@@ -169,6 +168,10 @@ func (self *rxPortal) run() {
 				}
 				self.ii.WireMessageTx(self.peer, ack)
 				ack.buffer.unref()
+			}
+
+			if found {
+				wm.buffer.unref()
 			}
 
 			if self.tree.Size() > 0 {
