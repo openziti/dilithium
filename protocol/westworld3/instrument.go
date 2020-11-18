@@ -45,6 +45,8 @@ type InstrumentInstance interface {
 
 func NewInstrument(name string, config map[string]interface{}) (i Instrument, err error) {
 	switch name {
+	case "metrics":
+		return NewMetricsInstrument(config)
 	case "nil":
 		return NewNilInstrument(), nil
 	case "trace":

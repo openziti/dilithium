@@ -41,8 +41,15 @@ func Load(data map[string]interface{}, cf interface{}) error {
 							return errors.Errorf("field '%s' type mismatch, got [%s], expected [%s]", key, reflect.TypeOf(v), cfV.Field(i).Type())
 						}
 
+					case string:
+						if s, ok := v.(string); ok {
+							cfV.Field(i).SetString(s)
+						} else {
+							return errors.Errorf("field '%s' type mismatch, got [%s], expected [%s]", key, reflect.TypeOf(v), cfV.Field(i).Type())
+						}
+
 					default:
-						return errors.Errorf("unspported field type [%s]", cfV.Field(i).Type())
+						return errors.Errorf("unsupported field type [%s]", cfV.Field(i).Type())
 					}
 				}
 			}

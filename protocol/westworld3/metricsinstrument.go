@@ -29,6 +29,7 @@ type metricsInstrumentConfig struct {
 
 func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	i := &metricsInstrument{
+		lock: new(sync.Mutex),
 		config: &metricsInstrumentConfig{
 			SnapshotMs: 1000,
 		},

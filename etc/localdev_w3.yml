@@ -1,8 +1,12 @@
 profile_version: 1
 
+#instrument:
+#  name: trace
+#  wire: false
+#  tx_portal: true
+#  rx_portal: true
+#  errors: true
+
 instrument:
-  name: trace
-  wire: false
-  tx_portal: true
-  rx_portal: true
-  errors: true
+  name: metrics
+  path: /tmp/metrics_instrument
