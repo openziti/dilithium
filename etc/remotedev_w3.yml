@@ -1,0 +1,5 @@
+profile_version: 1
+
+instrument:
+  name: metrics
+  path: logs

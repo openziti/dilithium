@@ -45,7 +45,7 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 func (self *metricsInstrument) NewInstance(id string, peer *net.UDPAddr) InstrumentInstance {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	ii := &metricsInstrumentInstance{}
+	ii := &metricsInstrumentInstance{id: id, peer: peer}
 	go ii.snapshotter(self.config.SnapshotMs)
 	self.instances = append(self.instances, ii)
 	return ii
@@ -55,8 +55,8 @@ func (self *metricsInstrument) writeAllSamples() error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	for _, mii := range self.instances {
-		peerName := fmt.Sprintf("%s_", mii.peer.String())
+	for _, ii := range self.instances {
+		peerName := fmt.Sprintf("%s_", ii.id)
 		if err := os.MkdirAll(self.config.Path, os.ModePerm); err != nil {
 			return err
 		}
@@ -67,59 +67,59 @@ func (self *metricsInstrument) writeAllSamples() error {
 		logrus.Infof("writing metrics to: %s", outPath)
 
 		var values map[string]string
-		if mii.listenerAddr != nil {
+		if ii.listenerAddr != nil {
 			values = make(map[string]string)
-			values["listener"] = mii.listenerAddr.String()
+			values["listener"] = ii.listenerAddr.String()
 		}
 		if err := util.WriteMetricsId(fmt.Sprintf("westworld3.%d", protocolVersion), outPath, values); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("tx_bytes", outPath, mii.txBytes); err != nil {
+		if err := util.WriteSamples("tx_bytes", outPath, ii.txBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("tx_msgs", outPath, mii.txMsgs); err != nil {
+		if err := util.WriteSamples("tx_msgs", outPath, ii.txMsgs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("retx_bytes", outPath, mii.retxBytes); err != nil {
+		if err := util.WriteSamples("retx_bytes", outPath, ii.retxBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("retx_msgs", outPath, mii.retxMs); err != nil {
+		if err := util.WriteSamples("retx_msgs", outPath, ii.retxMs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("rx_bytes", outPath, mii.rxBytes); err != nil {
+		if err := util.WriteSamples("rx_bytes", outPath, ii.rxBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("rx_msgs", outPath, mii.rxMsgs); err != nil {
+		if err := util.WriteSamples("rx_msgs", outPath, ii.rxMsgs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("tx_portal_capacity", outPath, mii.txPortalCapacity); err != nil {
+		if err := util.WriteSamples("tx_portal_capacity", outPath, ii.txPortalCapacity); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("tx_portal_sz", outPath, mii.txPortalSz); err != nil {
+		if err := util.WriteSamples("tx_portal_sz", outPath, ii.txPortalSz); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("tx_portal_rx_sz", outPath, mii.txPortalRxSz); err != nil {
+		if err := util.WriteSamples("tx_portal_rx_sz", outPath, ii.txPortalRxSz); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("retx_ms", outPath, mii.retxMs); err != nil {
+		if err := util.WriteSamples("retx_ms", outPath, ii.retxMs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("dup_acks", outPath, mii.dupAcks); err != nil {
+		if err := util.WriteSamples("dup_acks", outPath, ii.dupAcks); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("rx_portal_sz", outPath, mii.rxPortalSz); err != nil {
+		if err := util.WriteSamples("rx_portal_sz", outPath, ii.rxPortalSz); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("dup_rx_bytes", outPath, mii.dupRxBytes); err != nil {
+		if err := util.WriteSamples("dup_rx_bytes", outPath, ii.dupRxBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("dup_rx_msgs", outPath, mii.dupRxMsgs); err != nil {
+		if err := util.WriteSamples("dup_rx_msgs", outPath, ii.dupRxMsgs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("allocations", outPath, mii.allocations); err != nil {
+		if err := util.WriteSamples("allocations", outPath, ii.allocations); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("errors", outPath, mii.errors); err != nil {
+		if err := util.WriteSamples("errors", outPath, ii.errors); err != nil {
 			return err
 		}
 	}
@@ -133,16 +133,15 @@ func (self *metricsInstrument) signalHandler() {
 	for {
 		s := <-c
 		if s == syscall.SIGUSR2 {
-			/*
-				if err := self.writeAllSamples(); err != nil {
-					logrus.Errorf("error writing all samples (%v)", err)
-				}
-			*/
+			if err := self.writeAllSamples(); err != nil {
+				logrus.Errorf("error writing all samples (%v)", err)
+			}
 		}
 	}
 }
 
 type metricsInstrumentInstance struct {
+	id           string
 	peer         *net.UDPAddr
 	listenerAddr *net.UDPAddr
 	close        chan struct{}
