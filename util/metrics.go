@@ -49,6 +49,33 @@ func ReadMetricsId(path string) (*MetricsId, error) {
 	return metricsId, nil
 }
 
+func DiscoverMetrics(root string) (map[string]*MetricsId, error) {
+	var metricsIdPaths []string
+	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error  {
+		if err != nil {
+			return err
+		}
+		if !fi.IsDir() && filepath.Base(path) == "metrics.id" {
+			metricsIdPaths = append(metricsIdPaths, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	metricsMap := make(map[string]*MetricsId)
+	for _, metricsIdPath := range metricsIdPaths {
+		metricsId, err := ReadMetricsId(metricsIdPath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error reading [%s]", metricsIdPath)
+		}
+		metricsRoot := filepath.Dir(metricsIdPath)
+		metricsMap[metricsRoot] = metricsId
+	}
+	return metricsMap, nil
+}
+
 type Sample struct {
 	Ts time.Time
 	V  int64
