@@ -194,6 +194,7 @@ func (self *txPortal) duplicateAck(seq int32) {
 	self.successCt = 0
 	if self.dupAckCt >= self.profile.TxPortalDupAckThresh {
 		newCapacity := int(float64(self.capacity) * self.profile.TxPortalDupAckCapacityScale)
+		self.profile.RetxAddMs += 10 // #93: Self-Adjusting retxMs
 		self.updatePortalCapacity(newCapacity)
 		self.dupAckCt = 0
 		self.successAccum = int(float64(self.successAccum) * self.profile.TxPortalDupAckSuccessScale)

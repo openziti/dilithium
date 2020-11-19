@@ -1,5 +1,9 @@
 profile_version: 1
 
+tx_portal_dupack_success_scale: 1.0
+tx_portal_retx_success_scale: 1.0
+
 instrument:
   name: metrics
   path: logs
+  snapshot_ms: 250
