@@ -75,7 +75,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 			self.lastRttProbe = now
 		}
 
-		for math.Min(float64(self.capacity-(self.txPortalSz+segmentSz)), float64(self.capacity-self.rxPortalSz)) < 0 {
+		for self.availableCapacity(segmentSz) < 0 {
 			self.ready.Wait()
 		}
 
@@ -225,4 +225,10 @@ func (self *txPortal) updatePortalCapacity(newCapacity int) {
 	if self.capacity != oldCapacity {
 		self.ii.TxPortalCapacityChanged(self.peer, self.capacity)
 	}
+}
+
+func (self *txPortal) availableCapacity(segmentSz int) int {
+	txPortalCapacity := float64(self.capacity-int(float64(self.rxPortalSz)*self.profile.TxPortalRxSzPressureScale)-(self.txPortalSz+segmentSz))
+	rxPortalCapacity := float64(self.capacity-self.rxPortalSz)
+	return int(math.Min(txPortalCapacity, rxPortalCapacity))
 }

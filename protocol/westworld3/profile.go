@@ -38,6 +38,7 @@ type Profile struct {
 	TxPortalRetxThresh          int     `cf:"tx_portal_retx_thresh"`
 	TxPortalRetxCapacityScale   float64 `cf:"tx_portal_retx_capacity_scale"`
 	TxPortalRetxSuccessScale    float64 `cf:"tx_portal_retx_success_scale"`
+	TxPortalRxSzPressureScale	float64 `cf:"tx_portal_rx_sz_pressure_scale"`
 	RetxStartMs                 int     `cf:"retx_start_ms"`
 	RetxScale                   float64 `cf:"retx_scale"`
 	RetxAddMs                   int     `cf:"retx_add_ms"`
@@ -70,10 +71,11 @@ func NewBaselineProfile() *Profile {
 		TxPortalIncreaseScale:       1.0,
 		TxPortalDupAckThresh:        64,
 		TxPortalDupAckCapacityScale: 0.9,
-		TxPortalDupAckSuccessScale:  0.0,
+		TxPortalDupAckSuccessScale:  0.75,
 		TxPortalRetxThresh:          64,
 		TxPortalRetxCapacityScale:   0.75,
-		TxPortalRetxSuccessScale:    0.0,
+		TxPortalRetxSuccessScale:    0.75,
+		TxPortalRxSzPressureScale:   2.6789,
 		RetxStartMs:                 200,
 		RetxScale:                   2.0,
 		RetxAddMs:                   100,
