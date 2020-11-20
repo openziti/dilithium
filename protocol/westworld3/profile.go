@@ -75,7 +75,7 @@ func NewBaselineProfile() *Profile {
 		TxPortalRetxThresh:          64,
 		TxPortalRetxCapacityScale:   0.75,
 		TxPortalRetxSuccessScale:    0.75,
-		TxPortalRxSzPressureScale:   2.6789,
+		TxPortalRxSzPressureScale:   2.8911,
 		RetxStartMs:                 200,
 		RetxScale:                   2.0,
 		RetxAddMs:                   100,
