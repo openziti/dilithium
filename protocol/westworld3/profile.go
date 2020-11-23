@@ -41,10 +41,11 @@ type Profile struct {
 	TxPortalRxSzPressureScale   float64 `cf:"tx_portal_rx_sz_pressure_scale"`
 	RetxStartMs                 int     `cf:"retx_start_ms"`
 	RetxScale                   float64 `cf:"retx_scale"`
+	RetxScaleFloor              float64 `cf:"retx_scale_floor"`
 	RetxAddMs                   int     `cf:"retx_add_ms"`
 	RetxEvaluationMs            int     `cf:"retx_evaluation_ms"`
 	RetxEvaluationScaleIncr     float64 `cf:"retx_evaluation_scale_incr"`
-	RetxEvaluationScaleDecr		float64 `cf:"retx_evaluation_scale_decr"`
+	RetxEvaluationScaleDecr     float64 `cf:"retx_evaluation_scale_decr"`
 	RetxBatchMs                 int     `cf:"retx_batch_ms"`
 	RttProbeMs                  int     `cf:"rtt_probe_ms"`
 	RttProbeAvg                 int     `cf:"rtt_probe_avg"`
@@ -81,10 +82,11 @@ func NewBaselineProfile() *Profile {
 		TxPortalRxSzPressureScale:   2.8911,
 		RetxStartMs:                 200,
 		RetxScale:                   1.5,
+		RetxScaleFloor:              1.0,
 		RetxAddMs:                   100,
 		RetxEvaluationMs:            2000,
-		RetxEvaluationScaleIncr:	 0.15,
-		RetxEvaluationScaleDecr:	 0.01,
+		RetxEvaluationScaleIncr:     0.15,
+		RetxEvaluationScaleDecr:     0.025,
 		RetxBatchMs:                 2,
 		RttProbeMs:                  50,
 		RttProbeAvg:                 8,

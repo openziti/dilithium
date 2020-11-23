@@ -13,44 +13,46 @@ import (
 )
 
 type txPortal struct {
-	lock               *sync.Mutex
-	tree               *btree.Tree
-	capacity           int
-	ready              *sync.Cond
-	txPortalSz         int
-	rxPortalSz         int
-	successCt          int
-	successAccum       int
-	dupAckCt           int
-	retxCt             int
-	startRetxScale     float64
-	lastRetxEvaluation time.Time
-	lastRttProbe       time.Time
-	monitor            *retxMonitor
-	closeWaitSeq       int32
-	closed             bool
-	conn               *net.UDPConn
-	peer               *net.UDPAddr
-	pool               *pool
-	profile            *Profile
-	ii                 InstrumentInstance
+	lock              *sync.Mutex
+	tree              *btree.Tree
+	capacity          int
+	ready             *sync.Cond
+	txPortalSz        int
+	rxPortalSz        int
+	successCt         int
+	successAccum      int
+	dupAckCt          int
+	retxCt            int
+	startRetxScale    float64
+	lastRetxScaleIncr time.Time
+	lastRetxScaleDecr time.Time
+	lastRttProbe      time.Time
+	monitor           *retxMonitor
+	closeWaitSeq      int32
+	closed            bool
+	conn              *net.UDPConn
+	peer              *net.UDPAddr
+	pool              *pool
+	profile           *Profile
+	ii                InstrumentInstance
 }
 
 func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, pool *pool, ii InstrumentInstance) *txPortal {
 	p := &txPortal{
-		lock:               new(sync.Mutex),
-		tree:               btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
-		capacity:           profile.TxPortalStartSz,
-		startRetxScale:     profile.RetxScale,
-		lastRetxEvaluation: time.Now(),
-		rxPortalSz:         -1,
-		closeWaitSeq:       -1,
-		closed:             false,
-		conn:               conn,
-		peer:               peer,
-		pool:               pool,
-		profile:            profile,
-		ii:                 ii,
+		lock:              new(sync.Mutex),
+		tree:              btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
+		capacity:          profile.TxPortalStartSz,
+		startRetxScale:    profile.RetxScale,
+		lastRetxScaleIncr: time.Now(),
+		lastRetxScaleDecr: time.Now(),
+		rxPortalSz:        -1,
+		closeWaitSeq:      -1,
+		closed:            false,
+		conn:              conn,
+		peer:              peer,
+		pool:              pool,
+		profile:           profile,
+		ii:                ii,
 	}
 	p.ready = sync.NewCond(p.lock)
 	p.monitor = newRetxMonitor(profile, conn, peer, p.lock, p.ii)
@@ -140,12 +142,12 @@ func (self *txPortal) ack(acks []ack) error {
 		self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
 	}
 
-	if time.Since(self.lastRetxEvaluation).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
+	if time.Since(self.lastRetxScaleDecr).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
 		self.profile.RetxScale -= self.profile.RetxEvaluationScaleDecr
-		if self.profile.RetxScale < 1.0 {
-			self.profile.RetxScale = 1.0
+		if self.profile.RetxScale < self.profile.RetxScaleFloor {
+			self.profile.RetxScale = self.profile.RetxScaleFloor
 		}
-		self.lastRetxEvaluation = time.Now()
+		self.lastRetxScaleDecr = time.Now()
 		logrus.Infof("decreased retx scale: %0.2f", self.profile.RetxScale)
 	}
 
@@ -210,9 +212,9 @@ func (self *txPortal) duplicateAck(seq int32) {
 		newCapacity := int(float64(self.capacity) * self.profile.TxPortalDupAckCapacityScale)
 
 		// #93: Self-Adjusting retxMs
-		if time.Since(self.lastRetxEvaluation).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
+		if time.Since(self.lastRetxScaleIncr).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
 			self.profile.RetxScale += self.profile.RetxEvaluationScaleIncr
-			self.lastRetxEvaluation = time.Now()
+			self.lastRetxScaleIncr = time.Now()
 			logrus.Infof("increased retx scale: %0.2f", self.profile.RetxScale)
 		}
 
