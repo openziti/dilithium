@@ -1,34 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_DILITHIUM",
-      "label": "Dilithium",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "influxdb",
-      "pluginName": "InfluxDB"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "7.1.1"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "influxdb",
-      "name": "InfluxDB",
-      "version": "1.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -45,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1605814613824,
+  "id": 4,
+  "iteration": 1606156831266,
   "links": [],
   "panels": [
     {
@@ -54,7 +24,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -97,7 +67,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -139,7 +109,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -181,7 +151,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -223,7 +193,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -310,7 +280,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -353,7 +323,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -395,7 +365,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -437,7 +407,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -479,7 +449,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -566,7 +536,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -609,7 +579,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -651,7 +621,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -693,7 +663,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -780,7 +750,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -823,7 +793,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -910,7 +880,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -920,7 +890,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 12,
         "x": 0,
         "y": 18
@@ -953,7 +923,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -996,7 +966,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "RTT",
+      "title": "retxMs",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1040,7 +1010,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -1050,7 +1020,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 12,
         "x": 12,
         "y": 18
@@ -1083,7 +1053,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -1170,7 +1140,138 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "hiddenSeries": false,
+      "id": 13,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "percentage": false,
+      "pluginVersion": "7.1.1",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "250ms"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "retx_scale",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "v"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$peer$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "retxScale",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:412",
+          "decimals": null,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:413",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1182,9 +1283,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 23
+        "w": 12,
+        "x": 12,
+        "y": 24
       },
       "hiddenSeries": false,
       "id": 2,
@@ -1214,7 +1315,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "250ms"
               ],
               "type": "time"
             },
@@ -1303,8 +1404,12 @@
     "list": [
       {
         "allValue": null,
-        "current": {},
-        "datasource": "${DS_DILITHIUM}",
+        "current": {
+          "selected": true,
+          "text": "listenerConn_0.0.0.0:6262_3.87.217.253:58010_008956420",
+          "value": "listenerConn_0.0.0.0:6262_3.87.217.253:58010_008956420"
+        },
+        "datasource": "Dilithium",
         "definition": "show tag values with key = \"peer\" where type =~ /westworld31/",
         "hide": 0,
         "includeAll": false,
@@ -1326,8 +1431,8 @@
     ]
   },
   "time": {
-    "from": "now-6h",
-    "to": "now"
+    "from": "2020-11-23T18:17:46.791Z",
+    "to": "2020-11-23T18:20:54.815Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1345,5 +1450,5 @@
   "timezone": "",
   "title": "Westworld 3.1 Analyzer",
   "uid": "XIgn8-TMz",
-  "version": 3
+  "version": 5
 }
