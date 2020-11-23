@@ -104,6 +104,9 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := util.WriteSamples("retx_ms", outPath, ii.retxMs); err != nil {
 			return err
 		}
+		if err := util.WriteSamples("retx_scale", outPath, ii.retxScale); err != nil {
+			return err
+		}
 		if err := util.WriteSamples("dup_acks", outPath, ii.dupAcks); err != nil {
 			return err
 		}
@@ -167,6 +170,8 @@ type metricsInstrumentInstance struct {
 	txPortalRxSzVal     int64
 	retxMs              []*util.Sample
 	retxMsVal           int64
+	retxScale			[]*util.Sample
+	retxScaleVal		int64
 	dupAcks             []*util.Sample
 	dupAcksAccum        int64
 
@@ -251,6 +256,10 @@ func (self *metricsInstrumentInstance) NewRetxMs(_ *net.UDPAddr, ms int) {
 	atomic.StoreInt64(&self.retxMsVal, int64(ms))
 }
 
+func (self *metricsInstrumentInstance) NewRetxScale(_ *net.UDPAddr, retxMs float64) {
+	atomic.StoreInt64(&self.retxScaleVal, int64(retxMs * 1000.0))
+}
+
 func (self *metricsInstrumentInstance) DuplicateAck(*net.UDPAddr, int32) {
 	atomic.AddInt64(&self.dupAcksAccum, 1)
 }
@@ -296,6 +305,7 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 		self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalSzVal)})
 		self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalRxSzVal)})
 		self.retxMs = append(self.retxMs, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxMsVal)})
+		self.retxScale = append(self.retxScale, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxScaleVal)})
 		self.dupAcks = append(self.dupAcks, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupAcksAccum, 0)})
 		self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.rxPortalSzVal)})
 		self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})

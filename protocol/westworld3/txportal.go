@@ -5,7 +5,6 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"math"
 	"net"
 	"sync"
@@ -147,6 +146,7 @@ func (self *txPortal) ack(acks []ack) error {
 		if self.profile.RetxScale < self.profile.RetxScaleFloor {
 			self.profile.RetxScale = self.profile.RetxScaleFloor
 		}
+		self.ii.NewRetxScale(self.peer, self.profile.RetxScale)
 		self.lastRetxScaleDecr = time.Now()
 	}
 
@@ -214,6 +214,7 @@ func (self *txPortal) duplicateAck(seq int32) {
 		if time.Since(self.lastRetxScaleIncr).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
 			self.profile.RetxScale += self.profile.RetxEvaluationScaleIncr
 			self.lastRetxScaleIncr = time.Now()
+			self.ii.NewRetxScale(self.peer, self.profile.RetxScale)
 		}
 
 		self.updatePortalCapacity(newCapacity)
@@ -250,6 +251,6 @@ func (self *txPortal) updatePortalCapacity(newCapacity int) {
 
 func (self *txPortal) availableCapacity(segmentSz int) int {
 	txPortalCapacity := float64(self.capacity - int(float64(self.rxPortalSz)*self.profile.TxPortalRxSzPressureScale) - (self.txPortalSz + segmentSz))
-	rxPortalCapacity := float64(self.capacity - self.rxPortalSz)
+	rxPortalCapacity := float64(self.capacity - (self.rxPortalSz + segmentSz))
 	return int(math.Min(txPortalCapacity, rxPortalCapacity))
 }

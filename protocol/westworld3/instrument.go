@@ -30,6 +30,7 @@ type InstrumentInstance interface {
 	TxPortalSzChanged(peer *net.UDPAddr, capacity int)
 	TxPortalRxSzChanged(peer *net.UDPAddr, sz int)
 	NewRetxMs(peer *net.UDPAddr, retxMs int)
+	NewRetxScale(peer *net.UDPAddr, retxScale float64)
 	DuplicateAck(peer *net.UDPAddr, ack int32)
 
 	// rxPortal

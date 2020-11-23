@@ -44,6 +44,7 @@ var westworld31Datasets = []string{
 	"tx_portal_sz",
 	"tx_portal_rx_sz",
 	"retx_ms",
+	"retx_scale",
 	"dup_acks",
 	"rx_portal_sz",
 	"dup_rx_bytes",

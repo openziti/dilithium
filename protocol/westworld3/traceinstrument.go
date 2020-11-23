@@ -150,6 +150,14 @@ func (self *traceInstrumentInstance) NewRetxMs(peer *net.UDPAddr, retxMs int) {
 	}
 }
 
+func (self *traceInstrumentInstance) NewRetxScale(_ *net.UDPAddr, retxScale float64) {
+	if self.i.config.TxPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s RETX SCALE: %0.2f", self.id, retxScale))
+		self.lock.Unlock()
+	}
+}
+
 func (self *traceInstrumentInstance) DuplicateAck(peer *net.UDPAddr, seq int32) {
 	if self.i.config.TxPortal {
 		self.lock.Lock()

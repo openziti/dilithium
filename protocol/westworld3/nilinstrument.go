@@ -40,6 +40,7 @@ func (self *nilInstrumentInstance) TxPortalCapacityChanged(*net.UDPAddr, int) {}
 func (self *nilInstrumentInstance) TxPortalSzChanged(*net.UDPAddr, int)       {}
 func (self *nilInstrumentInstance) TxPortalRxSzChanged(*net.UDPAddr, int)     {}
 func (self *nilInstrumentInstance) NewRetxMs(*net.UDPAddr, int)               {}
+func (self *nilInstrumentInstance) NewRetxScale(*net.UDPAddr, float64)        {}
 func (self *nilInstrumentInstance) DuplicateAck(*net.UDPAddr, int32)          {}
 
 /*
