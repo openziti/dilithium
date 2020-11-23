@@ -141,12 +141,12 @@ func (self *txPortal) ack(acks []ack) error {
 	}
 
 	if time.Since(self.lastRetxEvaluation).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
-		logrus.Infof("decreasing retx scale")
-		self.profile.RetxScale -= 0.05
+		self.profile.RetxScale -= self.profile.RetxEvaluationScaleDecr
 		if self.profile.RetxScale < 1.0 {
-			self.profile.RetxScale = self.startRetxScale
+			self.profile.RetxScale = 1.0
 		}
 		self.lastRetxEvaluation = time.Now()
+		logrus.Infof("decreased retx scale: %0.2f", self.profile.RetxScale)
 	}
 
 	self.ready.Broadcast()
@@ -208,9 +208,13 @@ func (self *txPortal) duplicateAck(seq int32) {
 	self.successCt = 0
 	if self.dupAckCt >= self.profile.TxPortalDupAckThresh {
 		newCapacity := int(float64(self.capacity) * self.profile.TxPortalDupAckCapacityScale)
+
 		// #93: Self-Adjusting retxMs
-		self.profile.RetxScale += 0.1
-		self.lastRetxEvaluation = time.Now()
+		if time.Since(self.lastRetxEvaluation).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
+			self.profile.RetxScale += self.profile.RetxEvaluationScaleIncr
+			self.lastRetxEvaluation = time.Now()
+			logrus.Infof("increased retx scale: %0.2f", self.profile.RetxScale)
+		}
 
 		self.updatePortalCapacity(newCapacity)
 		self.dupAckCt = 0
