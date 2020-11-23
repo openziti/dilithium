@@ -38,7 +38,7 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 		seq:     util.NewSequence(int32(sSeq)),
 		profile: profile,
 	}
-	id := fmt.Sprintf("dialerConn_%s", peer)
+	id := fmt.Sprintf("dialerConn_%s_%s", conn.LocalAddr(), peer)
 	dc.ii = profile.i.NewInstance(id, peer)
 	dc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), dc.ii)
 	dc.txPortal = newTxPortal(conn, peer, profile, dc.pool, dc.ii)
