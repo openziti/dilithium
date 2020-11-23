@@ -148,7 +148,6 @@ func (self *txPortal) ack(acks []ack) error {
 			self.profile.RetxScale = self.profile.RetxScaleFloor
 		}
 		self.lastRetxScaleDecr = time.Now()
-		logrus.Infof("decreased retx scale: %0.2f", self.profile.RetxScale)
 	}
 
 	self.ready.Broadcast()
@@ -215,7 +214,6 @@ func (self *txPortal) duplicateAck(seq int32) {
 		if time.Since(self.lastRetxScaleIncr).Milliseconds() > int64(self.profile.RetxEvaluationMs) {
 			self.profile.RetxScale += self.profile.RetxEvaluationScaleIncr
 			self.lastRetxScaleIncr = time.Now()
-			logrus.Infof("increased retx scale: %0.2f", self.profile.RetxScale)
 		}
 
 		self.updatePortalCapacity(newCapacity)
