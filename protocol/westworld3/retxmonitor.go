@@ -52,11 +52,12 @@ func (self *retxMonitor) updateRttMs(rttMs uint16) {
 	}
 	accum /= len(self.rttAvg)
 	self.retxMs = int(float64(accum)*self.profile.RetxScale) + self.profile.RetxAddMs
+	self.waitlist.Update(self.retxMs)
 	self.ii.NewRetxMs(self.peer, self.retxMs)
 }
 
 func (self *retxMonitor) add(wm *wireMessage) {
-	self.waitlist.Add(wm, self.deadline())
+	self.waitlist.Add(wm, self.retxMs, self.deadline())
 	self.ready.Broadcast()
 }
 
@@ -118,7 +119,7 @@ func (self *retxMonitor) run() {
 							self.retxF()
 						}
 
-						self.waitlist.Add(wm, self.deadline())
+						self.waitlist.Add(wm, self.retxMs, self.deadline())
 
 					} else {
 						break

@@ -5,7 +5,8 @@ import (
 )
 
 type waitlist interface {
-	Add(*wireMessage, time.Time)
+	Add(*wireMessage, int, time.Time)
+	Update(int)
 	Remove(*wireMessage)
 	Size() int
 	Peek() (*wireMessage, time.Time)
@@ -18,6 +19,7 @@ type arrayWaitlist struct {
 
 type waitlistSubject struct {
 	deadline time.Time
+	retxMs   int
 	wm       *wireMessage
 }
 
@@ -25,8 +27,15 @@ func newArrayWaitlist() waitlist {
 	return &arrayWaitlist{}
 }
 
-func (self *arrayWaitlist) Add(wm *wireMessage, t time.Time) {
-	self.waitlist = append(self.waitlist, &waitlistSubject{t, wm})
+func (self *arrayWaitlist) Add(wm *wireMessage, retxMs int, t time.Time) {
+	self.waitlist = append(self.waitlist, &waitlistSubject{t, retxMs, wm})
+}
+
+func (self *arrayWaitlist) Update(retxMs int) {
+	for _, wl := range self.waitlist {
+		delta := retxMs - wl.retxMs
+		wl.deadline.Add(time.Duration(delta) * time.Millisecond)
+	}
 }
 
 func (self *arrayWaitlist) Remove(wm *wireMessage) {
