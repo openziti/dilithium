@@ -14,7 +14,7 @@ func testTwoByteTimestamps() {
 		time.Sleep(time.Duration(randMs) * time.Millisecond)
 		checkTs := uint16(time.Now().UnixNano() / int64(time.Millisecond))
 		delta := checkTs - sourceTs
-		if int(delta) < (randMs - int(float64(randMs) * 0.05)) || int(delta) > (randMs + int(float64(randMs) * 0.05)) {
+		if int(delta) < (randMs-int(float64(randMs)*0.05)) || int(delta) > (randMs+int(float64(randMs)*0.05)) {
 			fmt.Printf("{%d != %d}", delta, randMs)
 		} else {
 			fmt.Printf(".")

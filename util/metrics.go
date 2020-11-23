@@ -51,7 +51,7 @@ func ReadMetricsId(path string) (*MetricsId, error) {
 
 func DiscoverMetrics(root string) (map[string]*MetricsId, error) {
 	var metricsIdPaths []string
-	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error  {
+	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

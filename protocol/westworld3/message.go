@@ -181,7 +181,7 @@ func newData(seq int32, rtt *uint16, data []byte, p *pool) (wm *wireMessage, err
 		return nil, errors.Errorf("short buffer for data [%d < %d]", wm.buffer.sz, dataStart+rttSz+dataSz)
 	}
 	copy(wm.buffer.data[dataStart+rttSz:], data)
-	return wm.encodeHeader(uint16(rttSz+dataSz))
+	return wm.encodeHeader(uint16(rttSz + dataSz))
 }
 
 func (self *wireMessage) asData() (data []byte, rtt *uint16, err error) {
@@ -197,7 +197,7 @@ func (self *wireMessage) asData() (data []byte, rtt *uint16, err error) {
 		*rtt = util.ReadUint16(self.buffer.data[dataStart:])
 		rttSz = 2
 	}
-	return self.buffer.data[dataStart+rttSz:self.buffer.uz], rtt, nil
+	return self.buffer.data[dataStart+rttSz : self.buffer.uz], rtt, nil
 }
 
 func (self *wireMessage) asDataSize() (sz uint32, err error) {
@@ -213,8 +213,8 @@ func (self *wireMessage) asDataSize() (sz uint32, err error) {
 
 func newKeepalive(rxPortalSz int, p *pool) (wm *wireMessage, err error) {
 	wm = &wireMessage{
-		seq: -1,
-		mt: KEEPALIVE,
+		seq:    -1,
+		mt:     KEEPALIVE,
 		buffer: p.get(),
 	}
 	util.WriteInt32(wm.buffer.data[dataStart:], int32(rxPortalSz))
@@ -325,10 +325,10 @@ func (mt messageType) String() string {
 
 func (mt messageType) FlagsString() string {
 	flags := ""
-	if messageFlag(mt) & INLINE_ACK == INLINE_ACK {
+	if messageFlag(mt)&INLINE_ACK == INLINE_ACK {
 		flags += " INLINE_ACK"
 	}
-	if messageFlag(mt) & RTT == RTT {
+	if messageFlag(mt)&RTT == RTT {
 		flags += " RTT"
 	}
 	return strings.TrimSpace(flags)

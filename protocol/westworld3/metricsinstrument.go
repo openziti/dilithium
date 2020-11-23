@@ -170,8 +170,8 @@ type metricsInstrumentInstance struct {
 	txPortalRxSzVal     int64
 	retxMs              []*util.Sample
 	retxMsVal           int64
-	retxScale			[]*util.Sample
-	retxScaleVal		int64
+	retxScale           []*util.Sample
+	retxScaleVal        int64
 	dupAcks             []*util.Sample
 	dupAcksAccum        int64
 
@@ -257,7 +257,7 @@ func (self *metricsInstrumentInstance) NewRetxMs(_ *net.UDPAddr, ms int) {
 }
 
 func (self *metricsInstrumentInstance) NewRetxScale(_ *net.UDPAddr, retxMs float64) {
-	atomic.StoreInt64(&self.retxScaleVal, int64(retxMs * 1000.0))
+	atomic.StoreInt64(&self.retxScaleVal, int64(retxMs*1000.0))
 }
 
 func (self *metricsInstrumentInstance) DuplicateAck(*net.UDPAddr, int32) {

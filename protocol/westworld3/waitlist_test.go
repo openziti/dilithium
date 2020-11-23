@@ -9,7 +9,7 @@ import (
 func TestArrayWaitlist_Add_Next(t *testing.T) {
 	aw := &arrayWaitlist{}
 	deadline := time.Now().Add(200 * time.Millisecond)
-	aw.Add(&wireMessage{seq: int32(99)}, deadline)
+	aw.Add(&wireMessage{seq: int32(99)}, 200, deadline)
 
 	wmOut, deadlineOut := aw.Next()
 	assert.NotNil(t, wmOut)
@@ -25,7 +25,7 @@ func TestArrayWaitlist_Add_Remove(t *testing.T) {
 	aw := &arrayWaitlist{}
 	wm := &wireMessage{seq: int32(66)}
 	deadline := time.Now().Add(200 * time.Millisecond)
-	aw.Add(wm, deadline)
+	aw.Add(wm, 200, deadline)
 
 	aw.Remove(wm)
 	wmOut, deadlineOut := aw.Next()
@@ -36,14 +36,14 @@ func TestArrayWaitlist_Add_Remove(t *testing.T) {
 func benchmarkArrayWaitlist_Add_Next(sz int, b *testing.B) {
 	toAdd := make([]*waitlistSubject, 0)
 	for i := 0; i < sz; i++ {
-		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), 200, &wireMessage{seq: int32(i)}})
 	}
 	aw := &arrayWaitlist{}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for i := 0; i < sz; i++ {
-			aw.Add(toAdd[i].wm, toAdd[i].deadline)
+			aw.Add(toAdd[i].wm, 200, toAdd[i].deadline)
 		}
 		for i := 0; i < sz; i++ {
 			aw.Next()
@@ -57,14 +57,14 @@ func BenchmarkArrayWaitlist_Add_Next_16384(b *testing.B) { benchmarkArrayWaitlis
 func benchmarkArrayWaitlist_Add_Remove(sz int, b *testing.B) {
 	toAdd := make([]*waitlistSubject, 0)
 	for i := 0; i < sz; i++ {
-		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), 200, &wireMessage{seq: int32(i)}})
 	}
 	aw := &arrayWaitlist{}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for i := 0; i < sz; i++ {
-			aw.Add(toAdd[i].wm, toAdd[i].deadline)
+			aw.Add(toAdd[i].wm, 200, toAdd[i].deadline)
 		}
 		for i := 0; i < sz; i++ {
 			aw.Remove(toAdd[i].wm)
@@ -84,14 +84,14 @@ func BenchmarkArrayWaitlist_Add_Remove_16384(b *testing.B) {
 func benchmarkArrayWaitlist_Add_Remove_Reverse(sz int, b *testing.B) {
 	toAdd := make([]*waitlistSubject, 0)
 	for i := 0; i < sz; i++ {
-		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), &wireMessage{seq: int32(i)}})
+		toAdd = append(toAdd, &waitlistSubject{time.Now().Add(200 * time.Millisecond), 200, &wireMessage{seq: int32(i)}})
 	}
 	aw := &arrayWaitlist{}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for i := 0; i < sz; i++ {
-			aw.Add(toAdd[i].wm, toAdd[i].deadline)
+			aw.Add(toAdd[i].wm, 200, toAdd[i].deadline)
 		}
 		for i := sz - 1; i >= 0; i-- {
 			aw.Remove(toAdd[i].wm)

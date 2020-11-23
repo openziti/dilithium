@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/dilithium/cmd/dilithium/dilithium"
 	_ "github.com/openziti/dilithium/cmd/dilithium/echo"
 	_ "github.com/openziti/dilithium/cmd/dilithium/influx"
 	_ "github.com/openziti/dilithium/cmd/dilithium/loop"
 	_ "github.com/openziti/dilithium/cmd/dilithium/tunnel"
-	"github.com/michaelquigley/pfxlog"
 	"github.com/sirupsen/logrus"
 )
 

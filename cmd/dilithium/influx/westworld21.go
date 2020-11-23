@@ -71,7 +71,6 @@ func discoverW21Peers(path string) ([]*peer, error) {
 	return peers, nil
 }
 
-
 var westworld21Datasets = []string{
 	"txBytes",
 	"txMsgs",

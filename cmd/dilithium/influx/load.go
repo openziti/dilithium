@@ -48,7 +48,7 @@ func influxLoad(_ *cobra.Command, args []string) {
 			}
 
 		default:
-			logrus.Warn("unknown metrics type [%s]", metricsId.Id)
+			logrus.Warnf("unknown metrics type [%s]", metricsId.Id)
 		}
 	}
 
