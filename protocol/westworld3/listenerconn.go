@@ -192,7 +192,7 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 				self.ii.WireMessageRx(self.peer, ackWm)
 
 				if ackWm.mt != ACK {
-					logrus.Errorf("expected ACK, got [%d]", ackWm.mt)
+					logrus.Errorf("expected ACK, got [%d]", ackWm.messageType())
 					continue
 				}
 				if ack, _, _, err := ackWm.asAck(); err == nil {
