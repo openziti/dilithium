@@ -224,14 +224,25 @@ func (self *rxPortal) run() {
 				}
 			}
 
-		} else if wm.messageType() == CLOSE && !self.closed {
-			if err := self.txPortal.close(self.seq); err != nil {
-				logrus.Errorf("error closing (%v)", err)
+		} else if wm.messageType() == CLOSE {
+			closeAck, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), nil, self.ackPool)
+			if err == nil {
+				if err := writeWireMessage(closeAck, self.conn, self.peer); err != nil {
+					logrus.Errorf("error writing close ack (%v)", err)
+				}
+			} else {
+				logrus.Errorf("error creating close ack (%v)", err)
 			}
-			self.reads <- &rxRead{nil, 0, true}
-			self.closed = true
-			wm.buffer.unref()
-			close(self.rxs)
+
+			if !self.closed {
+				if err := self.txPortal.close(self.seq); err != nil {
+					logrus.Errorf("error closing (%v)", err)
+				}
+				self.reads <- &rxRead{nil, 0, true}
+				self.closed = true
+				wm.buffer.unref()
+				close(self.rxs)
+			}
 		}
 	}
 }

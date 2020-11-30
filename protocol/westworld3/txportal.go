@@ -118,15 +118,20 @@ func (self *txPortal) ack(acks []ack) error {
 				wm := v.(*wireMessage)
 				self.monitor.remove(wm)
 				self.tree.Remove(seq)
-				sz, err := wm.asDataSize()
-				if err != nil {
-					return errors.Wrap(err, "internal tree error")
-				}
-				self.txPortalSz -= int(sz)
-				self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
-				wm.buffer.unref()
+				if wm.messageType() == DATA {
+					sz, err := wm.asDataSize()
+					if err != nil {
+						return errors.Wrap(err, "internal tree error")
+					}
+					self.txPortalSz -= int(sz)
+					self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
+					self.successfulAck(int(sz))
 
-				self.successfulAck(int(sz))
+				} else {
+					// most like a CLOSE
+					self.successfulAck(0)
+				}
+				wm.buffer.unref()
 
 				if wm.seq == self.closeWaitSeq {
 					self.closed = true

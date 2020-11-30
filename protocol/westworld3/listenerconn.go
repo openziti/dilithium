@@ -47,7 +47,6 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
 	lc.txPortal = newTxPortal(conn, peer, profile, lc.pool, lc.ii)
 	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile, lc.ii)
-	go lc.rxer()
 	return lc, nil
 }
 
@@ -201,6 +200,10 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 							logrus.Errorf("invalid hello ack sequence (%d != %d)", ack[0].start, helloAckSeq)
 							continue
 						}
+
+						// connection established, now we can start
+						go self.rxer()
+
 						return nil
 					}
 				}
