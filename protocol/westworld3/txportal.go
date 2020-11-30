@@ -5,6 +5,7 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"math"
 	"net"
 	"sync"
@@ -118,7 +119,8 @@ func (self *txPortal) ack(acks []ack) error {
 				wm := v.(*wireMessage)
 				self.monitor.remove(wm)
 				self.tree.Remove(seq)
-				if wm.messageType() == DATA {
+				switch wm.messageType() {
+				case DATA:
 					sz, err := wm.asDataSize()
 					if err != nil {
 						return errors.Wrap(err, "internal tree error")
@@ -127,9 +129,11 @@ func (self *txPortal) ack(acks []ack) error {
 					self.ii.TxPortalSzChanged(self.peer, self.txPortalSz)
 					self.successfulAck(int(sz))
 
-				} else {
-					// most like a CLOSE
+				case CLOSE:
 					self.successfulAck(0)
+
+				default:
+					logrus.Warnf("acked suspicious message type in tree [%d]", wm.messageType())
 				}
 				wm.buffer.unref()
 
