@@ -1,4 +1,34 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_DILITHIUM",
+      "label": "Dilithium",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "7.1.1"
+    },
+    {
+      "type": "panel",
+      "id": "graph",
+      "name": "Graph",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0"
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -15,8 +45,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 4,
-  "iteration": 1606156831266,
+  "id": null,
+  "iteration": 1606156831279,
   "links": [],
   "panels": [
     {
@@ -24,7 +54,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -67,7 +97,7 @@
           "groupBy": [
             {
               "params": [
-                "250ms"
+                "1s"
               ],
               "type": "time"
             },
@@ -109,7 +139,7 @@
           "groupBy": [
             {
               "params": [
-                "250ms"
+                "1s"
               ],
               "type": "time"
             },
@@ -151,7 +181,7 @@
           "groupBy": [
             {
               "params": [
-                "250ms"
+                "1s"
               ],
               "type": "time"
             },
@@ -193,7 +223,7 @@
           "groupBy": [
             {
               "params": [
-                "250ms"
+                "1s"
               ],
               "type": "time"
             },
@@ -253,7 +283,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:742",
-          "format": "Bps",
+          "format": "bytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -280,7 +310,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -536,7 +566,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -750,7 +780,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -880,7 +910,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -1010,7 +1040,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -1140,7 +1170,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -1271,7 +1301,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${DS_DILITHIUM}",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1404,12 +1434,8 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "selected": true,
-          "text": "listenerConn_0.0.0.0:6262_3.87.217.253:58010_008956420",
-          "value": "listenerConn_0.0.0.0:6262_3.87.217.253:58010_008956420"
-        },
-        "datasource": "Dilithium",
+        "current": {},
+        "datasource": "${DS_DILITHIUM}",
         "definition": "show tag values with key = \"peer\" where type =~ /westworld31/",
         "hide": 0,
         "includeAll": false,
@@ -1431,8 +1457,8 @@
     ]
   },
   "time": {
-    "from": "2020-11-23T18:17:46.791Z",
-    "to": "2020-11-23T18:20:54.815Z"
+    "from": "2020-11-30T18:37:56.400Z",
+    "to": "2020-11-30T18:39:20.400Z"
   },
   "timepicker": {
     "refresh_intervals": [
