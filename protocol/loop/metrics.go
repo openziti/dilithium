@@ -24,6 +24,7 @@ type Metrics struct {
 	Prefix string
 	close  chan struct{}
 
+	start        time.Time
 	RxBytes      []*util.Sample
 	RxBytesAccum int64
 	TxBytes      []*util.Sample
@@ -55,12 +56,46 @@ func WriteAllSamples() {
 	}
 }
 
+func (self *Metrics) Start() {
+	self.start = time.Now()
+}
+
 func (self *Metrics) Rx(bytes int64) {
 	atomic.AddInt64(&self.RxBytesAccum, bytes)
 }
 
 func (self *Metrics) Tx(bytes int64) {
 	atomic.AddInt64(&self.TxBytesAccum, bytes)
+}
+
+func (self *Metrics) Summarize() {
+	rxTotalBytes := int64(0)
+	rxLastTimestamp := time.Time{}
+	for _, sample := range self.RxBytes {
+		if sample.V > 0 {
+			rxTotalBytes += sample.V
+			rxLastTimestamp = sample.Ts
+		}
+	}
+	rxDurationSeconds := float64(rxLastTimestamp.Sub(self.start).Milliseconds() / 1000.0)
+	rxBytesSec := int64(float64(rxTotalBytes) / rxDurationSeconds)
+	if rxTotalBytes > 0 {
+		logrus.Infof("Rx: %s in %0.2f sec = %s/sec", util.BytesToSize(rxTotalBytes), rxDurationSeconds, util.BytesToSize(rxBytesSec))
+	}
+
+	txTotalBytes := int64(0)
+	txLastTimestamp := time.Time{}
+	for _, sample := range self.TxBytes {
+		if sample.V > 0 {
+			txTotalBytes += sample.V
+			txLastTimestamp = sample.Ts
+		}
+	}
+	txDurationSeconds := float64(txLastTimestamp.Sub(self.start).Milliseconds() / 1000.0)
+	txBytesSec := int64(float64(txTotalBytes) / txDurationSeconds)
+	if txTotalBytes > 0 {
+		logrus.Infof("Tx: %s in %0.2f sec = %s/sec", util.BytesToSize(txTotalBytes), txDurationSeconds, util.BytesToSize(txBytesSec))
+	}
 }
 
 func (self *Metrics) Close() {

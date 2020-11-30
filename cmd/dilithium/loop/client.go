@@ -39,6 +39,7 @@ func loopClient(_ *cobra.Command, args []string) {
 	}
 
 	m := loop.NewMetrics(conn.LocalAddr(), conn.RemoteAddr(), 100, "logs")
+	m.Start()
 
 	var rx *loop.Receiver
 	if startReceiver {
@@ -59,5 +60,6 @@ func loopClient(_ *cobra.Command, args []string) {
 		<-tx.Done
 	}
 
+	m.Summarize()
 	loop.WriteAllSamples()
 }
