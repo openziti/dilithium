@@ -223,7 +223,7 @@ func (self *rxPortal) run() {
 				/*
 				 * Send "pacing" KEEPALIVE when buffer size changes more than RxPortalSzPacingThresh.
 				 */
-				if float64(self.rxPortalSz)/float64(startingRxPortalSz) < self.profile.RxPortalSzPacingThresh {
+				if startingRxPortalSz > self.profile.TxPortalMinSz && float64(self.rxPortalSz)/float64(startingRxPortalSz) < self.profile.RxPortalSzPacingThresh {
 					if keepalive, err := newKeepalive(self.rxPortalSz, self.ackPool); err == nil {
 						if err := writeWireMessage(keepalive, self.conn, self.peer); err != nil {
 							logrus.Errorf("error sending pacing keepalive (%v)", err)
