@@ -18,6 +18,7 @@ type dialerConn struct {
 	seq      *util.Sequence
 	txPortal *txPortal
 	rxPortal *rxPortal
+	closer   *closer
 	pool     *pool
 	profile  *Profile
 	ii       InstrumentInstance
@@ -41,13 +42,13 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 	id := fmt.Sprintf("dialerConn_%s_%s", conn.LocalAddr(), peer)
 	dc.ii = profile.i.NewInstance(id, peer)
 	dc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), dc.ii)
-	closer := newCloser(dc.seq, dc.profile, nil)
-	dc.txPortal = newTxPortal(conn, peer, closer, profile, dc.pool, dc.ii)
-	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, closer, profile, dc.ii)
-	closer.txPortal = dc.txPortal
-	closer.rxPortal = dc.rxPortal
+	dc.closer = newCloser(dc.seq, dc.profile, nil)
+	dc.txPortal = newTxPortal(conn, peer, dc.closer, profile, dc.pool, dc.ii)
+	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, dc.closer, profile, dc.ii)
+	dc.closer.txPortal = dc.txPortal
+	dc.closer.rxPortal = dc.rxPortal
 	go dc.rxer()
-	go closer.run()
+	go dc.closer.run()
 	return dc, nil
 }
 
@@ -94,7 +95,8 @@ func (self *dialerConn) rxer() {
 		if err != nil {
 			logrus.Errorf("error reading (%v)", err)
 			self.ii.ReadError(self.peer, err)
-			continue
+			self.closer.emergencyStop()
+			return
 		}
 		self.ii.WireMessageRx(peer, wm)
 

@@ -34,6 +34,17 @@ func newCloser(seq *util.Sequence, profile *Profile, hook func()) *closer {
 	}
 }
 
+func (self *closer) emergencyStop() {
+	logrus.Infof("broken glass")
+
+	self.txPortal.close()
+	self.rxPortal.close()
+
+	if self.hook != nil {
+		self.hook()
+	}
+}
+
 func (self *closer) run() {
 closeWait:
 	for {
