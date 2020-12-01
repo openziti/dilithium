@@ -45,7 +45,7 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 func (self *metricsInstrument) NewInstance(id string, peer *net.UDPAddr) InstrumentInstance {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	ii := &metricsInstrumentInstance{id: id, peer: peer}
+	ii := &metricsInstrumentInstance{id: id, peer: peer, close: make(chan struct{}, 1)}
 	go ii.snapshotter(self.config.SnapshotMs)
 	self.instances = append(self.instances, ii)
 	return ii
@@ -295,28 +295,33 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 	defer logrus.Infof("exited")
 	for {
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-		self.txBytes = append(self.txBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txBytesAccum, 0)})
-		self.txMsgs = append(self.txMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txMsgsAccum, 0)})
-		self.retxBytes = append(self.retxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxBytesAccum, 0)})
-		self.retxMsgs = append(self.retxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxMsgsAccum, 0)})
-		self.rxBytes = append(self.rxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxBytesAccum, 0)})
-		self.rxMsgs = append(self.rxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxMsgsAccum, 0)})
-		self.txPortalCapacity = append(self.txPortalCapacity, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalCapacityVal)})
-		self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalSzVal)})
-		self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalRxSzVal)})
-		self.retxMs = append(self.retxMs, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxMsVal)})
-		self.retxScale = append(self.retxScale, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxScaleVal)})
-		self.dupAcks = append(self.dupAcks, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupAcksAccum, 0)})
-		self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.rxPortalSzVal)})
-		self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
-		self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
-		self.allocations = append(self.allocations, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.allocationsAccum, 0)})
-		self.errors = append(self.errors, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.errorsAccum, 0)})
+		self.snapshot()
 		select {
 		case <-self.close:
+			self.snapshot()
 			return
 		default:
 			//
 		}
 	}
+}
+
+func (self *metricsInstrumentInstance) snapshot() {
+	self.txBytes = append(self.txBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txBytesAccum, 0)})
+	self.txMsgs = append(self.txMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txMsgsAccum, 0)})
+	self.retxBytes = append(self.retxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxBytesAccum, 0)})
+	self.retxMsgs = append(self.retxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxMsgsAccum, 0)})
+	self.rxBytes = append(self.rxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxBytesAccum, 0)})
+	self.rxMsgs = append(self.rxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxMsgsAccum, 0)})
+	self.txPortalCapacity = append(self.txPortalCapacity, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalCapacityVal)})
+	self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalSzVal)})
+	self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalRxSzVal)})
+	self.retxMs = append(self.retxMs, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxMsVal)})
+	self.retxScale = append(self.retxScale, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxScaleVal)})
+	self.dupAcks = append(self.dupAcks, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupAcksAccum, 0)})
+	self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.rxPortalSzVal)})
+	self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
+	self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
+	self.allocations = append(self.allocations, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.allocationsAccum, 0)})
+	self.errors = append(self.errors, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.errorsAccum, 0)})
 }

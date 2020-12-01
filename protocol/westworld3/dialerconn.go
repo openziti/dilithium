@@ -42,7 +42,10 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 	id := fmt.Sprintf("dialerConn_%s_%s", conn.LocalAddr(), peer)
 	dc.ii = profile.i.NewInstance(id, peer)
 	dc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), dc.ii)
-	dc.closer = newCloser(dc.seq, dc.profile, nil)
+	closeHook := func() {
+		dc.ii.Shutdown()
+	}
+	dc.closer = newCloser(dc.seq, dc.profile, closeHook)
 	dc.txPortal = newTxPortal(conn, peer, dc.closer, profile, dc.pool, dc.ii)
 	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, dc.closer, profile, dc.ii)
 	dc.closer.txPortal = dc.txPortal

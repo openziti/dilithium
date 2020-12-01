@@ -19,10 +19,10 @@ type closer struct {
 	rxPortal     *rxPortal
 	lastEvent    time.Time
 	profile      *Profile
-	hook         func()
+	closeHook    func()
 }
 
-func newCloser(seq *util.Sequence, profile *Profile, hook func()) *closer {
+func newCloser(seq *util.Sequence, profile *Profile, closeHook func()) *closer {
 	return &closer{
 		seq:          seq,
 		rxCloseSeq:   notClosed,
@@ -30,7 +30,7 @@ func newCloser(seq *util.Sequence, profile *Profile, hook func()) *closer {
 		txCloseSeq:   notClosed,
 		txCloseSeqIn: make(chan int32, 1),
 		profile:      profile,
-		hook:         hook,
+		closeHook:    closeHook,
 	}
 }
 
@@ -40,8 +40,8 @@ func (self *closer) emergencyStop() {
 	self.txPortal.close()
 	self.rxPortal.close()
 
-	if self.hook != nil {
-		self.hook()
+	if self.closeHook != nil {
+		self.closeHook()
 	}
 }
 
@@ -90,8 +90,8 @@ closeWait:
 	self.txPortal.close()
 	self.rxPortal.close()
 
-	if self.hook != nil {
-		self.hook()
+	if self.closeHook != nil {
+		self.closeHook()
 	}
 
 	logrus.Info("close complete")

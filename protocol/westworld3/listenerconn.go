@@ -26,7 +26,7 @@ type listenerConn struct {
 	ii       InstrumentInstance
 }
 
-func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, hook func()) (*listenerConn, error) {
+func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, callerHook func()) (*listenerConn, error) {
 	startSeq := int64(0)
 	if profile.RandomizeSeq {
 		randomSeq, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
@@ -46,7 +46,13 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 	id := fmt.Sprintf("listenerConn_%s_%s", listener.addr, peer)
 	lc.ii = profile.i.NewInstance(id, peer)
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
-	lc.closer = newCloser(lc.seq, lc.profile, hook)
+	closeHook := func() {
+		lc.ii.Shutdown()
+		if callerHook != nil {
+			callerHook()
+		}
+	}
+	lc.closer = newCloser(lc.seq, lc.profile, closeHook)
 	lc.txPortal = newTxPortal(conn, peer, lc.closer, profile, lc.pool, lc.ii)
 	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, lc.closer, profile, lc.ii)
 	lc.closer.txPortal = lc.txPortal
