@@ -5,7 +5,7 @@ profile_version: 1
 #  path: logs
 #  snapshot_ms: 250
 
-instrument:
-  name: trace
-  wire: true
-  error: true
+#instrument:
+#  name: trace
+#  wire: true
+#  error: true

@@ -18,16 +18,18 @@ type closer struct {
 	txPortal     *txPortal
 	rxPortal     *rxPortal
 	lastEvent    time.Time
+	profile      *Profile
 	hook         func()
 }
 
-func newCloser(seq *util.Sequence, hook func()) *closer {
+func newCloser(seq *util.Sequence, profile *Profile, hook func()) *closer {
 	return &closer{
 		seq:          seq,
 		rxCloseSeq:   notClosed,
 		rxCloseSeqIn: make(chan int32, 1),
 		txCloseSeq:   notClosed,
 		txCloseSeqIn: make(chan int32, 1),
+		profile:      profile,
 		hook:         hook,
 	}
 }
@@ -66,7 +68,7 @@ closeWait:
 				break closeWait
 			}
 
-		case <-time.After(1000 * time.Millisecond):
+		case <-time.After(time.Duration(self.profile.CloseCheckMs) * time.Millisecond):
 			if self.readyToClose() {
 				break closeWait
 			}
@@ -85,5 +87,5 @@ closeWait:
 }
 
 func (self *closer) readyToClose() bool {
-	return self.txCloseSeq != notClosed && self.rxCloseSeq != notClosed && time.Since(self.lastEvent).Milliseconds() > 5000
+	return self.txCloseSeq != notClosed && self.rxCloseSeq != notClosed && time.Since(self.lastEvent).Milliseconds() > int64(self.profile.CloseWaitMs)
 }
