@@ -1,11 +1,11 @@
 profile_version: 1
 
-instrument:
-  name: metrics
-  path: logs
-  snapshot_ms: 250
-
 #instrument:
-#  name: trace
-#  wire: true
-#  error: true
+#  name: metrics
+#  path: logs
+#  snapshot_ms: 250
+
+instrument:
+  name: trace
+  wire: true
+  error: true

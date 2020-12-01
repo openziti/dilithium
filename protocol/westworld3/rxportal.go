@@ -26,6 +26,7 @@ type rxPortal struct {
 	peer       *net.UDPAddr
 	txPortal   *txPortal
 	seq        *util.Sequence
+	closer     *closer
 	profile    *Profile
 	closed     bool
 	ii         InstrumentInstance
@@ -37,7 +38,7 @@ type rxRead struct {
 	eof bool
 }
 
-func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, profile *Profile, ii InstrumentInstance) *rxPortal {
+func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *util.Sequence, closer *closer, profile *Profile, ii InstrumentInstance) *rxPortal {
 	rx := &rxPortal{
 		tree:       btree.NewWith(profile.RxPortalTreeLen, utils.Int32Comparator),
 		accepted:   -1,
@@ -50,6 +51,7 @@ func newRxPortal(conn *net.UDPConn, peer *net.UDPAddr, txPortal *txPortal, seq *
 		peer:       peer,
 		txPortal:   txPortal,
 		seq:        seq,
+		closer:     closer,
 		profile:    profile,
 		ii:         ii,
 	}
@@ -76,6 +78,8 @@ preread:
 				if n != read.sz {
 
 				}
+			} else {
+				return 0, io.EOF
 			}
 
 		default:
@@ -121,6 +125,12 @@ func (self *rxPortal) rx(wm *wireMessage) (err error) {
 
 func (self *rxPortal) setAccepted(accepted int32) {
 	self.accepted = accepted
+}
+
+func (self *rxPortal) close() {
+	self.reads <- &rxRead{nil, 0, true}
+	self.closed = true
+	close(self.rxs)
 }
 
 func (self *rxPortal) run() {
@@ -233,16 +243,8 @@ func (self *rxPortal) run() {
 			} else {
 				logrus.Errorf("error creating close ack (%v)", err)
 			}
-
-			if !self.closed {
-				if err := self.txPortal.close(self.seq); err != nil {
-					logrus.Errorf("error closing (%v)", err)
-				}
-				self.reads <- &rxRead{nil, 0, true}
-				self.closed = true
-				wm.buffer.unref()
-				close(self.rxs)
-			}
+			self.closer.rxCloseSeqIn <- int32(wm.seq)
+			wm.buffer.unref()
 		}
 	}
 }

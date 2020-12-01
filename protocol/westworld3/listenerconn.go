@@ -20,6 +20,7 @@ type listenerConn struct {
 	seq      *util.Sequence
 	txPortal *txPortal
 	rxPortal *rxPortal
+	closer   *closer
 	pool     *pool
 	profile  *Profile
 	ii       InstrumentInstance
@@ -45,8 +46,11 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 	id := fmt.Sprintf("listenerConn_%s_%s", listener.addr, peer)
 	lc.ii = profile.i.NewInstance(id, peer)
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
-	lc.txPortal = newTxPortal(conn, peer, profile, lc.pool, lc.ii)
-	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, profile, lc.ii)
+	lc.closer = newCloser(lc.seq, nil)
+	lc.txPortal = newTxPortal(conn, peer, lc.closer, profile, lc.pool, lc.ii)
+	lc.rxPortal = newRxPortal(conn, peer, lc.txPortal, lc.seq, lc.closer, profile, lc.ii)
+	lc.closer.txPortal = lc.txPortal
+	lc.closer.rxPortal = lc.rxPortal
 	return lc, nil
 }
 
@@ -60,7 +64,7 @@ func (self *listenerConn) Write(p []byte) (int, error) {
 
 func (self *listenerConn) Close() error {
 	logrus.Warnf("close requested")
-	return self.txPortal.close(self.seq)
+	return self.txPortal.sendClose(self.seq)
 }
 
 func (self *listenerConn) RemoteAddr() net.Addr {
@@ -203,6 +207,7 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 
 						// connection established, now we can start
 						go self.rxer()
+						go self.closer.run()
 
 						return nil
 					}

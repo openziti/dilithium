@@ -6,6 +6,7 @@ import (
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io"
 	"math"
 	"net"
 	"sync"
@@ -28,7 +29,8 @@ type txPortal struct {
 	lastRetxScaleDecr time.Time
 	lastRttProbe      time.Time
 	monitor           *retxMonitor
-	closeWaitSeq      int32
+	closer            *closer
+	closeSent         bool
 	closed            bool
 	conn              *net.UDPConn
 	peer              *net.UDPAddr
@@ -37,7 +39,7 @@ type txPortal struct {
 	ii                InstrumentInstance
 }
 
-func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, pool *pool, ii InstrumentInstance) *txPortal {
+func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, closer *closer, profile *Profile, pool *pool, ii InstrumentInstance) *txPortal {
 	p := &txPortal{
 		lock:              new(sync.Mutex),
 		tree:              btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
@@ -46,7 +48,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, pool *p
 		lastRetxScaleIncr: time.Now(),
 		lastRetxScaleDecr: time.Now(),
 		rxPortalSz:        -1,
-		closeWaitSeq:      -1,
+		closer:            closer,
 		closed:            false,
 		conn:              conn,
 		peer:              peer,
@@ -64,8 +66,8 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if self.closeWaitSeq != -1 || self.closed {
-		return 0, errors.New("closed")
+	if self.closed {
+		return -1, io.EOF
 	}
 
 	remaining := len(p)
@@ -137,9 +139,6 @@ func (self *txPortal) ack(acks []ack) error {
 				}
 				wm.buffer.unref()
 
-				if wm.seq == self.closeWaitSeq {
-					self.closed = true
-				}
 			} else {
 				self.duplicateAck(seq)
 			}
@@ -180,26 +179,35 @@ func (self *txPortal) rtt(probeTs uint16) {
 	self.lock.Unlock()
 }
 
-func (self *txPortal) close(seq *util.Sequence) error {
+func (self *txPortal) sendClose(seq *util.Sequence) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
-	if !self.closed {
+	if !self.closeSent {
 		wm, err := newClose(seq.Next(), self.pool)
 		if err != nil {
 			return errors.Wrap(err, "close")
 		}
-		self.closeWaitSeq = wm.seq
 		self.tree.Put(wm.seq, wm)
 		self.monitor.add(wm)
 
 		if err := writeWireMessage(wm, self.conn, self.peer); err != nil {
 			return errors.Wrap(err, "tx close")
 		}
+		self.closer.txCloseSeqIn <- wm.seq
 		self.ii.WireMessageTx(self.peer, wm)
+
+		self.closeSent = true
 	}
 
 	return nil
+}
+
+func (self *txPortal) close() {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.closed = true
+	self.monitor.closed = true
 }
 
 func (self *txPortal) successfulAck(sz int) {
