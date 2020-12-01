@@ -99,7 +99,14 @@ func (self *listener) run() {
 }
 
 func (self *listener) hello(hello *wireMessage, peer *net.UDPAddr) {
-	conn, err := newListenerConn(self, self.conn, peer, self.profile)
+	hook := func() {
+		self.lock.Lock()
+		self.peers.Remove(peer)
+		logrus.Infof("remaining peers: %d", self.peers.Size())
+		self.lock.Unlock()
+		logrus.Infof("removed peer [%s]", peer)
+	}
+	conn, err := newListenerConn(self, self.conn, peer, self.profile, hook)
 	if err != nil {
 		self.ii.ConnectionError(peer, err)
 		return
