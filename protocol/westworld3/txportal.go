@@ -204,8 +204,6 @@ func (self *txPortal) sendClose(seq *util.Sequence) error {
 }
 
 func (self *txPortal) close() {
-	self.lock.Lock()
-	defer self.lock.Unlock()
 	self.closed = true
 	self.monitor.closed = true
 }

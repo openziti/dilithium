@@ -174,7 +174,7 @@ func (self *dialerConn) hello() error {
 		}
 		self.ii.WireMessageTx(self.peer, hello)
 
-		if err := self.conn.SetReadDeadline(time.Now().Add(time.Duration(self.profile.ConnectionTimeoutMs) * time.Millisecond)); err != nil {
+		if err := self.conn.SetReadDeadline(time.Now().Add(time.Duration(self.profile.ConnectionSetupTimeoutMs) * time.Millisecond)); err != nil {
 			return errors.Wrap(err, "set read deadline")
 		}
 

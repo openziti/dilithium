@@ -11,6 +11,7 @@ import (
 	"math"
 	"net"
 	"sync"
+	"time"
 )
 
 type rxPortal struct {
@@ -128,9 +129,11 @@ func (self *rxPortal) setAccepted(accepted int32) {
 }
 
 func (self *rxPortal) close() {
-	self.reads <- &rxRead{nil, 0, true}
-	self.closed = true
-	close(self.rxs)
+	if !self.closed {
+		self.reads <- &rxRead{nil, 0, true}
+		self.closed = true
+		close(self.rxs)
+	}
 }
 
 func (self *rxPortal) run() {
@@ -144,8 +147,16 @@ func (self *rxPortal) run() {
 	}()
 
 	for {
-		wm, ok := <-self.rxs
-		if !ok {
+		var wm *wireMessage
+		var ok bool
+		select {
+		case wm, ok = <-self.rxs:
+			if !ok {
+				return
+			}
+
+		case <-time.After(time.Duration(self.profile.ConnectionInactiveTimeoutMs) * time.Millisecond):
+			self.closer.timeout()
 			return
 		}
 

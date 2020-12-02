@@ -160,6 +160,7 @@ type metricsInstrumentInstance struct {
 	peer         *net.UDPAddr
 	listenerAddr *net.UDPAddr
 	close        chan struct{}
+	closed       bool
 
 	txBytes        []*util.Sample
 	txBytesAccum   int64
@@ -221,7 +222,10 @@ func (self *metricsInstrumentInstance) ConnectionError(*net.UDPAddr, error) {}
 
 func (self *metricsInstrumentInstance) Closed(*net.UDPAddr) {
 	logrus.Infof("closing snapshotter")
-	close(self.close)
+	if !self.closed {
+		self.closed = true
+		close(self.close)
+	}
 }
 
 /*
@@ -317,7 +321,10 @@ func (self *metricsInstrumentInstance) Allocate(string) {
  * instrument lifecycle
  */
 func (self *metricsInstrumentInstance) Shutdown() {
-	close(self.close)
+	if !self.closed {
+		self.closed = true
+		close(self.close)
+	}
 }
 
 func (self *metricsInstrumentInstance) snapshotter(ms int) {

@@ -45,7 +45,21 @@ func (self *closer) emergencyStop() {
 	}
 }
 
+func (self *closer) timeout() {
+	logrus.Infof("timeout")
+
+	self.txPortal.close()
+	self.rxPortal.close()
+
+	if self.closeHook != nil {
+		self.closeHook()
+	}
+}
+
 func (self *closer) run() {
+	logrus.Info("started")
+	defer logrus.Info("exited")
+
 closeWait:
 	for {
 		select {
@@ -98,5 +112,9 @@ closeWait:
 }
 
 func (self *closer) readyToClose() bool {
-	return self.txCloseSeq != notClosed && self.rxCloseSeq != notClosed && time.Since(self.lastEvent).Milliseconds() > int64(self.profile.CloseWaitMs)
+	if (self.txCloseSeq != notClosed || self.rxCloseSeq != notClosed) && time.Since(self.lastEvent).Milliseconds() > 15000 {
+		return true
+	} else {
+		return self.txCloseSeq != notClosed && self.rxCloseSeq != notClosed && time.Since(self.lastEvent).Milliseconds() > int64(self.profile.CloseWaitMs)
+	}
 }
