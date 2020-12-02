@@ -46,7 +46,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1606156831279,
+  "iteration": 1606156831298,
   "links": [],
   "panels": [
     {
@@ -64,7 +64,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 12,
+        "h": 10,
         "w": 12,
         "x": 0,
         "y": 0
@@ -320,7 +320,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 12,
+        "h": 10,
         "w": 12,
         "x": 12,
         "y": 0
@@ -579,7 +579,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 10
       },
       "hiddenSeries": false,
       "id": 8,
@@ -635,7 +635,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -677,7 +677,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -719,7 +719,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -736,7 +736,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "txPortal",
+      "title": "txPortal/rxPortal",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -793,7 +793,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 10
       },
       "hiddenSeries": false,
       "id": 9,
@@ -849,7 +849,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -923,10 +923,10 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 16
       },
       "hiddenSeries": false,
-      "id": 11,
+      "id": 15,
       "legend": {
         "avg": false,
         "current": false,
@@ -964,7 +964,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "retx_ms",
+          "measurement": "ack_msgs",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -979,7 +979,49 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$peer$/"
+            }
+          ]
+        },
+        {
+          "groupBy": [
+            {
+              "params": [
+                "250ms"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "keepalive_msgs",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "v"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "sum"
               }
             ]
           ],
@@ -996,7 +1038,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "retxMs",
+      "title": "ACK/KEEPALIVE Messages",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1012,8 +1054,8 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:412",
-          "format": "ms",
+          "$$hashKey": "object:3493",
+          "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1021,7 +1063,7 @@
           "show": true
         },
         {
-          "$$hashKey": "object:413",
+          "$$hashKey": "object:3494",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1053,7 +1095,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 16
       },
       "hiddenSeries": false,
       "id": 12,
@@ -1183,7 +1225,137 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 22
+      },
+      "hiddenSeries": false,
+      "id": 11,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "percentage": false,
+      "pluginVersion": "7.1.1",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "250ms"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "retx_ms",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "v"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$peer$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "retxMs",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:412",
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:413",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "${DS_DILITHIUM}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 13,
@@ -1314,8 +1486,8 @@
       "gridPos": {
         "h": 6,
         "w": 12,
-        "x": 12,
-        "y": 24
+        "x": 0,
+        "y": 28
       },
       "hiddenSeries": false,
       "id": 2,
@@ -1457,8 +1629,8 @@
     ]
   },
   "time": {
-    "from": "2020-11-30T18:37:56.400Z",
-    "to": "2020-11-30T18:39:20.400Z"
+    "from": "2020-12-02T15:52:53.204Z",
+    "to": "2020-12-02T15:54:00.187Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1476,5 +1648,5 @@
   "timezone": "",
   "title": "Westworld 3.1 Analyzer",
   "uid": "XIgn8-TMz",
-  "version": 5
+  "version": 6
 }
