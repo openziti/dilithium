@@ -160,7 +160,8 @@ func (self *rxPortal) run() {
 			return
 		}
 
-		if wm.messageType() == DATA {
+		switch wm.messageType() {
+		case DATA:
 			_, found := self.tree.Get(wm.seq)
 			if !found && (wm.seq > self.accepted || (wm.seq == 0 && self.accepted == math.MaxInt32)) {
 				if sz, err := wm.asDataSize(); err == nil {
@@ -247,7 +248,7 @@ func (self *rxPortal) run() {
 				}
 			}
 
-		} else if wm.messageType() == CLOSE {
+		case CLOSE:
 			closeAck, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), nil, self.ackPool)
 			if err == nil {
 				if err := writeWireMessage(closeAck, self.conn, self.peer); err != nil {
@@ -260,6 +261,9 @@ func (self *rxPortal) run() {
 			}
 			self.closer.rxCloseSeqIn <- wm.seq
 			wm.buffer.unref()
+
+		default:
+			logrus.Errorf("unexpected message type [%d]", wm.messageType())
 		}
 	}
 }

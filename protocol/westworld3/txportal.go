@@ -28,6 +28,7 @@ type txPortal struct {
 	lastRetxScaleIncr time.Time
 	lastRetxScaleDecr time.Time
 	lastRttProbe      time.Time
+	lastTx			  time.Time
 	monitor           *retxMonitor
 	closer            *closer
 	closeSent         bool
@@ -59,6 +60,9 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, closer *closer, profile *
 	p.ready = sync.NewCond(p.lock)
 	p.monitor = newRetxMonitor(profile, conn, peer, p.lock, p.ii)
 	p.monitor.setRetxF(p.retx)
+	if p.profile.SendKeepalive {
+		go p.keepaliveSender()
+	}
 	return p
 }
 
@@ -100,6 +104,7 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 			return 0, errors.Wrap(err, "tx")
 		}
 		self.ii.WireMessageTx(self.peer, wm)
+		self.lastTx = time.Now()
 
 		self.monitor.add(wm)
 
@@ -268,4 +273,32 @@ func (self *txPortal) availableCapacity(segmentSz int) int {
 	txPortalCapacity := float64(self.capacity - int(float64(self.rxPortalSz)*self.profile.TxPortalRxSzPressureScale) - (self.txPortalSz + segmentSz))
 	rxPortalCapacity := float64(self.capacity - (self.rxPortalSz + segmentSz))
 	return int(math.Min(txPortalCapacity, rxPortalCapacity))
+}
+
+func (self *txPortal) keepaliveSender() {
+	logrus.Info("started")
+	defer logrus.Info("exited")
+
+	for {
+		time.Sleep(1 * time.Second)
+		if self.closed {
+			return
+		}
+		if time.Since(self.lastTx).Milliseconds() > int64(self.profile.ConnectionInactiveTimeoutMs / 2) {
+			keepalive, err := newKeepalive(self.rxPortalSz, self.pool)
+			if err == nil {
+				if err := writeWireMessage(keepalive, self.conn, self.peer); err == nil {
+					self.lastTx = time.Now()
+
+					self.ii.WireMessageTx(self.peer, keepalive)
+					self.ii.SendKeepalive(self.peer, keepalive)
+
+					logrus.Infof("sent keepalive")
+
+				} else {
+					logrus.Errorf("error sending keepalive (%v)", err)
+				}
+			}
+		}
+	}
 }

@@ -141,6 +141,10 @@ func (self *dialerConn) rxer() {
 				continue
 			}
 			self.txPortal.updateRxPortalSz(rxPortalSz)
+			if err := self.rxPortal.rx(wm); err != nil {
+				logrus.Errorf("error forwarding keepalive to rxPortal (%v)", err)
+				continue
+			}
 			wm.buffer.unref()
 
 		case CLOSE:

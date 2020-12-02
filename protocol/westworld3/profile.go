@@ -28,6 +28,7 @@ type Profile struct {
 	RandomizeSeq                bool    `cf:"randomize_seq"`
 	ConnectionSetupTimeoutMs    int     `cf:"connection_setup_timeout_ms"`
 	ConnectionInactiveTimeoutMs int     `cf:"connection_inactive_timeout_ms"`
+	SendKeepalive               bool    `cf:"send_keepalive"`
 	CloseWaitMs                 int     `cf:"close_wait_ms"`
 	CloseCheckMs                int     `cf:"close_check_ms`
 	TxPortalStartSz             int     `cf:"tx_portal_start_sz"`
@@ -71,7 +72,8 @@ func NewBaselineProfile() *Profile {
 	return &Profile{
 		RandomizeSeq:                false,
 		ConnectionSetupTimeoutMs:    5000,
-		ConnectionInactiveTimeoutMs: 5000,
+		ConnectionInactiveTimeoutMs: 15000,
+		SendKeepalive:               true,
 		CloseWaitMs:                 5000,
 		CloseCheckMs:                500,
 		TxPortalStartSz:             16 * 1024,
