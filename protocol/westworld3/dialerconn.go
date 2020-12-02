@@ -50,8 +50,6 @@ func newDialerConn(conn *net.UDPConn, peer *net.UDPAddr, profile *Profile) (*dia
 	dc.rxPortal = newRxPortal(conn, peer, dc.txPortal, dc.seq, dc.closer, profile, dc.ii)
 	dc.closer.txPortal = dc.txPortal
 	dc.closer.rxPortal = dc.rxPortal
-	go dc.rxer()
-	go dc.closer.run()
 	return dc, nil
 }
 
@@ -217,6 +215,8 @@ func (self *dialerConn) hello() error {
 			self.ii.WireMessageTx(self.peer, finalAck)
 
 			go self.rxer()
+			go self.txPortal.start()
+			go self.closer.run()
 			return nil
 		}
 

@@ -48,6 +48,7 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
 	closeHook := func() {
 		lc.ii.Shutdown()
+		close(lc.rxQueue)
 		if callerHook != nil {
 			callerHook()
 		}
@@ -217,6 +218,7 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 
 						// connection established, now we can start
 						go self.rxer()
+						go self.txPortal.start()
 						go self.closer.run()
 
 						return nil

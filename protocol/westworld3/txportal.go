@@ -58,12 +58,15 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, closer *closer, profile *
 		ii:                ii,
 	}
 	p.ready = sync.NewCond(p.lock)
-	p.monitor = newRetxMonitor(profile, conn, peer, p.lock, p.ii)
+	p.monitor = newRetxMonitor(p.profile, p.conn, p.peer, p.lock, p.ii)
 	p.monitor.setRetxF(p.retx)
-	if p.profile.SendKeepalive {
-		go p.keepaliveSender()
-	}
 	return p
+}
+
+func (self *txPortal) start() {
+	if self.profile.SendKeepalive {
+		go self.keepaliveSender()
+	}
 }
 
 func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
@@ -211,6 +214,7 @@ func (self *txPortal) sendClose(seq *util.Sequence) error {
 func (self *txPortal) close() {
 	self.closed = true
 	self.monitor.closed = true
+	self.monitor.ready.Broadcast()
 }
 
 func (self *txPortal) successfulAck(sz int) {

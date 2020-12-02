@@ -86,6 +86,7 @@ func (self *retxMonitor) run() {
 
 			if self.closed {
 				self.ii.Closed(self.peer)
+				self.lock.Unlock()
 				return
 			}
 
