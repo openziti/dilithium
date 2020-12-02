@@ -33,12 +33,15 @@ func newRetxMonitor(profile *Profile, conn *net.UDPConn, peer *net.UDPAddr, lock
 		ready:    sync.NewCond(lock),
 		ii:       ii,
 	}
-	go rm.run()
 	return rm
 }
 
 func (self *retxMonitor) setRetxF(f func()) {
 	self.retxF = f
+}
+
+func (self *retxMonitor) start() {
+	go self.run()
 }
 
 func (self *retxMonitor) updateRttMs(rttMs uint16) {

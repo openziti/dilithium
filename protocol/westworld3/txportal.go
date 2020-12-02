@@ -64,6 +64,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, closer *closer, profile *
 }
 
 func (self *txPortal) start() {
+	self.monitor.start()
 	if self.profile.SendKeepalive {
 		go self.keepaliveSender()
 	}
