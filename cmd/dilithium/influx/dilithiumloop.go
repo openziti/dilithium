@@ -59,11 +59,11 @@ func discoverDilithiumLoopPeers(path string) ([]*peer, error) {
 		}
 		if metricsId.Id == "dilithiumLoop" {
 			parts := strings.Split(filepath.Base(filepath.Dir(path)), "_")
-			if len(parts) != 3 {
+			if len(parts) != 4 {
 				return nil, errors.New("dilithiumLoop peer path did not contain 3 parts")
 			}
 			peers = append(peers, &peer{
-				id: parts[2],
+				id: parts[3],
 				paths: []string{
 					filepath.Dir(path),
 				},

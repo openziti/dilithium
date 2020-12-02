@@ -49,6 +49,10 @@ var westworld31Datasets = []string{
 	"rx_portal_sz",
 	"dup_rx_bytes",
 	"dup_rx_msgs",
+	"ack_bytes",
+	"ack_msgs",
+	"keepalive_bytes",
+	"keepalive_msgs",
 	"allocations",
 	"errors",
 }
