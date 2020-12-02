@@ -185,6 +185,22 @@ func (self *traceInstrumentInstance) DuplicateRx(peer *net.UDPAddr, wm *wireMess
 	}
 }
 
+func (self *traceInstrumentInstance) SendAck(_ *net.UDPAddr, wm *wireMessage) {
+	if self.i.config.RxPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s SEND ACK", self.id))
+		self.lock.Unlock()
+	}
+}
+
+func (self *traceInstrumentInstance) SendKeepalive(_ *net.UDPAddr, _ *wireMessage) {
+	if self.i.config.RxPortal {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s SEND KEEPALIVE", self.id))
+		self.lock.Unlock()
+	}
+}
+
 /*
  * allocation
  */

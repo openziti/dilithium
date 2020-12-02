@@ -119,6 +119,18 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := util.WriteSamples("dup_rx_msgs", outPath, ii.dupRxMsgs); err != nil {
 			return err
 		}
+		if err := util.WriteSamples("ack_bytes", outPath, ii.ackBytes); err != nil {
+			return err
+		}
+		if err := util.WriteSamples("ack_msgs", outPath, ii.ackMsgs); err != nil {
+			return err
+		}
+		if err := util.WriteSamples("keepalive_bytes", outPath, ii.keepaliveBytes); err != nil {
+			return err
+		}
+		if err := util.WriteSamples("keepalive_msgs", outPath, ii.keepaliveMsgs); err != nil {
+			return err
+		}
 		if err := util.WriteSamples("allocations", outPath, ii.allocations); err != nil {
 			return err
 		}
@@ -175,12 +187,20 @@ type metricsInstrumentInstance struct {
 	dupAcks             []*util.Sample
 	dupAcksAccum        int64
 
-	rxPortalSz      []*util.Sample
-	rxPortalSzVal   int64
-	dupRxBytes      []*util.Sample
-	dupRxBytesAccum int64
-	dupRxMsgs       []*util.Sample
-	dupRxMsgsAccum  int64
+	rxPortalSz          []*util.Sample
+	rxPortalSzVal       int64
+	dupRxBytes          []*util.Sample
+	dupRxBytesAccum     int64
+	dupRxMsgs           []*util.Sample
+	dupRxMsgsAccum      int64
+	ackBytes            []*util.Sample
+	ackBytesAccum       int64
+	ackMsgs             []*util.Sample
+	ackMsgsAccum        int64
+	keepaliveBytes      []*util.Sample
+	keepaliveBytesAccum int64
+	keepaliveMsgs       []*util.Sample
+	keepaliveMsgsAccum  int64
 
 	allocations      []*util.Sample
 	allocationsAccum int64
@@ -276,6 +296,16 @@ func (self *metricsInstrumentInstance) DuplicateRx(_ *net.UDPAddr, wm *wireMessa
 	atomic.AddInt64(&self.dupRxMsgsAccum, 1)
 }
 
+func (self *metricsInstrumentInstance) SendAck(_ *net.UDPAddr, wm *wireMessage) {
+	atomic.AddInt64(&self.ackBytesAccum, int64(wm.buffer.uz))
+	atomic.AddInt64(&self.ackMsgsAccum, 1)
+}
+
+func (self *metricsInstrumentInstance) SendKeepalive(_ *net.UDPAddr, wm *wireMessage) {
+	atomic.AddInt64(&self.keepaliveBytesAccum, int64(wm.buffer.uz))
+	atomic.AddInt64(&self.keepaliveMsgsAccum, 1)
+}
+
 /*
  * allocation
  */
@@ -307,21 +337,26 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 }
 
 func (self *metricsInstrumentInstance) snapshot() {
-	self.txBytes = append(self.txBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txBytesAccum, 0)})
-	self.txMsgs = append(self.txMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.txMsgsAccum, 0)})
-	self.retxBytes = append(self.retxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxBytesAccum, 0)})
-	self.retxMsgs = append(self.retxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.retxMsgsAccum, 0)})
-	self.rxBytes = append(self.rxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxBytesAccum, 0)})
-	self.rxMsgs = append(self.rxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.rxMsgsAccum, 0)})
-	self.txPortalCapacity = append(self.txPortalCapacity, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalCapacityVal)})
-	self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalSzVal)})
-	self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.txPortalRxSzVal)})
-	self.retxMs = append(self.retxMs, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxMsVal)})
-	self.retxScale = append(self.retxScale, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.retxScaleVal)})
-	self.dupAcks = append(self.dupAcks, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupAcksAccum, 0)})
-	self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: time.Now(), V: atomic.LoadInt64(&self.rxPortalSzVal)})
-	self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
-	self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
-	self.allocations = append(self.allocations, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.allocationsAccum, 0)})
-	self.errors = append(self.errors, &util.Sample{Ts: time.Now(), V: atomic.SwapInt64(&self.errorsAccum, 0)})
+	now := time.Now()
+	self.txBytes = append(self.txBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txBytesAccum, 0)})
+	self.txMsgs = append(self.txMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txMsgsAccum, 0)})
+	self.retxBytes = append(self.retxBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.retxBytesAccum, 0)})
+	self.retxMsgs = append(self.retxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.retxMsgsAccum, 0)})
+	self.rxBytes = append(self.rxBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxBytesAccum, 0)})
+	self.rxMsgs = append(self.rxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxMsgsAccum, 0)})
+	self.txPortalCapacity = append(self.txPortalCapacity, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.txPortalCapacityVal)})
+	self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.txPortalSzVal)})
+	self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.txPortalRxSzVal)})
+	self.retxMs = append(self.retxMs, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.retxMsVal)})
+	self.retxScale = append(self.retxScale, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.retxScaleVal)})
+	self.dupAcks = append(self.dupAcks, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.dupAcksAccum, 0)})
+	self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.rxPortalSzVal)})
+	self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
+	self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
+	self.ackBytes = append(self.ackBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.ackBytesAccum, 0)})
+	self.ackMsgs = append(self.ackMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.ackMsgsAccum, 0)})
+	self.keepaliveBytes = append(self.keepaliveBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.keepaliveBytesAccum, 0)})
+	self.keepaliveMsgs = append(self.keepaliveMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.keepaliveMsgsAccum, 0)})
+	self.allocations = append(self.allocations, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.allocationsAccum, 0)})
+	self.errors = append(self.errors, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.errorsAccum, 0)})
 }
