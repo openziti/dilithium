@@ -76,7 +76,7 @@ func NewBaselineProfile() *Profile {
 		SendKeepalive:               true,
 		CloseWaitMs:                 5000,
 		CloseCheckMs:                500,
-		TxPortalStartSz:             16 * 1024,
+		TxPortalStartSz:             96 * 1024,
 		TxPortalMinSz:               16 * 1024,
 		TxPortalMaxSz:               4 * 1024 * 1024,
 		TxPortalIncreaseThresh:      224,
