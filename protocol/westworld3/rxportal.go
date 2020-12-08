@@ -249,7 +249,7 @@ func (self *rxPortal) run() {
 			}
 
 		case KEEPALIVE:
-			logrus.Infof("received keepalive")
+			//
 
 		case CLOSE:
 			closeAck, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), nil, self.ackPool)
