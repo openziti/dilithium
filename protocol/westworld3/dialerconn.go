@@ -129,6 +129,7 @@ func (self *dialerConn) rxer() {
 				logrus.Errorf("error acking (%v)", err)
 				continue
 			}
+			self.ii.RxAck(peer, wm)
 			wm.buffer.unref()
 
 		case KEEPALIVE:
@@ -142,6 +143,7 @@ func (self *dialerConn) rxer() {
 				logrus.Errorf("error forwarding keepalive to rxPortal (%v)", err)
 				continue
 			}
+			self.ii.RxKeepalive(peer, wm)
 			wm.buffer.unref()
 
 		case CLOSE:

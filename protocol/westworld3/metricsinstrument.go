@@ -98,10 +98,22 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := util.WriteSamples("tx_ack_msgs", outPath, ii.txAckMsgs); err != nil {
 			return err
 		}
+		if err := util.WriteSamples("rx_ack_bytes", outPath, ii.rxAckBytes); err != nil {
+			return err
+		}
+		if err := util.WriteSamples("rx_ack_msgs", outPath, ii.rxAckMsgs); err != nil {
+			return err
+		}
 		if err := util.WriteSamples("tx_keepalive_bytes", outPath, ii.txKeepaliveBytes); err != nil {
 			return err
 		}
 		if err := util.WriteSamples("tx_keepalive_msgs", outPath, ii.txKeepaliveMsgs); err != nil {
+			return err
+		}
+		if err := util.WriteSamples("rx_keepalive_bytes", outPath, ii.rxKeepaliveBytes); err != nil {
+			return err
+		}
+		if err := util.WriteSamples("rx_keepalive_msgs", outPath, ii.rxKeepaliveMsgs); err != nil {
 			return err
 		}
 		if err := util.WriteSamples("tx_portal_capacity", outPath, ii.txPortalCapacity); err != nil {
@@ -179,10 +191,18 @@ type metricsInstrumentInstance struct {
 	txAckBytesAccum       int64
 	txAckMsgs             []*util.Sample
 	txAckMsgsAccum        int64
+	rxAckBytes            []*util.Sample
+	rxAckBytesAccum       int64
+	rxAckMsgs             []*util.Sample
+	rxAckMsgsAccum        int64
 	txKeepaliveBytes      []*util.Sample
 	txKeepaliveBytesAccum int64
 	txKeepaliveMsgs       []*util.Sample
 	txKeepaliveMsgsAccum  int64
+	rxKeepaliveBytes      []*util.Sample
+	rxKeepaliveBytesAccum int64
+	rxKeepaliveMsgs       []*util.Sample
+	rxKeepaliveMsgsAccum  int64
 
 	txPortalCapacity    []*util.Sample
 	txPortalCapacityVal int64
@@ -197,12 +217,12 @@ type metricsInstrumentInstance struct {
 	dupAcks             []*util.Sample
 	dupAcksAccum        int64
 
-	rxPortalSz            []*util.Sample
-	rxPortalSzVal         int64
-	dupRxBytes            []*util.Sample
-	dupRxBytesAccum       int64
-	dupRxMsgs             []*util.Sample
-	dupRxMsgsAccum        int64
+	rxPortalSz      []*util.Sample
+	rxPortalSzVal   int64
+	dupRxBytes      []*util.Sample
+	dupRxBytesAccum int64
+	dupRxMsgs       []*util.Sample
+	dupRxMsgsAccum  int64
 
 	allocations      []*util.Sample
 	allocationsAccum int64
@@ -270,9 +290,19 @@ func (self *metricsInstrumentInstance) TxAck(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt64(&self.txAckMsgsAccum, 1)
 }
 
+func (self *metricsInstrumentInstance) RxAck(_ *net.UDPAddr, wm *wireMessage) {
+	atomic.AddInt64(&self.rxAckBytesAccum, int64(wm.buffer.uz))
+	atomic.AddInt64(&self.rxAckMsgsAccum, 1)
+}
+
 func (self *metricsInstrumentInstance) TxKeepalive(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt64(&self.txKeepaliveBytesAccum, int64(wm.buffer.uz))
 	atomic.AddInt64(&self.txKeepaliveMsgsAccum, 1)
+}
+
+func (self *metricsInstrumentInstance) RxKeepalive(_ *net.UDPAddr, wm *wireMessage) {
+	atomic.AddInt64(&self.rxKeepaliveBytesAccum, int64(wm.buffer.uz))
+	atomic.AddInt64(&self.rxKeepaliveMsgsAccum, 1)
 }
 
 /*
@@ -355,6 +385,14 @@ func (self *metricsInstrumentInstance) snapshot() {
 	self.retxMsgs = append(self.retxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.retxMsgsAccum, 0)})
 	self.rxBytes = append(self.rxBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxBytesAccum, 0)})
 	self.rxMsgs = append(self.rxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxMsgsAccum, 0)})
+	self.txAckBytes = append(self.txAckBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txAckBytesAccum, 0)})
+	self.txAckMsgs = append(self.txAckMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txAckMsgsAccum, 0)})
+	self.rxAckBytes = append(self.rxAckBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxAckBytesAccum, 0)})
+	self.rxAckMsgs = append(self.rxAckMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxAckMsgsAccum, 0)})
+	self.txKeepaliveBytes = append(self.txKeepaliveBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txKeepaliveBytesAccum, 0)})
+	self.txKeepaliveMsgs = append(self.txKeepaliveMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txKeepaliveMsgsAccum, 0)})
+	self.rxKeepaliveBytes = append(self.rxKeepaliveBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxKeepaliveBytesAccum, 0)})
+	self.rxKeepaliveMsgs = append(self.rxKeepaliveMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.rxKeepaliveMsgsAccum, 0)})
 	self.txPortalCapacity = append(self.txPortalCapacity, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.txPortalCapacityVal)})
 	self.txPortalSz = append(self.txPortalSz, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.txPortalSzVal)})
 	self.txPortalRxSz = append(self.txPortalRxSz, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.txPortalRxSzVal)})
@@ -364,10 +402,6 @@ func (self *metricsInstrumentInstance) snapshot() {
 	self.rxPortalSz = append(self.rxPortalSz, &util.Sample{Ts: now, V: atomic.LoadInt64(&self.rxPortalSzVal)})
 	self.dupRxBytes = append(self.dupRxBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.dupRxBytesAccum, 0)})
 	self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
-	self.txAckBytes = append(self.txAckBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txAckBytesAccum, 0)})
-	self.txAckMsgs = append(self.txAckMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txAckMsgsAccum, 0)})
-	self.txKeepaliveBytes = append(self.txKeepaliveBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txKeepaliveBytesAccum, 0)})
-	self.txKeepaliveMsgs = append(self.txKeepaliveMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txKeepaliveMsgsAccum, 0)})
 	self.allocations = append(self.allocations, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.allocationsAccum, 0)})
 	self.errors = append(self.errors, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.errorsAccum, 0)})
 }

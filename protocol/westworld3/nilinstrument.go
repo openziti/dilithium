@@ -37,7 +37,9 @@ func (self *nilInstrumentInstance) UnexpectedMessageType(*net.UDPAddr, messageTy
  * control
  */
 func (self *nilInstrumentInstance) TxAck(*net.UDPAddr, *wireMessage)       {}
+func (self *nilInstrumentInstance) RxAck(*net.UDPAddr, *wireMessage)       {}
 func (self *nilInstrumentInstance) TxKeepalive(*net.UDPAddr, *wireMessage) {}
+func (self *nilInstrumentInstance) RxKeepalive(*net.UDPAddr, *wireMessage) {}
 
 /*
  * txPortal

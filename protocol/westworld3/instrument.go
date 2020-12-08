@@ -27,7 +27,9 @@ type InstrumentInstance interface {
 
 	// control
 	TxAck(peer *net.UDPAddr, wm *wireMessage)
+	RxAck(peer *net.UDPAddr, wm *wireMessage)
 	TxKeepalive(peer *net.UDPAddr, wm *wireMessage)
+	RxKeepalive(peer *net.UDPAddr, wm *wireMessage)
 
 	// txPortal
 	TxPortalCapacityChanged(peer *net.UDPAddr, capacity int)

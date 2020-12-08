@@ -119,10 +119,18 @@ func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt
 /*
  * control
  */
-func (self *traceInstrumentInstance) TxAck(_ *net.UDPAddr, wm *wireMessage) {
+func (self *traceInstrumentInstance) TxAck(_ *net.UDPAddr, _ *wireMessage) {
 	if self.i.config.Control {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s TX ACK", self.id))
+		self.lock.Unlock()
+	}
+}
+
+func (self *traceInstrumentInstance) RxAck(_ *net.UDPAddr, _ *wireMessage) {
+	if self.i.config.Control {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s RX ACK", self.id))
 		self.lock.Unlock()
 	}
 }
@@ -131,6 +139,14 @@ func (self *traceInstrumentInstance) TxKeepalive(_ *net.UDPAddr, _ *wireMessage)
 	if self.i.config.Control {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s TX KEEPALIVE", self.id))
+		self.lock.Unlock()
+	}
+}
+
+func (self *traceInstrumentInstance) RxKeepalive(_ *net.UDPAddr, _ *wireMessage) {
+	if self.i.config.Control {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s RX KEEPALIVE", self.id))
 		self.lock.Unlock()
 	}
 }

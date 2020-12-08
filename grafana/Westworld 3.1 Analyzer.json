@@ -46,7 +46,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1606156831309,
+  "iteration": 1606156831322,
   "links": [],
   "panels": [
     {
@@ -1006,10 +1006,94 @@
               "type": "fill"
             }
           ],
+          "measurement": "rx_ack_msgs",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "D",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "v"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "sum"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$peer$/"
+            }
+          ]
+        },
+        {
+          "groupBy": [
+            {
+              "params": [
+                "250ms"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
           "measurement": "tx_keepalive_msgs",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "v"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "sum"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$peer$/"
+            }
+          ]
+        },
+        {
+          "groupBy": [
+            {
+              "params": [
+                "250ms"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "rx_keepalive_msgs",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "E",
           "resultFormat": "time_series",
           "select": [
             [
@@ -1541,8 +1625,8 @@
     ]
   },
   "time": {
-    "from": "2020-12-08T18:43:38.671Z",
-    "to": "2020-12-08T18:44:58.052Z"
+    "from": "2020-12-08T19:27:49.841Z",
+    "to": "2020-12-08T19:29:16.773Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1560,5 +1644,5 @@
   "timezone": "",
   "title": "Westworld 3.1 Analyzer",
   "uid": "XIgn8-TMz",
-  "version": 8
+  "version": 9
 }
