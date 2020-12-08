@@ -46,7 +46,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1606156831298,
+  "iteration": 1606156831309,
   "links": [],
   "panels": [
     {
@@ -964,7 +964,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "ack_msgs",
+          "measurement": "tx_ack_msgs",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1006,10 +1006,52 @@
               "type": "fill"
             }
           ],
-          "measurement": "keepalive_msgs",
+          "measurement": "tx_keepalive_msgs",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "v"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "sum"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$peer$/"
+            }
+          ]
+        },
+        {
+          "groupBy": [
+            {
+              "params": [
+                "250ms"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "dup_acks",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "C",
           "resultFormat": "time_series",
           "select": [
             [
@@ -1038,7 +1080,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "ACK/KEEPALIVE Messages",
+      "title": "Control Messages",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1083,6 +1125,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "${DS_DILITHIUM}",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -1098,7 +1141,7 @@
         "y": 16
       },
       "hiddenSeries": false,
-      "id": 12,
+      "id": 2,
       "legend": {
         "avg": false,
         "current": false,
@@ -1136,7 +1179,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "dup_acks",
+          "measurement": "allocations",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1158,8 +1201,8 @@
           "tags": [
             {
               "key": "peer",
-              "operator": "=~",
-              "value": "/^$peer$/"
+              "operator": "=",
+              "value": "${peer}"
             }
           ]
         }
@@ -1168,7 +1211,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "dupAcks",
+      "title": "Allocations",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1184,7 +1227,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:412",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1193,7 +1235,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:413",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1467,135 +1508,6 @@
         "align": false,
         "alignLevel": null
       }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "${DS_DILITHIUM}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 28
-      },
-      "hiddenSeries": false,
-      "id": 2,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "percentage": false,
-      "pluginVersion": "7.1.1",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "groupBy": [
-            {
-              "params": [
-                "250ms"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "allocations",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "v"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "sum"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "peer",
-              "operator": "=",
-              "value": "${peer}"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Allocations",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
     }
   ],
   "refresh": false,
@@ -1629,8 +1541,8 @@
     ]
   },
   "time": {
-    "from": "2020-12-02T15:52:53.204Z",
-    "to": "2020-12-02T15:54:00.187Z"
+    "from": "2020-12-08T18:43:38.671Z",
+    "to": "2020-12-08T18:44:58.052Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1648,5 +1560,5 @@
   "timezone": "",
   "title": "Westworld 3.1 Analyzer",
   "uid": "XIgn8-TMz",
-  "version": 6
+  "version": 8
 }

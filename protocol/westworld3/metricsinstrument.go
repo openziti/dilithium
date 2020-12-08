@@ -119,16 +119,16 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := util.WriteSamples("dup_rx_msgs", outPath, ii.dupRxMsgs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("ack_bytes", outPath, ii.ackBytes); err != nil {
+		if err := util.WriteSamples("tx_ack_bytes", outPath, ii.ackBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("ack_msgs", outPath, ii.ackMsgs); err != nil {
+		if err := util.WriteSamples("tx_ack_msgs", outPath, ii.ackMsgs); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("keepalive_bytes", outPath, ii.keepaliveBytes); err != nil {
+		if err := util.WriteSamples("tx_keepalive_bytes", outPath, ii.txKeepaliveBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("keepalive_msgs", outPath, ii.keepaliveMsgs); err != nil {
+		if err := util.WriteSamples("tx_keepalive_msgs", outPath, ii.txKeepaliveMsgs); err != nil {
 			return err
 		}
 		if err := util.WriteSamples("allocations", outPath, ii.allocations); err != nil {
@@ -189,19 +189,19 @@ type metricsInstrumentInstance struct {
 	dupAcksAccum        int64
 
 	rxPortalSz          []*util.Sample
-	rxPortalSzVal       int64
-	dupRxBytes          []*util.Sample
-	dupRxBytesAccum     int64
-	dupRxMsgs           []*util.Sample
-	dupRxMsgsAccum      int64
-	ackBytes            []*util.Sample
-	ackBytesAccum       int64
-	ackMsgs             []*util.Sample
-	ackMsgsAccum        int64
-	keepaliveBytes      []*util.Sample
-	keepaliveBytesAccum int64
-	keepaliveMsgs       []*util.Sample
-	keepaliveMsgsAccum  int64
+	rxPortalSzVal         int64
+	dupRxBytes            []*util.Sample
+	dupRxBytesAccum       int64
+	dupRxMsgs             []*util.Sample
+	dupRxMsgsAccum        int64
+	ackBytes              []*util.Sample
+	ackBytesAccum         int64
+	ackMsgs               []*util.Sample
+	ackMsgsAccum          int64
+	txKeepaliveBytes      []*util.Sample
+	txKeepaliveBytesAccum int64
+	txKeepaliveMsgs       []*util.Sample
+	txKeepaliveMsgsAccum  int64
 
 	allocations      []*util.Sample
 	allocationsAccum int64
@@ -300,14 +300,14 @@ func (self *metricsInstrumentInstance) DuplicateRx(_ *net.UDPAddr, wm *wireMessa
 	atomic.AddInt64(&self.dupRxMsgsAccum, 1)
 }
 
-func (self *metricsInstrumentInstance) SendAck(_ *net.UDPAddr, wm *wireMessage) {
+func (self *metricsInstrumentInstance) TxAck(_ *net.UDPAddr, wm *wireMessage) {
 	atomic.AddInt64(&self.ackBytesAccum, int64(wm.buffer.uz))
 	atomic.AddInt64(&self.ackMsgsAccum, 1)
 }
 
-func (self *metricsInstrumentInstance) SendKeepalive(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.keepaliveBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.keepaliveMsgsAccum, 1)
+func (self *metricsInstrumentInstance) TxKeepalive(_ *net.UDPAddr, wm *wireMessage) {
+	atomic.AddInt64(&self.txKeepaliveBytesAccum, int64(wm.buffer.uz))
+	atomic.AddInt64(&self.txKeepaliveMsgsAccum, 1)
 }
 
 /*
@@ -362,8 +362,8 @@ func (self *metricsInstrumentInstance) snapshot() {
 	self.dupRxMsgs = append(self.dupRxMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.dupRxMsgsAccum, 0)})
 	self.ackBytes = append(self.ackBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.ackBytesAccum, 0)})
 	self.ackMsgs = append(self.ackMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.ackMsgsAccum, 0)})
-	self.keepaliveBytes = append(self.keepaliveBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.keepaliveBytesAccum, 0)})
-	self.keepaliveMsgs = append(self.keepaliveMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.keepaliveMsgsAccum, 0)})
+	self.txKeepaliveBytes = append(self.txKeepaliveBytes, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txKeepaliveBytesAccum, 0)})
+	self.txKeepaliveMsgs = append(self.txKeepaliveMsgs, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.txKeepaliveMsgsAccum, 0)})
 	self.allocations = append(self.allocations, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.allocationsAccum, 0)})
 	self.errors = append(self.errors, &util.Sample{Ts: now, V: atomic.SwapInt64(&self.errorsAccum, 0)})
 }

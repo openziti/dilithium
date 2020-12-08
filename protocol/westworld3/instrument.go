@@ -36,8 +36,8 @@ type InstrumentInstance interface {
 	// rxPortal
 	RxPortalSzChanged(peer *net.UDPAddr, capacity int)
 	DuplicateRx(peer *net.UDPAddr, wm *wireMessage)
-	SendAck(peer *net.UDPAddr, wm *wireMessage)
-	SendKeepalive(peer *net.UDPAddr, wm *wireMessage)
+	TxAck(peer *net.UDPAddr, wm *wireMessage)
+	TxKeepalive(peer *net.UDPAddr, wm *wireMessage)
 
 	// allocation
 	Allocate(id string)

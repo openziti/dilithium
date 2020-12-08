@@ -48,8 +48,8 @@ func (self *nilInstrumentInstance) DuplicateAck(*net.UDPAddr, int32)          {}
  */
 func (self *nilInstrumentInstance) RxPortalSzChanged(*net.UDPAddr, int)      {}
 func (self *nilInstrumentInstance) DuplicateRx(*net.UDPAddr, *wireMessage)   {}
-func (self *nilInstrumentInstance) SendAck(*net.UDPAddr, *wireMessage)       {}
-func (self *nilInstrumentInstance) SendKeepalive(*net.UDPAddr, *wireMessage) {}
+func (self *nilInstrumentInstance) TxAck(*net.UDPAddr, *wireMessage)       {}
+func (self *nilInstrumentInstance) TxKeepalive(*net.UDPAddr, *wireMessage) {}
 
 /*
  * allocation

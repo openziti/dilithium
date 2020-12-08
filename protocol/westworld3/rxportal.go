@@ -189,7 +189,7 @@ func (self *rxPortal) run() {
 					logrus.Errorf("error sending ack (%v)", err)
 				}
 				self.ii.WireMessageTx(self.peer, ack)
-				self.ii.SendAck(self.peer, ack)
+				self.ii.TxAck(self.peer, ack)
 				ack.buffer.unref()
 			}
 
@@ -242,7 +242,7 @@ func (self *rxPortal) run() {
 							logrus.Errorf("error sending pacing keepalive (%v)", err)
 						}
 						self.ii.WireMessageTx(self.peer, keepalive)
-						self.ii.SendKeepalive(self.peer, keepalive)
+						self.ii.TxKeepalive(self.peer, keepalive)
 						keepalive.buffer.unref()
 					}
 				}
@@ -258,7 +258,7 @@ func (self *rxPortal) run() {
 					logrus.Errorf("error writing close ack (%v)", err)
 				}
 				self.ii.WireMessageTx(self.peer, closeAck)
-				self.ii.SendAck(self.peer, closeAck)
+				self.ii.TxAck(self.peer, closeAck)
 			} else {
 				logrus.Errorf("error creating close ack (%v)", err)
 			}

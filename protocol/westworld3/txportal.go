@@ -296,7 +296,7 @@ func (self *txPortal) keepaliveSender() {
 					self.lastTx = time.Now()
 
 					self.ii.WireMessageTx(self.peer, keepalive)
-					self.ii.SendKeepalive(self.peer, keepalive)
+					self.ii.TxKeepalive(self.peer, keepalive)
 
 				} else {
 					logrus.Errorf("error sending keepalive (%v)", err)
