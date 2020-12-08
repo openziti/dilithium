@@ -34,6 +34,12 @@ func (self *nilInstrumentInstance) ReadError(*net.UDPAddr, error)               
 func (self *nilInstrumentInstance) UnexpectedMessageType(*net.UDPAddr, messageType) {}
 
 /*
+ * control
+ */
+func (self *nilInstrumentInstance) TxAck(*net.UDPAddr, *wireMessage)       {}
+func (self *nilInstrumentInstance) TxKeepalive(*net.UDPAddr, *wireMessage) {}
+
+/*
  * txPortal
  */
 func (self *nilInstrumentInstance) TxPortalCapacityChanged(*net.UDPAddr, int) {}
@@ -46,10 +52,8 @@ func (self *nilInstrumentInstance) DuplicateAck(*net.UDPAddr, int32)          {}
 /*
  * rxPortal
  */
-func (self *nilInstrumentInstance) RxPortalSzChanged(*net.UDPAddr, int)      {}
-func (self *nilInstrumentInstance) DuplicateRx(*net.UDPAddr, *wireMessage)   {}
-func (self *nilInstrumentInstance) TxAck(*net.UDPAddr, *wireMessage)       {}
-func (self *nilInstrumentInstance) TxKeepalive(*net.UDPAddr, *wireMessage) {}
+func (self *nilInstrumentInstance) RxPortalSzChanged(*net.UDPAddr, int)    {}
+func (self *nilInstrumentInstance) DuplicateRx(*net.UDPAddr, *wireMessage) {}
 
 /*
  * allocation

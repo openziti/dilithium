@@ -25,6 +25,10 @@ type InstrumentInstance interface {
 	ReadError(peer *net.UDPAddr, err error)
 	UnexpectedMessageType(peer *net.UDPAddr, mt messageType)
 
+	// control
+	TxAck(peer *net.UDPAddr, wm *wireMessage)
+	TxKeepalive(peer *net.UDPAddr, wm *wireMessage)
+
 	// txPortal
 	TxPortalCapacityChanged(peer *net.UDPAddr, capacity int)
 	TxPortalSzChanged(peer *net.UDPAddr, capacity int)
@@ -36,8 +40,6 @@ type InstrumentInstance interface {
 	// rxPortal
 	RxPortalSzChanged(peer *net.UDPAddr, capacity int)
 	DuplicateRx(peer *net.UDPAddr, wm *wireMessage)
-	TxAck(peer *net.UDPAddr, wm *wireMessage)
-	TxKeepalive(peer *net.UDPAddr, wm *wireMessage)
 
 	// allocation
 	Allocate(id string)

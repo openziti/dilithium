@@ -16,6 +16,7 @@ type traceInstrument struct {
 
 type traceInstrumentConfig struct {
 	Wire     bool `cf:"wire"`
+	Control  bool `cf:"control"`
 	TxPortal bool `cf:"tx_portal"`
 	RxPortal bool `cf:"rx_portal"`
 	Error    bool `cf:"error"`
@@ -116,6 +117,25 @@ func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt
 }
 
 /*
+ * control
+ */
+func (self *traceInstrumentInstance) TxAck(_ *net.UDPAddr, wm *wireMessage) {
+	if self.i.config.Control {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s TX ACK", self.id))
+		self.lock.Unlock()
+	}
+}
+
+func (self *traceInstrumentInstance) TxKeepalive(_ *net.UDPAddr, _ *wireMessage) {
+	if self.i.config.Control {
+		self.lock.Lock()
+		fmt.Println(fmt.Sprintf("!! %-24s TX KEEPALIVE", self.id))
+		self.lock.Unlock()
+	}
+}
+
+/*
  * txPortal
  */
 func (self *traceInstrumentInstance) TxPortalCapacityChanged(peer *net.UDPAddr, capacity int) {
@@ -181,22 +201,6 @@ func (self *traceInstrumentInstance) DuplicateRx(peer *net.UDPAddr, wm *wireMess
 	if self.i.config.RxPortal {
 		self.lock.Lock()
 		fmt.Println(fmt.Sprintf("!! %-24s DUPLICATE RX: #%d", self.id, wm.seq))
-		self.lock.Unlock()
-	}
-}
-
-func (self *traceInstrumentInstance) TxAck(_ *net.UDPAddr, wm *wireMessage) {
-	if self.i.config.RxPortal {
-		self.lock.Lock()
-		fmt.Println(fmt.Sprintf("!! %-24s SEND ACK", self.id))
-		self.lock.Unlock()
-	}
-}
-
-func (self *traceInstrumentInstance) TxKeepalive(_ *net.UDPAddr, _ *wireMessage) {
-	if self.i.config.RxPortal {
-		self.lock.Lock()
-		fmt.Println(fmt.Sprintf("!! %-24s SEND KEEPALIVE", self.id))
 		self.lock.Unlock()
 	}
 }
