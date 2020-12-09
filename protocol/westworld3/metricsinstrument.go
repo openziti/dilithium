@@ -83,7 +83,7 @@ func (self *metricsInstrument) writeAllSamples() error {
 		if err := util.WriteSamples("retx_bytes", outPath, ii.retxBytes); err != nil {
 			return err
 		}
-		if err := util.WriteSamples("retx_msgs", outPath, ii.retxMs); err != nil {
+		if err := util.WriteSamples("retx_msgs", outPath, ii.retxMsgs); err != nil {
 			return err
 		}
 		if err := util.WriteSamples("rx_bytes", outPath, ii.rxBytes); err != nil {
