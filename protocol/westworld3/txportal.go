@@ -28,7 +28,7 @@ type txPortal struct {
 	lastRetxScaleIncr time.Time
 	lastRetxScaleDecr time.Time
 	lastRttProbe      time.Time
-	lastTx			  time.Time
+	lastTx            time.Time
 	monitor           *retxMonitor
 	closer            *closer
 	closeSent         bool
@@ -289,7 +289,7 @@ func (self *txPortal) keepaliveSender() {
 		if self.closed {
 			return
 		}
-		if time.Since(self.lastTx).Milliseconds() > int64(self.profile.ConnectionInactiveTimeoutMs / 2) {
+		if time.Since(self.lastTx).Milliseconds() > int64(self.profile.ConnectionInactiveTimeoutMs/2) {
 			keepalive, err := newKeepalive(self.rxPortalSz, self.pool)
 			if err == nil {
 				if err := writeWireMessage(keepalive, self.conn, self.peer); err == nil {
