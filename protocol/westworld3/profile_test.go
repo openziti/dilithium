@@ -14,7 +14,7 @@ func TestProfileLoad(t *testing.T) {
 	d["tx_portal_start_sz"] = 17 * 1024
 	d["tx_portal_dupack_capacity_scale"] = 4.5
 	assert.False(t, p.RandomizeSeq)
-	assert.Equal(t, 16*1024, p.TxPortalStartSz)
+	assert.Equal(t, 96*1024, p.TxPortalStartSz)
 	assert.Equal(t, 0.9, p.TxPortalDupAckCapacityScale)
 	err := cf.Load(d, p)
 	assert.NoError(t, err)
