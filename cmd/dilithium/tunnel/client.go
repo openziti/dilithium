@@ -78,7 +78,11 @@ func handleTunnelInitiator(initiator net.Conn, serverAddress string) {
 }
 
 func handleTunnelInitiatorReader(initiator net.Conn, tunnel net.Conn) {
-	defer func() { _ = tunnel.Close() }()
+	defer logrus.Warnf("closing")
+	defer func() {
+		_ = tunnel.Close()
+		_ = initiator.Close()
+	}()
 
 	buffer := make([]byte, bufferSize)
 	for {
