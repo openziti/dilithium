@@ -34,6 +34,7 @@ type Profile struct {
 	TxPortalStartSz             int     `cf:"tx_portal_start_sz"`
 	TxPortalMinSz               int     `cf:"tx_portal_min_sz"`
 	TxPortalMaxSz               int     `cf:"tx_portal_max_sz"`
+	TxPortalSoftCapacityEnable  bool    `cf:"tx_portal_soft_capacity_enable"`
 	TxPortalTopCapacityWindow   int     `cf:"tx_portal_top_capacity_window"`
 	TxPortalTopCapacityScaleMs  int     `cf:"tx_portal_top_capacity_scale_ms"`
 	TxPortalIncreaseThresh      int     `cf:"tx_portal_increase_thresh"`
@@ -81,6 +82,7 @@ func NewBaselineProfile() *Profile {
 		TxPortalStartSz:             96 * 1024,
 		TxPortalMinSz:               16 * 1024,
 		TxPortalMaxSz:               4 * 1024 * 1024,
+		TxPortalSoftCapacityEnable:  false,
 		TxPortalTopCapacityWindow:   8,
 		TxPortalTopCapacityScaleMs:  60 * 1000,
 		TxPortalIncreaseThresh:      224,

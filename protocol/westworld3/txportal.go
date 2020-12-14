@@ -282,7 +282,7 @@ func (self *txPortal) updatePortalCapacity(newCapacity int) {
 
 func (self *txPortal) availableCapacity(segmentSz int) int {
 	softCapacity := self.capacity
-	if self.topCapacity > 0 && self.topCapacity < self.capacity {
+	if self.profile.TxPortalSoftCapacityEnable && self.topCapacity > 0 && self.topCapacity < self.capacity {
 		lastTopMs := time.Since(self.lastTopCapacity).Milliseconds()
 		lastTopFrac := float64(lastTopMs) / float64(self.profile.TxPortalTopCapacityScaleMs)
 		if lastTopFrac > 1.0 {
@@ -298,17 +298,19 @@ func (self *txPortal) availableCapacity(segmentSz int) int {
 }
 
 func (self *txPortal) snapshotTopCapacity() {
-	self.topCapacityWindow = append(self.topCapacityWindow, int(float64(self.capacity) * 0.9))
-	if len(self.topCapacityWindow) > self.profile.TxPortalTopCapacityWindow {
-		self.topCapacityWindow = self.topCapacityWindow[1:]
+	if(self.profile.TxPortalSoftCapacityEnable) {
+		self.topCapacityWindow = append(self.topCapacityWindow, int(float64(self.capacity) * 0.9))
+		if len(self.topCapacityWindow) > self.profile.TxPortalTopCapacityWindow {
+			self.topCapacityWindow = self.topCapacityWindow[1:]
+		}
+		accum := 0
+		for _, capacity := range self.topCapacityWindow {
+			accum += capacity
+		}
+		self.topCapacity = accum / len(self.topCapacityWindow)
+		self.lastTopCapacity = time.Now()
+		logrus.Infof("capacity = %d, topCapacity = %d", self.capacity, self.topCapacity)
 	}
-	accum := 0
-	for _, capacity := range self.topCapacityWindow {
-		accum += capacity
-	}
-	self.topCapacity = accum / len(self.topCapacityWindow)
-	self.lastTopCapacity = time.Now()
-	logrus.Infof("capacity = %d, topCapacity = %d", self.capacity, self.topCapacity)
 }
 
 func (self *txPortal) keepaliveSender() {
