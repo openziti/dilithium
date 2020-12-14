@@ -284,7 +284,7 @@ func (self *txPortal) availableCapacity(segmentSz int) int {
 	softCapacity := self.capacity
 	if self.profile.TxPortalSoftCapacityEnable && self.topCapacity > 0 && self.topCapacity < self.capacity {
 		lastTopMs := time.Since(self.lastTopCapacity).Milliseconds()
-		lastTopFrac := float64(lastTopMs) / float64(self.profile.TxPortalTopCapacityScaleMs)
+		lastTopFrac := float64(lastTopMs) / float64(self.profile.TxPortalSoftCapacityScaleMs)
 		if lastTopFrac > 1.0 {
 			lastTopFrac = 1.0
 		}
@@ -300,7 +300,7 @@ func (self *txPortal) availableCapacity(segmentSz int) int {
 func (self *txPortal) snapshotTopCapacity() {
 	if(self.profile.TxPortalSoftCapacityEnable) {
 		self.topCapacityWindow = append(self.topCapacityWindow, int(float64(self.capacity) * 0.9))
-		if len(self.topCapacityWindow) > self.profile.TxPortalTopCapacityWindow {
+		if len(self.topCapacityWindow) > self.profile.TxPortalSoftCapacityWindow {
 			self.topCapacityWindow = self.topCapacityWindow[1:]
 		}
 		accum := 0
