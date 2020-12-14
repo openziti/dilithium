@@ -19,6 +19,7 @@ type txPortal struct {
 	capacity          int
 	topCapacity       int
 	topCapacityWindow []int
+	lastTopCapacity   time.Time
 	ready             *sync.Cond
 	txPortalSz        int
 	rxPortalSz        int
@@ -47,6 +48,7 @@ func newTxPortal(conn *net.UDPConn, peer *net.UDPAddr, closer *closer, profile *
 		lock:              new(sync.Mutex),
 		tree:              btree.NewWith(profile.TxPortalTreeLen, utils.Int32Comparator),
 		capacity:          profile.TxPortalStartSz,
+		lastTopCapacity:   time.Now(),
 		startRetxScale:    profile.RetxScale,
 		lastRetxScaleIncr: time.Now(),
 		lastRetxScaleDecr: time.Now(),
@@ -279,13 +281,24 @@ func (self *txPortal) updatePortalCapacity(newCapacity int) {
 }
 
 func (self *txPortal) availableCapacity(segmentSz int) int {
-	txPortalCapacity := float64(self.capacity - int(float64(self.rxPortalSz)*self.profile.TxPortalRxSzPressureScale) - (self.txPortalSz + segmentSz))
-	rxPortalCapacity := float64(self.capacity - (self.rxPortalSz + segmentSz))
+	softCapacity := self.capacity
+	if self.topCapacity > 0 && self.topCapacity < self.capacity {
+		lastTopMs := time.Since(self.lastTopCapacity).Milliseconds()
+		lastTopFrac := float64(lastTopMs) / float64(self.profile.TxPortalTopCapacityScaleMs)
+		if lastTopFrac > 1.0 {
+			lastTopFrac = 1.0
+		}
+		delta := int(float64(self.capacity - self.topCapacity) * lastTopFrac)
+		softCapacity += delta
+	}
+
+	txPortalCapacity := float64(softCapacity - int(float64(self.rxPortalSz)*self.profile.TxPortalRxSzPressureScale) - (self.txPortalSz + segmentSz))
+	rxPortalCapacity := float64(softCapacity - (self.rxPortalSz + segmentSz))
 	return int(math.Min(txPortalCapacity, rxPortalCapacity))
 }
 
 func (self *txPortal) snapshotTopCapacity() {
-	self.topCapacityWindow = append(self.topCapacityWindow, self.capacity)
+	self.topCapacityWindow = append(self.topCapacityWindow, int(float64(self.capacity) * 0.9))
 	if len(self.topCapacityWindow) > self.profile.TxPortalTopCapacityWindow {
 		self.topCapacityWindow = self.topCapacityWindow[1:]
 	}
@@ -294,6 +307,7 @@ func (self *txPortal) snapshotTopCapacity() {
 		accum += capacity
 	}
 	self.topCapacity = accum / len(self.topCapacityWindow)
+	self.lastTopCapacity = time.Now()
 	logrus.Infof("capacity = %d, topCapacity = %d", self.capacity, self.topCapacity)
 }
 
