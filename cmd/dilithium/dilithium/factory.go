@@ -3,6 +3,7 @@ package dilithium
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/openziti/dilithium/cf"
 	"github.com/openziti/dilithium/protocol/westlsworld3"
@@ -229,7 +230,16 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			listener, err := westlsworld3.Listen(listenAddress, generateTLSConfig(), profileId)
+			tlsConfig := generateTLSConfig()
+			tlsConfig.ClientAuth = tls.RequireAnyClientCert
+			tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
+				logrus.Infof("negotiated: %s, ciphersuite: %d", cs.NegotiatedProtocol, cs.CipherSuite)
+				for _, peerCert := range cs.PeerCertificates {
+					logrus.Infof("peer cert = %s", hex.Dump(peerCert.Signature))
+				}
+				return nil
+			}
+			listener, err := westlsworld3.Listen(listenAddress, tlsConfig, profileId)
 			if err != nil {
 				return nil, errors.Wrap(err, "listen")
 			}
@@ -240,7 +250,16 @@ func ProtocolFor(protocol string) (Protocol, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "resolve address")
 			}
-			conn, err := westlsworld3.Dial(dialAddress, generateTLSConfig(), profileId)
+			tlsConfig := generateTLSConfig()
+			tlsConfig.ClientAuth = tls.RequireAnyClientCert
+			tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
+				logrus.Infof("negotiated: %s, ciphersuite: %d", cs.NegotiatedProtocol, cs.CipherSuite)
+				for _, peerCert := range cs.PeerCertificates {
+					logrus.Infof("peer cert = %s", hex.Dump(peerCert.Signature))
+				}
+				return nil
+			}
+			conn, err := westlsworld3.Dial(dialAddress, tlsConfig, profileId)
 			if err != nil {
 				return nil, errors.Wrap(err, "dial")
 			}
