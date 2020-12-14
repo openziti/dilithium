@@ -34,6 +34,7 @@ type Profile struct {
 	TxPortalStartSz             int     `cf:"tx_portal_start_sz"`
 	TxPortalMinSz               int     `cf:"tx_portal_min_sz"`
 	TxPortalMaxSz               int     `cf:"tx_portal_max_sz"`
+	TxPortalTopCapacityWindow   int     `cf:"tx_portal_top_capacity_window"`
 	TxPortalIncreaseThresh      int     `cf:"tx_portal_increase_thresh"`
 	TxPortalIncreaseScale       float64 `cf:"tx_portal_increase_scale"`
 	TxPortalDupAckThresh        int     `cf:"tx_portal_dupack_thresh"`
@@ -79,6 +80,7 @@ func NewBaselineProfile() *Profile {
 		TxPortalStartSz:             96 * 1024,
 		TxPortalMinSz:               16 * 1024,
 		TxPortalMaxSz:               4 * 1024 * 1024,
+		TxPortalTopCapacityWindow:   8,
 		TxPortalIncreaseThresh:      224,
 		TxPortalIncreaseScale:       1.0,
 		TxPortalDupAckThresh:        64,

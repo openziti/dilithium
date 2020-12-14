@@ -17,6 +17,8 @@ type txPortal struct {
 	lock              *sync.Mutex
 	tree              *btree.Tree
 	capacity          int
+	topCapacity       int
+	topCapacityWindow []int
 	ready             *sync.Cond
 	txPortalSz        int
 	rxPortalSz        int
@@ -242,6 +244,7 @@ func (self *txPortal) duplicateAck(seq int32) {
 			self.ii.NewRetxScale(self.peer, self.profile.RetxScale)
 		}
 
+		self.snapshotTopCapacity()
 		self.updatePortalCapacity(newCapacity)
 		self.dupAckCt = 0
 		self.successAccum = int(float64(self.successAccum) * self.profile.TxPortalDupAckSuccessScale)
@@ -254,6 +257,7 @@ func (self *txPortal) retx() {
 	self.successCt = 0
 	if self.retxCt >= self.profile.TxPortalRetxThresh {
 		newCapacity := int(float64(self.capacity) * self.profile.TxPortalRetxCapacityScale)
+		self.snapshotTopCapacity()
 		self.updatePortalCapacity(newCapacity)
 		self.retxCt = 0
 		self.successAccum = int(float64(self.successAccum) * self.profile.TxPortalRetxSuccessScale)
@@ -278,6 +282,19 @@ func (self *txPortal) availableCapacity(segmentSz int) int {
 	txPortalCapacity := float64(self.capacity - int(float64(self.rxPortalSz)*self.profile.TxPortalRxSzPressureScale) - (self.txPortalSz + segmentSz))
 	rxPortalCapacity := float64(self.capacity - (self.rxPortalSz + segmentSz))
 	return int(math.Min(txPortalCapacity, rxPortalCapacity))
+}
+
+func (self *txPortal) snapshotTopCapacity() {
+	self.topCapacityWindow = append(self.topCapacityWindow, self.capacity)
+	if len(self.topCapacityWindow) > self.profile.TxPortalTopCapacityWindow {
+		self.topCapacityWindow = self.topCapacityWindow[1:]
+	}
+	accum := 0
+	for _, capacity := range self.topCapacityWindow {
+		accum += capacity
+	}
+	self.topCapacity = accum / len(self.topCapacityWindow)
+	logrus.Infof("capacity = %d, topCapacity = %d", self.capacity, self.topCapacity)
 }
 
 func (self *txPortal) keepaliveSender() {
