@@ -11,10 +11,10 @@ func init() {
 }
 
 var listenCmd = &cobra.Command{
-	Use: "listen <root>",
+	Use:   "listen <root>",
 	Short: "Listen for metrics clients",
-	Args: cobra.ExactArgs(1),
-	Run: listen,
+	Args:  cobra.ExactArgs(1),
+	Run:   listen,
 }
 
 func listen(_ *cobra.Command, args []string) {

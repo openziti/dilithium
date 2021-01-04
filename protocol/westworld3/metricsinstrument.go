@@ -9,10 +9,8 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"os/signal"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -154,6 +152,7 @@ func (self *metricsInstrument) writeAllSamples() error {
 }
 
 func (self *metricsInstrument) signalHandler() {
+	/*
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGUSR2)
 
@@ -165,6 +164,7 @@ func (self *metricsInstrument) signalHandler() {
 			}
 		}
 	}
+	*/
 }
 
 type metricsInstrumentInstance struct {
