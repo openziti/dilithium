@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 )
 
 type metricsInstrumentController struct{
@@ -55,6 +56,7 @@ func (self *metricsInstrumentController) handle(conn net.Conn) {
 			return
 		}
 
+		line = strings.TrimSpace(line)
 		logrus.Infof("line = [%s]", line)
 		_, _ = conn.Write([]byte("ok\n"))
 	}
