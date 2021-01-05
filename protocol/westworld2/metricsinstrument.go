@@ -28,7 +28,18 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	if err := mi.configure(config); err != nil {
 		return nil, err
 	}
-	go mi.signalHandler()
+	cl, err := util.GetCtrlListener(mi.prefix, "westworld2")
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting metrics ctrl listener")
+	}
+	cl.AddCallback("write", func(string) error {
+		err := mi.writeAllSamples()
+		if err != nil {
+			logrus.Errorf("error writing all samples (%v)", err)
+		}
+		return err
+	})
+	cl.Start()
 	return mi, nil
 }
 
@@ -60,22 +71,6 @@ func (self *metricsInstrument) configure(config map[string]interface{}) error {
 		}
 	}
 	return nil
-}
-
-func (self *metricsInstrument) signalHandler() {
-	/*
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGUSR2)
-
-	for {
-		s := <-c
-		if s == syscall.SIGUSR2 {
-			if err := self.writeAllSamples(); err != nil {
-				logrus.Errorf("error writing all samples (%v)", err)
-			}
-		}
-	}
-	*/
 }
 
 func (self *metricsInstrument) writeAllSamples() error {

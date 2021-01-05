@@ -44,6 +44,7 @@ func NewMetrics(addr, peer net.Addr, ms int, prefix string) (*Metrics, error) {
 		WriteAllSamples()
 		return nil
 	})
+	cl.Start()
 	go m.snapshotter(ms)
 	return m, nil
 }
