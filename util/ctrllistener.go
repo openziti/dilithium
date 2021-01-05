@@ -10,15 +10,28 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
-type CtrlListener struct{
-	listener net.Listener
-	callbacks map[string]func(string) error
+var ctrlListeners map[string]*CtrlListener
+var ctrlMutex sync.Mutex
+
+type CtrlListener struct {
+	listener  net.Listener
+	callbacks map[string][]func(string) error
+	running   bool
 }
 
-func NewCtrlListener(root, id string) (cl *CtrlListener, err error) {
-	cl = &CtrlListener{callbacks: make(map[string]func(string) error)}
+func GetCtrlListener(root, id string) (cl *CtrlListener, err error) {
+	ctrlMutex.Lock()
+	defer ctrlMutex.Unlock()
+
+	cl, found := ctrlListeners[root+id]
+	if found {
+		return cl, nil
+	}
+
+	cl = &CtrlListener{callbacks: make(map[string][]func(string) error)}
 	address := filepath.Join(root, fmt.Sprintf("%s.%d.sock", id, os.Getpid()))
 	unixAddress, err := net.ResolveUnixAddr("unix", address)
 	if err != nil {
@@ -29,11 +42,16 @@ func NewCtrlListener(root, id string) (cl *CtrlListener, err error) {
 }
 
 func (self *CtrlListener) AddCallback(keyword string, f func(string) error) {
-	self.callbacks[keyword] = f
+	self.callbacks[keyword] = append(self.callbacks[keyword], f)
 }
 
 func (self *CtrlListener) Start() {
-	go self.run()
+	ctrlMutex.Lock()
+	defer ctrlMutex.Unlock()
+
+	if !self.running {
+		go self.run()
+	}
 }
 
 func (self *CtrlListener) run() {
@@ -69,9 +87,16 @@ func (self *CtrlListener) handle(conn net.Conn) {
 		line = strings.TrimSpace(line)
 		tokens := strings.Split(line, " ")
 		if len(tokens) > 0 {
-			f, found := self.callbacks[tokens[0]]
+			fs, found := self.callbacks[tokens[0]]
 			if found {
-				fErr := f(line)
+				var fErr error
+			fsLoop:
+				for _, f := range fs {
+					fErr = f(line)
+					if fErr != nil {
+						break fsLoop
+					}
+				}
 				if fErr == nil {
 					_, err := conn.Write([]byte("ok\n"))
 					if err != nil {
