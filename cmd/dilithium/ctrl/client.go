@@ -1,7 +1,8 @@
-package metrics
+package ctrl
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
@@ -9,7 +10,8 @@ import (
 )
 
 func init() {
-	metricsCmd.AddCommand(clientCmd)
+	clientCmd.Flags().StringVarP(&clientCommand, "command", "c", "hello", "Command to send")
+	ctrlCmd.AddCommand(clientCmd)
 }
 
 var clientCmd = &cobra.Command{
@@ -18,6 +20,7 @@ var clientCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run:   client,
 }
+var clientCommand string
 
 func client(_ *cobra.Command, args []string) {
 	path := args[0]
@@ -29,7 +32,7 @@ func client(_ *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = conn.Write([]byte("hello\n"))
+	_, err = conn.Write([]byte(fmt.Sprintf("%s\n", clientCommand)))
 	if err != nil {
 		panic(err)
 	}
