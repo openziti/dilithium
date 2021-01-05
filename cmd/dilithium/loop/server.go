@@ -43,7 +43,10 @@ func loopServer(_ *cobra.Command, args []string) {
 		logrus.Fatalf("error accepting (%v)", err)
 	}
 
-	m := loop.NewMetrics(conn.LocalAddr(), conn.RemoteAddr(), 100, "logs")
+	m, err := loop.NewMetrics(conn.LocalAddr(), conn.RemoteAddr(), 100, "logs")
+	if err != nil {
+		logrus.Fatalf("error creating metrics (%v)", err)
+	}
 	m.Start()
 
 	var rx *loop.Receiver

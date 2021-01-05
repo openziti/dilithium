@@ -3,6 +3,7 @@ package loop
 import (
 	"fmt"
 	"github.com/openziti/dilithium/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net"
@@ -11,10 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 )
-
-func init() {
-	go signalHandler()
-}
 
 type Metrics struct {
 	Addr   net.Addr
@@ -29,7 +26,7 @@ type Metrics struct {
 	TxBytesAccum int64
 }
 
-func NewMetrics(addr, peer net.Addr, ms int, prefix string) *Metrics {
+func NewMetrics(addr, peer net.Addr, ms int, prefix string) (*Metrics, error) {
 	m := &Metrics{
 		Addr:   addr,
 		Peer:   peer,
@@ -39,8 +36,16 @@ func NewMetrics(addr, peer net.Addr, ms int, prefix string) *Metrics {
 	registryLock.Lock()
 	registry = append(registry, m)
 	registryLock.Unlock()
+	cl, err := util.GetCtrlListener(prefix, "loop")
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get ctrl listener")
+	}
+	cl.AddCallback("write", func(string) error {
+		WriteAllSamples()
+		return nil
+	})
 	go m.snapshotter(ms)
-	return m
+	return m, nil
 }
 
 func WriteAllSamples() {
@@ -140,17 +145,3 @@ func (self *Metrics) writeSamples() error {
 
 var registry []*Metrics
 var registryLock sync.Mutex
-
-func signalHandler() {
-	/*
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGUSR2)
-
-	for {
-		s := <-c
-		if s == syscall.SIGUSR2 {
-			WriteAllSamples()
-		}
-	}
-	*/
-}
