@@ -23,6 +23,7 @@ type metricsInstrument struct {
 type metricsInstrumentConfig struct {
 	Path       string `cf:"path"`
 	SnapshotMs int    `cf:"snapshot_ms"`
+	Enabled    bool   `cf:"enabled"`
 }
 
 func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
@@ -35,7 +36,26 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	if err := cf.Load(config, i.config); err != nil {
 		return nil, errors.Wrap(err, "unable to load config")
 	}
-	go i.signalHandler()
+	cl, err := util.GetCtrlListener(i.config.Path, "westworld3")
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get metrics ctrl listener")
+	}
+	cl.AddCallback("start", func(string) error {
+		i.config.Enabled = true
+		return nil
+	})
+	cl.AddCallback("stop", func(string) error {
+		i.config.Enabled = false
+		return nil
+	})
+	cl.AddCallback("write", func(string) error {
+		err := i.writeAllSamples()
+		if err != nil {
+			logrus.Errorf("error writing samples (%v)", err)
+		}
+		return err
+	})
+	cl.Start()
 	logrus.Infof(cf.Dump("config", i.config))
 	return i, nil
 }
@@ -43,7 +63,7 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 func (self *metricsInstrument) NewInstance(id string, peer *net.UDPAddr) InstrumentInstance {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	ii := &metricsInstrumentInstance{id: id, peer: peer, close: make(chan struct{}, 1)}
+	ii := &metricsInstrumentInstance{id: id, peer: peer, config: self.config, close: make(chan struct{}, 1)}
 	go ii.snapshotter(self.config.SnapshotMs)
 	self.instances = append(self.instances, ii)
 	return ii
@@ -151,26 +171,11 @@ func (self *metricsInstrument) writeAllSamples() error {
 	return nil
 }
 
-func (self *metricsInstrument) signalHandler() {
-	/*
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGUSR2)
-
-	for {
-		s := <-c
-		if s == syscall.SIGUSR2 {
-			if err := self.writeAllSamples(); err != nil {
-				logrus.Errorf("error writing all samples (%v)", err)
-			}
-		}
-	}
-	*/
-}
-
 type metricsInstrumentInstance struct {
 	id           string
 	peer         *net.UDPAddr
 	listenerAddr *net.UDPAddr
+	config       *metricsInstrumentConfig
 	close        chan struct{}
 	closed       bool
 
@@ -253,102 +258,140 @@ func (self *metricsInstrumentInstance) Closed(*net.UDPAddr) {
  * wire
  */
 func (self *metricsInstrumentInstance) WireMessageTx(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.txBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.txMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.txBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.txMsgsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) WireMessageRetx(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.retxBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.retxMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.retxBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.retxMsgsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) WireMessageRx(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.rxBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.rxMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.rxBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.rxMsgsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) UnknownPeer(peer *net.UDPAddr) {
-	logrus.Errorf("unknown peer (%v)", peer)
-	atomic.AddInt64(&self.errorsAccum, 1)
+	if self.config.Enabled {
+		logrus.Errorf("unknown peer (%v)", peer)
+		atomic.AddInt64(&self.errorsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) ReadError(_ *net.UDPAddr, err error) {
-	logrus.Errorf("read error (%v)", err)
-	atomic.AddInt64(&self.errorsAccum, 1)
+	if self.config.Enabled {
+		logrus.Errorf("read error (%v)", err)
+		atomic.AddInt64(&self.errorsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) UnexpectedMessageType(_ *net.UDPAddr, mt messageType) {
-	logrus.Errorf("unexpected message type (%d)", mt)
-	atomic.AddInt64(&self.errorsAccum, 1)
+	if self.config.Enabled {
+		logrus.Errorf("unexpected message type (%d)", mt)
+		atomic.AddInt64(&self.errorsAccum, 1)
+	}
 }
 
 /*
  * control
  */
 func (self *metricsInstrumentInstance) TxAck(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.txAckBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.txAckMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.txAckBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.txAckMsgsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) RxAck(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.rxAckBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.rxAckMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.rxAckBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.rxAckMsgsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) TxKeepalive(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.txKeepaliveBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.txKeepaliveMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.txKeepaliveBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.txKeepaliveMsgsAccum, 1)
+	}
 }
 
 func (self *metricsInstrumentInstance) RxKeepalive(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.rxKeepaliveBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.rxKeepaliveMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.rxKeepaliveBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.rxKeepaliveMsgsAccum, 1)
+	}
 }
 
 /*
  * txPortal
  */
 func (self *metricsInstrumentInstance) TxPortalCapacityChanged(_ *net.UDPAddr, capacity int) {
-	atomic.StoreInt64(&self.txPortalCapacityVal, int64(capacity))
+	if self.config.Enabled {
+		atomic.StoreInt64(&self.txPortalCapacityVal, int64(capacity))
+	}
 }
 
 func (self *metricsInstrumentInstance) TxPortalSzChanged(_ *net.UDPAddr, sz int) {
-	atomic.StoreInt64(&self.txPortalSzVal, int64(sz))
+	if self.config.Enabled {
+		atomic.StoreInt64(&self.txPortalSzVal, int64(sz))
+	}
 }
 
 func (self *metricsInstrumentInstance) TxPortalRxSzChanged(_ *net.UDPAddr, sz int) {
-	atomic.StoreInt64(&self.txPortalRxSzVal, int64(sz))
+	if self.config.Enabled {
+		atomic.StoreInt64(&self.txPortalRxSzVal, int64(sz))
+	}
 }
 
 func (self *metricsInstrumentInstance) NewRetxMs(_ *net.UDPAddr, ms int) {
-	atomic.StoreInt64(&self.retxMsVal, int64(ms))
+	if self.config.Enabled {
+		atomic.StoreInt64(&self.retxMsVal, int64(ms))
+	}
 }
 
 func (self *metricsInstrumentInstance) NewRetxScale(_ *net.UDPAddr, retxMs float64) {
-	atomic.StoreInt64(&self.retxScaleVal, int64(retxMs*1000.0))
+	if self.config.Enabled {
+		atomic.StoreInt64(&self.retxScaleVal, int64(retxMs*1000.0))
+	}
 }
 
 func (self *metricsInstrumentInstance) DuplicateAck(*net.UDPAddr, int32) {
-	atomic.AddInt64(&self.dupAcksAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.dupAcksAccum, 1)
+	}
 }
 
 /*
  * rxPortal
  */
 func (self *metricsInstrumentInstance) RxPortalSzChanged(_ *net.UDPAddr, sz int) {
-	atomic.StoreInt64(&self.rxPortalSzVal, int64(sz))
+	if self.config.Enabled {
+		atomic.StoreInt64(&self.rxPortalSzVal, int64(sz))
+	}
 }
 
 func (self *metricsInstrumentInstance) DuplicateRx(_ *net.UDPAddr, wm *wireMessage) {
-	atomic.AddInt64(&self.dupRxBytesAccum, int64(wm.buffer.uz))
-	atomic.AddInt64(&self.dupRxMsgsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.dupRxBytesAccum, int64(wm.buffer.uz))
+		atomic.AddInt64(&self.dupRxMsgsAccum, 1)
+	}
 }
 
 /*
  * allocation
  */
 func (self *metricsInstrumentInstance) Allocate(string) {
-	atomic.AddInt64(&self.allocationsAccum, 1)
+	if self.config.Enabled {
+		atomic.AddInt64(&self.allocationsAccum, 1)
+	}
 }
 
 /*
@@ -366,7 +409,9 @@ func (self *metricsInstrumentInstance) snapshotter(ms int) {
 	defer logrus.Infof("exited")
 	for {
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-		self.snapshot()
+		if self.config.Enabled {
+			self.snapshot()
+		}
 		select {
 		case <-self.close:
 			self.snapshot()
