@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -126,7 +127,7 @@ func (self *Metrics) writeSamples() error {
 	if err := os.MkdirAll(self.Prefix, os.ModePerm); err != nil {
 		return err
 	}
-	name := fmt.Sprintf("loop_%s_%s_", self.Addr, self.Peer)
+	name := strings.ReplaceAll(fmt.Sprintf("loop_%s_%s_", self.Addr, self.Peer), ":", "-")
 	outPath, err := ioutil.TempDir(self.Prefix, name)
 	if err != nil {
 		return err

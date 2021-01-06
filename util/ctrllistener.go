@@ -38,6 +38,9 @@ func GetCtrlListener(root, id string) (cl *CtrlListener, err error) {
 		return nil, errors.Wrap(err, "error resolving unix address")
 	}
 	cl.listener, err = net.ListenUnix("unix", unixAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "error listening")
+	}
 	return cl, nil
 }
 
