@@ -15,9 +15,10 @@ retx_evaluation_scale_incr:         0.0
 retx_evaluation_scale_decr:         0.0
 
 instrument:
-  name: metrics
-  path: logs
-  snapshot_ms: 250
+  name:                             metrics
+  path:                             logs
+  snapshot_ms:                      250
+  enable:                           true
 
 #instrument:
 #  name: trace

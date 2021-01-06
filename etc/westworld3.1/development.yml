@@ -1,9 +1,10 @@
 profile_version: 1
 
 instrument:
-  name: metrics
-  path: logs
-  snapshot_ms: 250
+  name:         metrics
+  path:         logs
+  snapshot_ms:  250
+  enable:       true
 
 #instrument:
 #  name: trace
