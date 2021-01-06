@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -74,7 +75,7 @@ func (self *metricsInstrument) writeAllSamples() error {
 	defer self.lock.Unlock()
 
 	for _, ii := range self.instances {
-		peerName := fmt.Sprintf("%s_", ii.id)
+		peerName := strings.ReplaceAll(fmt.Sprintf("%s_", ii.id), ":", "-")
 		if err := os.MkdirAll(self.config.Path, os.ModePerm); err != nil {
 			return err
 		}
