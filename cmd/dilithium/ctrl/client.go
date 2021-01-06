@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	clientCmd.Flags().StringVarP(&clientCommand, "command", "c", "hello", "Command to send")
+	clientCmd.Flags().StringVarP(&clientCommand, "command", "c", "write", "Command to send")
 	ctrlCmd.AddCommand(clientCmd)
 }
 
