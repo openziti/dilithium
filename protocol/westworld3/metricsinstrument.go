@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+var localEnabled = false
+var localEnabledOverridden = false
+
 type metricsInstrument struct {
 	lock      *sync.Mutex
 	config    *metricsInstrumentConfig
@@ -37,15 +40,24 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	if err := cf.Load(config, i.config); err != nil {
 		return nil, errors.Wrap(err, "unable to load config")
 	}
+	if localEnabledOverridden {
+		i.config.Enabled = localEnabled
+	}
 	cl, err := util.GetCtrlListener(i.config.Path, "westworld3")
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get metrics ctrl listener")
 	}
 	cl.AddCallback("start", func(string) error {
+		localEnabled = true
+		localEnabledOverridden = true
+
 		i.config.Enabled = true
 		return nil
 	})
 	cl.AddCallback("stop", func(string) error {
+		localEnabled = false
+		localEnabledOverridden = true
+
 		i.config.Enabled = false
 		return nil
 	})
