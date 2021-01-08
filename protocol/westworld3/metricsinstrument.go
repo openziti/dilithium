@@ -56,6 +56,10 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 		}
 		return err
 	})
+	cl.AddCallback("clean", func(string) error {
+		i.clean()
+		return nil
+	})
 	cl.Start()
 	logrus.Infof(cf.Dump("config", i.config))
 	return i, nil
@@ -170,6 +174,27 @@ func (self *metricsInstrument) writeAllSamples() error {
 		}
 	}
 	return nil
+}
+
+func (self *metricsInstrument) clean() {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	idx := self.findClosed()
+	for idx != -1 {
+		logrus.Infof("removed metricsInstrumentInstance #%p", self.instances[idx])
+		self.instances = append(self.instances[:idx], self.instances[idx+1:]...)
+		idx = self.findClosed()
+	}
+}
+
+func (self *metricsInstrument) findClosed() int {
+	for i, ii := range self.instances {
+		if ii.closed {
+			return i
+		}
+	}
+	return -1
 }
 
 type metricsInstrumentInstance struct {
