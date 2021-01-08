@@ -9,6 +9,7 @@ import (
 )
 
 func init() {
+	influxLoadCmd.Flags().BoolVarP(&influxLoadRetime, "retime", "r", false, "Shift metrics timestamps as close to 'now' as possible")
 	influxCmd.AddCommand(influxLoadCmd)
 }
 
@@ -18,6 +19,7 @@ var influxLoadCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run:   influxLoad,
 }
+var influxLoadRetime bool
 
 func influxLoad(_ *cobra.Command, args []string) {
 	authToken := ""
@@ -30,20 +32,30 @@ func influxLoad(_ *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
+
+	retimeMs := int64(0)
+	if influxLoadRetime {
+		newRetimeMs, err := scanForLatestTimestamp(metricsMap)
+		if err != nil {
+			panic(err)
+		}
+		retimeMs = newRetimeMs
+	}
+
 	for metricsRoot, metricsId := range metricsMap {
 		switch metricsId.Id {
 		case "westworld2.1":
-			if err := loadWestworld21Metrics(metricsRoot, client); err != nil {
+			if err := loadWestworld21Metrics(metricsRoot, retimeMs, client); err != nil {
 				panic(err)
 			}
 
 		case "westworld3.1":
-			if err := loadWestworld31Metrics(metricsRoot, client); err != nil {
+			if err := loadWestworld31Metrics(metricsRoot, retimeMs, client); err != nil {
 				panic(err)
 			}
 
 		case "dilithiumLoop":
-			if err := loadDilithiumLoopMetrics(metricsRoot, client); err != nil {
+			if err := loadDilithiumLoopMetrics(metricsRoot, retimeMs, client); err != nil {
 				panic(err)
 			}
 

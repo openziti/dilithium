@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func loadWestworld21Metrics(root string, client influxdb2.Client) error {
+func loadWestworld21Metrics(root string, retimeMs int64, client influxdb2.Client) error {
 	peers, err := discoverW21Peers(root)
 	if err != nil {
 		return errors.Wrap(err, "discover westworld2.1 peers")
@@ -26,6 +26,9 @@ func loadWestworld21Metrics(root string, client influxdb2.Client) error {
 			}
 			for ts, v := range data {
 				t := time.Unix(0, ts)
+				if retimeMs > 0 {
+					t = t.Add(time.Duration(retimeMs) * time.Millisecond)
+				}
 				p := influxdb2.NewPoint(dataset, nil, map[string]interface{}{"v": v}, t).AddTag("type", "westworld21").AddTag("peer", peer.id)
 				writeApi.WritePoint(p)
 			}
