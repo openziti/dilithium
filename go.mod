@@ -11,7 +11,7 @@ require (
 	github.com/lucas-clemente/quic-go v0.18.0
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/michaelquigley/pfxlog v0.0.0-20200810152857-445c0d2683db
+	github.com/michaelquigley/pfxlog v0.3.1
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/profile v1.5.0
