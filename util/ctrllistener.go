@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-var ctrlListeners map[string]*CtrlListener
+var ctrlListeners = make(map[string]*CtrlListener)
 var ctrlMutex sync.Mutex
 
 type CtrlListener struct {
@@ -41,6 +41,7 @@ func GetCtrlListener(root, id string) (cl *CtrlListener, err error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error listening")
 	}
+	ctrlListeners[root+id] = cl
 	return cl, nil
 }
 
@@ -53,6 +54,7 @@ func (self *CtrlListener) Start() {
 	defer ctrlMutex.Unlock()
 
 	if !self.running {
+		self.running = true
 		go self.run()
 	}
 }
