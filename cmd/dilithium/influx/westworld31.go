@@ -32,6 +32,16 @@ func loadWestworld31Metrics(root string, retimeMs int64, client influxdb2.Client
 	return nil
 }
 
+func findWestworld31LatestTimestamp(root string) (time.Time, error) {
+	peers := []*peer{
+		&peer{
+			id:    westworld3PeerId(root),
+			paths: []string{root},
+		},
+	}
+	return findLatestTimestamp(peers, westworld31Datasets)
+}
+
 func westworld3PeerId(root string) string {
 	return filepath.Base(root)
 }

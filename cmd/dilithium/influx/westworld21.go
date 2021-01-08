@@ -12,7 +12,7 @@ import (
 )
 
 func loadWestworld21Metrics(root string, retimeMs int64, client influxdb2.Client) error {
-	peers, err := discoverW21Peers(root)
+	peers, err := discoverWestworld21Peers(root)
 	if err != nil {
 		return errors.Wrap(err, "discover westworld2.1 peers")
 	}
@@ -39,7 +39,15 @@ func loadWestworld21Metrics(root string, retimeMs int64, client influxdb2.Client
 	return nil
 }
 
-func discoverW21Peers(path string) ([]*peer, error) {
+func findWestworld21LatestTimestamp(root string) (time.Time, error) {
+	peers, err := discoverWestworld21Peers(root)
+	if err != nil {
+		return time.Time{}, errors.Wrap(err, "discover westworld2.1 peers")
+	}
+	return findLatestTimestamp(peers, westworld21Datasets)
+}
+
+func discoverWestworld21Peers(path string) ([]*peer, error) {
 	var metricsIdPaths []string
 	err := filepath.Walk(path, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {

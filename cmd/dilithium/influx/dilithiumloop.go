@@ -39,6 +39,14 @@ func loadDilithiumLoopMetrics(root string, retimeMs int64, client influxdb2.Clie
 	return nil
 }
 
+func findDilithiumLoopLatestTimestamp(root string) (time.Time, error) {
+	peers, err := discoverDilithiumLoopPeers(root)
+	if err != nil {
+		return time.Time{}, errors.Wrap(err, "discover dilithiumLoop peers")
+	}
+	return findLatestTimestamp(peers, dilithiumLoopDatasets)
+}
+
 func discoverDilithiumLoopPeers(path string) ([]*peer, error) {
 	var metricsIdPaths []string
 	err := filepath.Walk(path, func(path string, fi os.FileInfo, err error) error {
