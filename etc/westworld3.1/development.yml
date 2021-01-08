@@ -4,7 +4,7 @@ instrument:
   name:         metrics
   path:         logs
   snapshot_ms:  250
-  enable:       true
+  enabled:      true
 
 #instrument:
 #  name: trace
