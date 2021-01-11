@@ -24,6 +24,15 @@ func AddProfile(p *Profile) (byte, error) {
 	return byte(nextProfile), nil
 }
 
+func GetProfile(id byte) *Profile {
+	profile, found := profileRegistry[id]
+	if found {
+		return profile
+	} else {
+		return nil
+	}
+}
+
 type Profile struct {
 	RandomizeSeq                bool    `cf:"randomize_seq"`
 	ConnectionSetupTimeoutMs    int     `cf:"connection_setup_timeout_ms"`
