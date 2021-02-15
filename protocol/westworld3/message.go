@@ -85,6 +85,9 @@ func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) 
 		}
 	}
 	helloSz, err = encodeHello(h, wm.buffer.data[dataStart+acksSz:])
+	if err != nil {
+		return nil, errors.Wrap(err, "error encoding hello")
+	}
 	return wm.encodeHeader(uint16(acksSz + helloSz))
 }
 
