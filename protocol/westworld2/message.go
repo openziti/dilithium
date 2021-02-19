@@ -4,7 +4,6 @@ import (
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"net"
-	"strings"
 )
 
 type wireMessage struct {
@@ -184,14 +183,6 @@ type messageFlag uint8
 const (
 	RTT messageFlag = 1
 )
-
-func (self messageFlag) string() string {
-	out := ""
-	if self|RTT == 1 {
-		out += " RTT"
-	}
-	return strings.TrimSpace(out)
-}
 
 const (
 	headerSz = 12
