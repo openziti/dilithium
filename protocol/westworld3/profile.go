@@ -39,7 +39,7 @@ type Profile struct {
 	ConnectionInactiveTimeoutMs int     `cf:"connection_inactive_timeout_ms"`
 	SendKeepalive               bool    `cf:"send_keepalive"`
 	CloseWaitMs                 int     `cf:"close_wait_ms"`
-	CloseCheckMs                int     `cf:"close_check_ms`
+	CloseCheckMs                int     `cf:"close_check_ms"`
 	TxPortalStartSz             int     `cf:"tx_portal_start_sz"`
 	TxPortalMinSz               int     `cf:"tx_portal_min_sz"`
 	TxPortalMaxSz               int     `cf:"tx_portal_max_sz"`
