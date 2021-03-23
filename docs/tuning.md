@@ -163,9 +163,9 @@ The round-trip time (RTT) is probed periodically, and then averaged to compute t
 
 ## rx_portal_sz_pacing_thresh
 
-`rx_portal_sz_pacing_thresh` controls how frequently we encode the receiver portal size into the ACK messages returning to the transmitter. Specified in milliseconds.
+When processing packets at the receiver, certain "out of order" conditions can free up large portions of the receiver's buffer (kind of like when you get that block just right in Tetris). When this happens, the transmitter can end up with a reduced portal and unable to transmit if the last ACK received indicated that the receiver's buffer was full (or nearly full).
 
-It's not free to encode a 4-byte number into the returning ACK messages, so we don't want to encode it on every ACK. But encoding the receiver portal size too infrequently into the returning ACKs means that the transmitter has delayed visibility into congestion issues at the receiver. Encoding the receiver portal size too frequently consumes available bandwidth.
+If a payload receiption by the receiver causes the size of the receiver's buffer to change by more than `rx_portal_sz_pacing_thresh`, then it will automatically transmit a _pacing ACK_ (an empty ACK with just the receiver's buffer size) to allow the transmitter to continue transmitting.
 
 ## max_segment_sz
 
