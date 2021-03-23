@@ -55,3 +55,52 @@ If the `randomize_seq` switch is set to `false` (the default), then all packet s
 
 Protocols like TCP randomize the starting sequence number by default. Turning `randomize_seq` on by setting the value to `true`, will randomize the starting sequence number.
 
+## connection_setup_timeout_ms
+
+The `connection_setup_timeout_ms` parameter specifies the number of milliseconds within which a new connection setup must complete. After the configured number of milliseconds, the connection is abandoned and an error is returned to the caller.
+
+## connection_inactive_timeout_ms
+
+The `connection_inactive_timeout_ms` parameter controls how long the `westworld3` protocol will wait after not having received any communication from its peer, before abandoning the connection and returning an error to the caller.
+
+## send_keepalive
+
+The `send_keepalive` switch determines whether or not keepalives are sent when an idle connection is detected. When keepalives are enabled, and the transmitter has not sent data for more than `connection_inactive_timeout_ms / 2`, a keepalive will be transmitted.
+
+## close_wait_ms
+
+## close_check_ms
+
+## tx_portal_start_sz, tx_portal_min_sz, tx_portal_max_sz
+
+## tx_portal_increase_thresh, tx_portal_increase_scale
+
+## tx_portal_dupack_thresh, tx_portal_dupack_capacity_scale, tx_portal_dupack_success_scale
+
+## tx_portal_retx_thresh, tx_portal_retx_capacity_scale, tx_portal_retx_success_scale
+
+## tx_portal_rx_sz_pressure_scale
+
+## retx_start_ms
+
+## retx_scale, retx_scale_floor
+
+## retx_add_ms
+
+## retx_evaluation_ms, retx_evaluation_scale_incr, retx_evaluation_scale_decr
+
+## retx_batch_ms
+
+## rtt_probe_ms, rtt_probe_avg
+
+## rx_portal_sz_pacing_thresh
+
+## max_segment_sz
+
+## pool_buffer_sz
+
+## rx_buffer_sz, tx_buffer_sz
+
+## tx_portal_tree_len, retx_monitor_tree_len, rx_portal_tree_len, listener_peers_tree_len
+
+## reads_queue_len, listener_rx_queue_len, accept_queue_len
