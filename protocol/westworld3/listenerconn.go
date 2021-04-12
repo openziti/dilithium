@@ -9,21 +9,23 @@ import (
 	"math"
 	"math/big"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
 type listenerConn struct {
-	listener *listener
-	conn     *net.UDPConn
-	peer     *net.UDPAddr
-	rxQueue  chan *wireMessage
-	seq      *util.Sequence
-	txPortal *txPortal
-	rxPortal *rxPortal
-	closer   *closer
-	pool     *pool
-	profile  *Profile
-	ii       InstrumentInstance
+	listener      *listener
+	conn          *net.UDPConn
+	peer          *net.UDPAddr
+	rxQueue       chan *wireMessage
+	rxQueueClosed int32
+	seq           *util.Sequence
+	txPortal      *txPortal
+	rxPortal      *rxPortal
+	closer        *closer
+	pool          *pool
+	profile       *Profile
+	ii            InstrumentInstance
 }
 
 func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, profile *Profile, callerHook func()) (*listenerConn, error) {
@@ -36,19 +38,22 @@ func newListenerConn(listener *listener, conn *net.UDPConn, peer *net.UDPAddr, p
 		startSeq = randomSeq.Int64()
 	}
 	lc := &listenerConn{
-		listener: listener,
-		conn:     conn,
-		peer:     peer,
-		rxQueue:  make(chan *wireMessage, profile.ListenerRxQueueLen),
-		seq:      util.NewSequence(int32(startSeq)),
-		profile:  profile,
+		listener:      listener,
+		conn:          conn,
+		peer:          peer,
+		rxQueue:       make(chan *wireMessage, profile.ListenerRxQueueLen),
+		rxQueueClosed: 0,
+		seq:           util.NewSequence(int32(startSeq)),
+		profile:       profile,
 	}
 	id := fmt.Sprintf("listenerConn_%s_%s", listener.addr, peer)
 	lc.ii = profile.i.NewInstance(id, peer)
 	lc.pool = newPool(id, uint32(dataStart+profile.MaxSegmentSz), lc.ii)
 	closeHook := func() {
 		lc.ii.Shutdown()
-		close(lc.rxQueue)
+		if atomic.CompareAndSwapInt32(&lc.rxQueueClosed, 0, 1) {
+			close(lc.rxQueue)
+		}
 		if callerHook != nil {
 			callerHook()
 		}
