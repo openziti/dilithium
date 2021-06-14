@@ -22,7 +22,7 @@ func init() {
 }
 
 func main() {
-	defer logrus.Infof("finished")
+	defer logrus.Debugf("finished")
 
 	go func() {
 		sigs := make(chan os.Signal, 1)

@@ -3,7 +3,6 @@ package ctrl
 import (
 	"bytes"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io"
 	"net"
@@ -41,6 +40,6 @@ func client(_ *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	logrus.Infof("response:\n%s\n", string(response.Bytes()))
+	fmt.Printf("%s\n", string(response.Bytes()))
 	_ = conn.Close()
 }
