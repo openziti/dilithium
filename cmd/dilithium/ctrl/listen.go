@@ -4,6 +4,7 @@ import (
 	"github.com/openziti/dilithium/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"net"
 	"time"
 )
 
@@ -25,13 +26,14 @@ func listen(_ *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	cl.AddCallback("hello", func(string) error {
+	cl.AddCallback("hello", func(string, net.Conn) (int64, error) {
 		logrus.Infof("invoked")
-		return nil
+		return 0, nil
 	})
-	cl.AddCallback("hello", func(string) error {
+	cl.AddCallback("hello", func(_ string, conn net.Conn) (int64, error) {
 		logrus.Infof("oh, wow!")
-		return nil
+		n, err := conn.Write([]byte("oh, wow!"))
+		return int64(n), err
 	})
 	cl.Start()
 	for {

@@ -47,30 +47,30 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get metrics ctrl listener")
 	}
-	cl.AddCallback("start", func(string) error {
+	cl.AddCallback("start", func(string, net.Conn) (int64, error) {
 		localEnabled = true
 		localEnabledOverridden = true
 
 		i.config.Enabled = true
-		return nil
+		return 0, nil
 	})
-	cl.AddCallback("stop", func(string) error {
+	cl.AddCallback("stop", func(string, net.Conn) (int64, error) {
 		localEnabled = false
 		localEnabledOverridden = true
 
 		i.config.Enabled = false
-		return nil
+		return 0, nil
 	})
-	cl.AddCallback("write", func(string) error {
+	cl.AddCallback("write", func(string, net.Conn) (int64, error) {
 		err := i.writeAllSamples()
 		if err != nil {
 			logrus.Errorf("error writing samples (%v)", err)
 		}
-		return err
+		return 0, err
 	})
-	cl.AddCallback("clean", func(string) error {
+	cl.AddCallback("clean", func(string, net.Conn) (int64, error) {
 		i.clean()
-		return nil
+		return 0, nil
 	})
 	cl.Start()
 	logrus.Infof(cf.Dump("config", i.config))

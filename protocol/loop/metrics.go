@@ -41,9 +41,9 @@ func NewMetrics(addr, peer net.Addr, ms int, prefix string) (*Metrics, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get ctrl listener")
 	}
-	cl.AddCallback("write", func(string) error {
+	cl.AddCallback("write", func(string, net.Conn) (int64, error) {
 		WriteAllSamples()
-		return nil
+		return 0, nil
 	})
 	cl.Start()
 	go m.snapshotter(ms)

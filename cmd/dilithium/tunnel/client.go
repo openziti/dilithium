@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"fmt"
 	"github.com/openziti/dilithium/cmd/dilithium/dilithium"
 	"github.com/openziti/dilithium/util"
 	"github.com/sirupsen/logrus"
@@ -27,11 +26,12 @@ func tunnelClient(_ *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("error getting ctrl listener (%v)", err)
 	}
-	cl.AddCallback("stacks", func(string) error {
+	cl.AddCallback("stacks", func(_ string, conn net.Conn) (int64, error) {
 		buf := make([]byte, 64 * 1024)
 		n := runtime.Stack(buf, true)
-		fmt.Printf("\n%s\n", string(buf[:n]))
-		return nil
+		var err error
+		n, err = conn.Write(buf[:n])
+		return int64(n), err
 	})
 	cl.Start()
 

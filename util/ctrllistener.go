@@ -16,9 +16,11 @@ import (
 var ctrlListeners = make(map[string]*CtrlListener)
 var ctrlMutex sync.Mutex
 
+type CtrlHandler func(string, net.Conn) (int64, error)
+
 type CtrlListener struct {
 	listener  net.Listener
-	callbacks map[string][]func(string) error
+	callbacks map[string][]CtrlHandler
 	running   bool
 }
 
@@ -31,13 +33,16 @@ func GetCtrlListener(root, id string) (cl *CtrlListener, err error) {
 		return cl, nil
 	}
 
-	cl = &CtrlListener{callbacks: make(map[string][]func(string) error)}
+	cl = &CtrlListener{callbacks: make(map[string][]CtrlHandler)}
 	address := filepath.Join(root, fmt.Sprintf("%s.%d.sock", id, os.Getpid()))
 	unixAddress, err := net.ResolveUnixAddr("unix", address)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving unix address")
 	}
-	cl.listener, err = net.ListenUnix("unix", unixAddress)
+	cl.listener, err = net.ListenUnix(
+		"unix",
+		unixAddress,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error listening")
 	}
@@ -45,7 +50,7 @@ func GetCtrlListener(root, id string) (cl *CtrlListener, err error) {
 	return cl, nil
 }
 
-func (self *CtrlListener) AddCallback(keyword string, f func(string) error) {
+func (self *CtrlListener) AddCallback(keyword string, f CtrlHandler) {
 	self.callbacks[keyword] = append(self.callbacks[keyword], f)
 }
 
@@ -78,10 +83,7 @@ func (self *CtrlListener) run() {
 func (self *CtrlListener) handle(conn net.Conn) {
 	logrus.Infof("new connection for [%s]", conn.LocalAddr())
 	defer logrus.Infof("ended connection for [%s]", conn.LocalAddr())
-	defer func() {
-		conn.Close()
-		logrus.Warnf("closed")
-	}()
+	defer func() { _ = conn.Close() }()
 
 	r := bufio.NewReader(conn)
 	line, err := r.ReadString('\n')
@@ -100,7 +102,7 @@ func (self *CtrlListener) handle(conn net.Conn) {
 			var fErr error
 		fsLoop:
 			for _, f := range fs {
-				fErr = f(line)
+				_, fErr = f(line, conn)
 				if fErr != nil {
 					break fsLoop
 				}

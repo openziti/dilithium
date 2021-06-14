@@ -33,12 +33,12 @@ func newMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting metrics ctrl listener")
 	}
-	cl.AddCallback("write", func(string) error {
+	cl.AddCallback("write", func(string, net.Conn) (int64, error) {
 		err := mi.writeAllSamples()
 		if err != nil {
 			logrus.Errorf("error writing all samples (%v)", err)
 		}
-		return err
+		return 0, err
 	})
 	cl.Start()
 	return mi, nil
