@@ -97,20 +97,25 @@ func (self *CtrlListener) handle(conn net.Conn) {
 	line = strings.TrimSpace(line)
 	tokens := strings.Split(line, " ")
 	if len(tokens) > 0 {
+		written := int64(0)
 		fs, found := self.callbacks[tokens[0]]
 		if found {
+			var n int64
 			var fErr error
 		fsLoop:
 			for _, f := range fs {
-				_, fErr = f(line, conn)
+				n, fErr = f(line, conn)
 				if fErr != nil {
 					break fsLoop
 				}
+				written += n
 			}
 			if fErr == nil {
-				_, err := conn.Write([]byte("ok\n"))
-				if err != nil {
-					logrus.Errorf("error responding (%v)", err)
+				if written == 0 {
+					_, err := conn.Write([]byte("ok\n"))
+					if err != nil {
+						logrus.Errorf("error responding (%v)", err)
+					}
 				}
 			} else {
 				logrus.Errorf("error executing callback (%v)", fErr)
