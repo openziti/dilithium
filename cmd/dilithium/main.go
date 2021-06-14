@@ -22,8 +22,6 @@ func init() {
 }
 
 func main() {
-	defer logrus.Debugf("finished")
-
 	go func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGQUIT)
