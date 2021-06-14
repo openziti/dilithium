@@ -32,6 +32,7 @@ func tunnelServer(_ *cobra.Command, args []string) {
 		fmt.Printf("\n%s\n", string(buf[:n]))
 		return nil
 	})
+	cl.Start()
 
 	protocol, err := dilithium.ProtocolFor(dilithium.SelectedProtocol)
 	if err != nil {

@@ -33,6 +33,7 @@ func tunnelClient(_ *cobra.Command, args []string) {
 		fmt.Printf("\n%s\n", string(buf[:n]))
 		return nil
 	})
+	cl.Start()
 
 	serverAddress := args[0]
 	listenAddress, err := net.ResolveTCPAddr("tcp", args[1])
