@@ -1,12 +1,12 @@
 package ctrl
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io"
 	"net"
-	"strings"
 )
 
 func init() {
@@ -36,16 +36,11 @@ func client(_ *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	r := bufio.NewReader(conn)
-	line, err := r.ReadString('\n')
+	response := new(bytes.Buffer)
+	_, err = io.Copy(response, conn)
 	if err != nil {
 		panic(err)
 	}
-	line = strings.TrimSpace(line)
-	if line == "ok" {
-		logrus.Infof("received 'ok'")
-	} else {
-		logrus.Errorf("invalid response '%s'", line)
-	}
+	logrus.Infof("response:\n%s\n", string(response.Bytes()))
 	_ = conn.Close()
 }

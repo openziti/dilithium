@@ -78,55 +78,57 @@ func (self *CtrlListener) run() {
 func (self *CtrlListener) handle(conn net.Conn) {
 	logrus.Infof("new connection for [%s]", conn.LocalAddr())
 	defer logrus.Infof("ended connection for [%s]", conn.LocalAddr())
+	defer func() {
+		conn.Close()
+		logrus.Warnf("closed")
+	}()
 
 	r := bufio.NewReader(conn)
-	for {
-		line, err := r.ReadString('\n')
-		if err == io.EOF {
-			return
-		} else if err != nil {
-			logrus.Errorf("error reading (%v)", err)
-			return
-		}
+	line, err := r.ReadString('\n')
+	if err == io.EOF {
+		return
+	} else if err != nil {
+		logrus.Errorf("error reading (%v)", err)
+		return
+	}
 
-		line = strings.TrimSpace(line)
-		tokens := strings.Split(line, " ")
-		if len(tokens) > 0 {
-			fs, found := self.callbacks[tokens[0]]
-			if found {
-				var fErr error
-			fsLoop:
-				for _, f := range fs {
-					fErr = f(line)
-					if fErr != nil {
-						break fsLoop
-					}
+	line = strings.TrimSpace(line)
+	tokens := strings.Split(line, " ")
+	if len(tokens) > 0 {
+		fs, found := self.callbacks[tokens[0]]
+		if found {
+			var fErr error
+		fsLoop:
+			for _, f := range fs {
+				fErr = f(line)
+				if fErr != nil {
+					break fsLoop
 				}
-				if fErr == nil {
-					_, err := conn.Write([]byte("ok\n"))
-					if err != nil {
-						logrus.Errorf("error responding (%v)", err)
-					}
-				} else {
-					logrus.Errorf("error executing callback (%v)", fErr)
-					_, err := conn.Write([]byte(fmt.Sprintf("error (%s)\n", fErr)))
-					if err != nil {
-						logrus.Errorf("error responding (%v)", err)
-					}
+			}
+			if fErr == nil {
+				_, err := conn.Write([]byte("ok\n"))
+				if err != nil {
+					logrus.Errorf("error responding (%v)", err)
 				}
 			} else {
-				logrus.Errorf("no callback for [%s]", line)
-				_, err := conn.Write([]byte("syntax error?\n"))
+				logrus.Errorf("error executing callback (%v)", fErr)
+				_, err := conn.Write([]byte(fmt.Sprintf("error (%s)\n", fErr)))
 				if err != nil {
 					logrus.Errorf("error responding (%v)", err)
 				}
 			}
 		} else {
-			logrus.Errorf("no tokens")
+			logrus.Errorf("no callback for [%s]", line)
 			_, err := conn.Write([]byte("syntax error?\n"))
 			if err != nil {
 				logrus.Errorf("error responding (%v)", err)
 			}
+		}
+	} else {
+		logrus.Errorf("no tokens")
+		_, err := conn.Write([]byte("syntax error?\n"))
+		if err != nil {
+			logrus.Errorf("error responding (%v)", err)
 		}
 	}
 }
