@@ -1,11 +1,14 @@
 package tunnel
 
 import (
+	"fmt"
 	"github.com/openziti/dilithium/cmd/dilithium/dilithium"
+	"github.com/openziti/dilithium/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io"
 	"net"
+	"runtime"
 )
 
 func init() {
@@ -20,6 +23,17 @@ var tunnelClientCmd = &cobra.Command{
 }
 
 func tunnelClient(_ *cobra.Command, args []string) {
+	cl, err := util.GetCtrlListener(".", "tunnel")
+	if err != nil {
+		logrus.Fatalf("error getting ctrl listener (%v)", err)
+	}
+	cl.AddCallback("stacks", func(string) error {
+		buf := make([]byte, 64 * 1024)
+		n := runtime.Stack(buf, true)
+		fmt.Printf("\n%s\n", string(buf[:n]))
+		return nil
+	})
+
 	serverAddress := args[0]
 	listenAddress, err := net.ResolveTCPAddr("tcp", args[1])
 	if err != nil {
