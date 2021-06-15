@@ -7,7 +7,6 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"github.com/openziti/dilithium/cf"
 	"github.com/openziti/dilithium/protocol/westlsworld3"
-	"github.com/openziti/dilithium/protocol/westworld2"
 	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -102,50 +101,6 @@ func ProtocolFor(protocol string) (Protocol, error) {
 				return nil, errors.Wrap(err, "stream")
 			}
 			return &quicConn{session, stream}, nil
-		}
-		return impl, nil
-
-	case "westworld2":
-		cfg := westworld2.NewDefaultConfig()
-		if configPath != "" {
-			data, err := ioutil.ReadFile(configPath)
-			if err != nil {
-				return nil, errors.Wrapf(err, "unable to read config file [%s]", configPath)
-			}
-			dataMap := make(map[interface{}]interface{})
-			if err = yaml.Unmarshal(data, dataMap); err != nil {
-				return nil, errors.Wrapf(err, "unable to unmarshal config data [%s]", configPath)
-			}
-			if err = cfg.Load(dataMap); err != nil {
-				return nil, errors.Wrapf(err, "unable to load westworld2 config [%s]", configPath)
-			}
-		}
-		if configDump {
-			logrus.Infof(cfg.Dump())
-		}
-
-		impl := struct{ ProtoProtocol }{}
-		impl.listen = func(address string) (Accepter, error) {
-			listenAddress, err := net.ResolveUDPAddr("udp", address)
-			if err != nil {
-				return nil, errors.Wrap(err, "resolve address")
-			}
-			listener, err := westworld2.Listen(listenAddress, cfg)
-			if err != nil {
-				return nil, errors.Wrap(err, "listen")
-			}
-			return listener, nil
-		}
-		impl.dial = func(address string) (net.Conn, error) {
-			dialAddress, err := net.ResolveUDPAddr("udp", address)
-			if err != nil {
-				return nil, errors.Wrap(err, "resolve address")
-			}
-			conn, err := westworld2.Dial(dialAddress, cfg)
-			if err != nil {
-				return nil, errors.Wrap(err, "dial")
-			}
-			return conn, nil
 		}
 		return impl, nil
 
