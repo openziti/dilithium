@@ -62,7 +62,7 @@ func (self *dialerConn) Write(p []byte) (int, error) {
 }
 
 func (self *dialerConn) Close() error {
-	logrus.Infof("close requested")
+	logrus.Warnf("close requested")
 	return self.txPortal.sendClose(self.seq)
 }
 
