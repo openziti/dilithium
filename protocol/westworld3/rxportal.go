@@ -75,10 +75,12 @@ preread:
 			if !read.eof {
 				n, err := self.readBuffer.Write(read.buf[:read.sz])
 				if err != nil {
+					logrus.Error("buffer")
 					return 0, errors.Wrap(err, "buffer")
 				}
 				if n != read.sz {
-
+					logrus.Errorf("short read")
+					return 0, errors.New("short read")
 				}
 			} else {
 				logrus.Error("read EOF(1)")
@@ -90,7 +92,11 @@ preread:
 		}
 	}
 	if self.readBuffer.Len() > 0 {
-		return self.readBuffer.Read(p)
+		n, err := self.readBuffer.Read(p)
+		if err == io.EOF {
+			logrus.Error("!buffer")
+		}
+		return n, err
 	} else {
 		read, ok := <-self.reads
 		if !ok {
