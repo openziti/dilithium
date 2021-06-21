@@ -69,6 +69,7 @@ preread:
 		select {
 		case read, ok := <-self.reads:
 			if !ok {
+				logrus.Error("!ok(1)")
 				return 0, io.EOF
 			}
 			if !read.eof {
@@ -80,6 +81,7 @@ preread:
 
 				}
 			} else {
+				logrus.Error("read EOF(1)")
 				return 0, io.EOF
 			}
 
@@ -92,6 +94,7 @@ preread:
 	} else {
 		read, ok := <-self.reads
 		if !ok {
+			logrus.Error("!ok")
 			return 0, io.EOF
 		}
 		if !read.eof {
@@ -107,7 +110,7 @@ preread:
 			return self.readBuffer.Read(p)
 
 		} else {
-			logrus.Infof("close notified")
+			logrus.Errorf("close notified")
 			close(self.reads)
 			return 0, io.EOF
 		}
