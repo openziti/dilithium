@@ -27,7 +27,7 @@ func tunnelClient(_ *cobra.Command, args []string) {
 		logrus.Fatalf("error getting ctrl listener (%v)", err)
 	}
 	cl.AddCallback("stacks", func(_ string, conn net.Conn) (int64, error) {
-		buf := make([]byte, 64 * 1024)
+		buf := make([]byte, 64*1024)
 		n := runtime.Stack(buf, true)
 		var err error
 		n, err = conn.Write(buf[:n])
