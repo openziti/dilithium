@@ -33,10 +33,10 @@ func NewTraceInstrument(config map[string]interface{}) (Instrument, error) {
 	i := &traceInstrument{
 		config: new(traceInstrumentConfig),
 	}
-	if err := cf.Load(config, i.config); err != nil {
+	if err := cf.Bind(i.config, config, cf.DefaultOptions()); err != nil {
 		return nil, errors.Wrap(err, "unable to load config")
 	}
-	logrus.Infof(cf.Dump("config", i.config))
+	logrus.Infof(cf.Dump(i.config, cf.DefaultOptions()))
 	return i, nil
 }
 

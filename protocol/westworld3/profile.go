@@ -159,9 +159,9 @@ func (self *Profile) Load(data map[string]interface{}) error {
 			return errors.New("invalid instrument map")
 		}
 	}
-	return cf.Load(data, self)
+	return cf.Bind(self, data, cf.DefaultOptions())
 }
 
 func (self *Profile) Dump() string {
-	return cf.Dump(reflect.TypeOf(self).String(), self)
+	return cf.Dump(self, cf.DefaultOptions())
 }

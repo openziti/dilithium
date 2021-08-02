@@ -37,7 +37,7 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 			SnapshotMs: 1000,
 		},
 	}
-	if err := cf.Load(config, i.config); err != nil {
+	if err := cf.Bind(i.config, config, cf.DefaultOptions()); err != nil {
 		return nil, errors.Wrap(err, "unable to load config")
 	}
 	if localEnabledOverridden {
@@ -73,7 +73,7 @@ func NewMetricsInstrument(config map[string]interface{}) (Instrument, error) {
 		return 0, nil
 	})
 	cl.Start()
-	logrus.Infof(cf.Dump("config", i.config))
+	logrus.Infof(cf.Dump(i.config, cf.DefaultOptions()))
 	return i, nil
 }
 
