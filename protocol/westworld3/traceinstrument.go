@@ -47,6 +47,7 @@ func (self *traceInstrument) NewInstance(id string, peer *net.UDPAddr) Instrumen
 /*
  * connection
  */
+
 func (self *traceInstrumentInstance) Listener(addr *net.UDPAddr) {
 }
 
@@ -65,6 +66,7 @@ func (self *traceInstrumentInstance) Closed(peer *net.UDPAddr) {
 /*
  * wire
  */
+
 func (self *traceInstrumentInstance) WireMessageTx(peer *net.UDPAddr, wm *wireMessage) {
 	if self.i.config.Wire {
 		decode, _ := self.decode(wm)
@@ -119,6 +121,7 @@ func (self *traceInstrumentInstance) UnexpectedMessageType(peer *net.UDPAddr, mt
 /*
  * control
  */
+
 func (self *traceInstrumentInstance) TxAck(_ *net.UDPAddr, _ *wireMessage) {
 	if self.i.config.Control {
 		self.lock.Lock()
@@ -154,6 +157,7 @@ func (self *traceInstrumentInstance) RxKeepalive(_ *net.UDPAddr, _ *wireMessage)
 /*
  * txPortal
  */
+
 func (self *traceInstrumentInstance) TxPortalCapacityChanged(peer *net.UDPAddr, capacity int) {
 	if self.i.config.TxPortal {
 		self.lock.Lock()
@@ -224,12 +228,14 @@ func (self *traceInstrumentInstance) DuplicateRx(peer *net.UDPAddr, wm *wireMess
 /*
  * allocation
  */
+
 func (self *traceInstrumentInstance) Allocate(id string) {
 }
 
 /*
  * instrument lifecycle
  */
+
 func (self *traceInstrumentInstance) Shutdown() {
 	self.lock.Lock()
 	fmt.Println(fmt.Sprintf("@@ %-24s SHUTDOWN", self.id))
