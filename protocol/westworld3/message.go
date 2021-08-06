@@ -69,7 +69,7 @@ func writeWireMessage(wm *wireMessage, conn *net.UDPConn, peer *net.UDPAddr) err
 	return nil
 }
 
-func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) {
+func newHello(seq int32, h hello, a *Ack, p *pool) (wm *wireMessage, err error) {
 	wm = &wireMessage{
 		seq:    seq,
 		mt:     HELLO,
@@ -79,7 +79,7 @@ func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) 
 	var helloSz uint32
 	if a != nil {
 		wm.setFlag(INLINE_ACK)
-		acksSz, err = EncodeAcks([]ack{*a}, wm.buffer.data[dataStart:])
+		acksSz, err = EncodeAcks([]Ack{*a}, wm.buffer.data[dataStart:])
 		if err != nil {
 			return nil, errors.Wrap(err, "error encoding hello ack")
 		}
@@ -91,7 +91,7 @@ func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) 
 	return wm.encodeHeader(uint16(acksSz + helloSz))
 }
 
-func (self *wireMessage) asHello() (h hello, a []ack, err error) {
+func (self *wireMessage) asHello() (h hello, a []Ack, err error) {
 	if self.messageType() != HELLO {
 		return hello{}, nil, errors.Errorf("unexpected message type [%d], expected HELLO", self.messageType())
 	}
@@ -109,7 +109,7 @@ func (self *wireMessage) asHello() (h hello, a []ack, err error) {
 	return
 }
 
-func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage, err error) {
+func newAck(acks []Ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage, err error) {
 	wm = &wireMessage{
 		seq:    -1,
 		mt:     ACK,
@@ -138,7 +138,7 @@ func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage
 	return wm.encodeHeader(uint16(rttSz + acksSz + 4))
 }
 
-func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err error) {
+func (self *wireMessage) asAck() (a []Ack, rxPortalSz int32, rtt *uint16, err error) {
 	if self.messageType() != ACK {
 		return nil, 0, nil, errors.Errorf("unexpected message type [%d], expected ACK", self.messageType())
 	}

@@ -193,7 +193,7 @@ func (self *rxPortal) run() {
 				}
 			}
 
-			if ack, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
+			if ack, err := newAck([]Ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), rtt, self.ackPool); err == nil {
 				if err := writeWireMessage(ack, self.conn, self.peer); err != nil {
 					logrus.Errorf("error sending ack (%v)", err)
 				}
@@ -261,7 +261,7 @@ func (self *rxPortal) run() {
 			//
 
 		case CLOSE:
-			closeAck, err := newAck([]ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), nil, self.ackPool)
+			closeAck, err := newAck([]Ack{{wm.seq, wm.seq}}, int32(self.rxPortalSz), nil, self.ackPool)
 			if err == nil {
 				if err := writeWireMessage(closeAck, self.conn, self.peer); err != nil {
 					logrus.Errorf("error writing close ack (%v)", err)

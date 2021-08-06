@@ -37,7 +37,7 @@ func TestHello(t *testing.T) {
 
 func TestHelloResponse(t *testing.T) {
 	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
-	wm, err := newHello(12, hello{protocolVersion, 6}, &ack{11, 11}, p)
+	wm, err := newHello(12, hello{protocolVersion, 6}, &Ack{11, 11}, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 	assert.Equal(t, uint32(dataStart+4+5), wm.buffer.uz)
@@ -52,14 +52,14 @@ func TestHelloResponse(t *testing.T) {
 	assert.Equal(t, protocolVersion, h.version)
 	assert.Equal(t, uint8(6), h.profile)
 	assert.Equal(t, 1, len(a))
-	assert.Equal(t, int32(11), a[0].start)
-	assert.Equal(t, int32(11), a[0].end)
+	assert.Equal(t, int32(11), a[0].Start)
+	assert.Equal(t, int32(11), a[0].End)
 }
 
 func TestAck(t *testing.T) {
 	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
 	rtt := uint16(332)
-	wm, err := newAck([]ack{{1, 1}, {3, 5}}, 10240, &rtt, p)
+	wm, err := newAck([]Ack{{1, 1}, {3, 5}}, 10240, &rtt, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 
@@ -70,10 +70,10 @@ func TestAck(t *testing.T) {
 	assert.Equal(t, int32(-1), wmOut.seq)
 	assert.Equal(t, ACK, wmOut.messageType())
 	assert.Equal(t, 2, len(a))
-	assert.Equal(t, int32(1), a[0].start)
-	assert.Equal(t, int32(1), a[0].end)
-	assert.Equal(t, int32(3), a[1].start)
-	assert.Equal(t, int32(5), a[1].end)
+	assert.Equal(t, int32(1), a[0].Start)
+	assert.Equal(t, int32(1), a[0].End)
+	assert.Equal(t, int32(3), a[1].Start)
+	assert.Equal(t, int32(5), a[1].End)
 	assert.Equal(t, int32(10240), rxPortalSz)
 	assert.NotNil(t, rttOut)
 	assert.Equal(t, rtt, *rttOut)
@@ -81,7 +81,7 @@ func TestAck(t *testing.T) {
 
 func TestAckNoRTT(t *testing.T) {
 	p := newPool("test", 1024, NewNilInstrument().NewInstance("", nil))
-	wm, err := newAck([]ack{{63, 64}}, 0, nil, p)
+	wm, err := newAck([]Ack{{63, 64}}, 0, nil, p)
 	assert.NoError(t, err)
 	fmt.Println(hex.Dump(wm.buffer.data[:wm.buffer.uz]))
 
@@ -92,8 +92,8 @@ func TestAckNoRTT(t *testing.T) {
 	assert.Equal(t, int32(-1), wmOut.seq)
 	assert.Equal(t, ACK, wmOut.messageType())
 	assert.Equal(t, 1, len(a))
-	assert.Equal(t, int32(63), a[0].start)
-	assert.Equal(t, int32(64), a[0].end)
+	assert.Equal(t, int32(63), a[0].Start)
+	assert.Equal(t, int32(64), a[0].End)
 	assert.Equal(t, int32(0), rxPortalSz)
 	assert.Nil(t, rttOut)
 }

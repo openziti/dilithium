@@ -119,13 +119,13 @@ func (self *txPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	return n, nil
 }
 
-func (self *txPortal) ack(acks []ack) error {
+func (self *txPortal) ack(acks []Ack) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
 	lastTxPortalSz := self.txPortalSz
 	for _, ack := range acks {
-		for seq := ack.start; seq <= ack.end; seq++ {
+		for seq := ack.Start; seq <= ack.End; seq++ {
 			if v, found := self.tree.Get(seq); found {
 				wm := v.(*wireMessage)
 				self.monitor.remove(wm)

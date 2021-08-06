@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var sampleAcks []ack
+var sampleAcks []Ack
 var benchmarkData []byte
 
 func init() {
@@ -17,17 +17,17 @@ func init() {
 	for i := 0; i < 127; i++ {
 		flip := rand.Intn(2)
 		if flip == 1 {
-			sampleAcks = append(sampleAcks, ack{rand.Int31(), rand.Int31()})
+			sampleAcks = append(sampleAcks, Ack{rand.Int31(), rand.Int31()})
 		} else {
 			value := rand.Int31()
-			sampleAcks = append(sampleAcks, ack{value, value})
+			sampleAcks = append(sampleAcks, Ack{value, value})
 		}
 	}
 	benchmarkData = make([]byte, 1+(127*8))
 }
 
 func TestSingleEqualAck(t *testing.T) {
-	acksIn := []ack{{99, 99}}
+	acksIn := []Ack{{99, 99}}
 
 	data := make([]byte, 4)
 	sz, err := EncodeAcks(acksIn, data)
@@ -43,7 +43,7 @@ func TestSingleEqualAck(t *testing.T) {
 }
 
 func TestSingleRangeAck(t *testing.T) {
-	acksIn := []ack{{1, 112}}
+	acksIn := []Ack{{1, 112}}
 
 	data := make([]byte, 1+8)
 	sz, err := EncodeAcks(acksIn, data)
@@ -59,7 +59,7 @@ func TestSingleRangeAck(t *testing.T) {
 }
 
 func TestSingleRangeSingle(t *testing.T) {
-	acksIn := []ack{{66, 66}, {69, 99}, {111, 111}}
+	acksIn := []Ack{{66, 66}, {69, 99}, {111, 111}}
 
 	data := make([]byte, 1+4+8+4)
 	sz, err := EncodeAcks(acksIn, data)

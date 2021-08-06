@@ -201,11 +201,11 @@ func (self *dialerConn) hello() error {
 			return errors.New("unexpected protocol version")
 		}
 
-		if len(acks) == 1 && acks[0].start == acks[0].end && acks[0].start == helloSeq {
+		if len(acks) == 1 && acks[0].Start == acks[0].End && acks[0].Start == helloSeq {
 			// Set next highest sequence
 			self.rxPortal.setAccepted(helloAck.seq)
 
-			finalAcks := []ack{{helloAck.seq, helloAck.seq}}
+			finalAcks := []Ack{{helloAck.seq, helloAck.seq}}
 			finalAck, err := newAck(finalAcks, 0, nil, self.pool)
 			if err != nil {
 				return errors.Wrap(err, "new final ack")

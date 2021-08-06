@@ -183,7 +183,7 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 		wm.buffer.unref()
 
 		helloAckSeq := self.seq.Next()
-		helloAck, err := newHello(helloAckSeq, hello, &ack{wm.seq, wm.seq}, self.pool)
+		helloAck, err := newHello(helloAckSeq, hello, &Ack{wm.seq, wm.seq}, self.pool)
 		if err != nil {
 			err = errors.Wrap(err, "new hello")
 			self.ii.ConnectionError(self.peer, err)
@@ -217,8 +217,8 @@ func (self *listenerConn) hello(wm *wireMessage) error {
 				}
 				if ack, _, _, err := ackWm.asAck(); err == nil {
 					if len(ack) == 1 {
-						if ack[0].start != helloAckSeq {
-							logrus.Errorf("invalid hello ack sequence (%d != %d)", ack[0].start, helloAckSeq)
+						if ack[0].Start != helloAckSeq {
+							logrus.Errorf("invalid hello ack sequence (%d != %d)", ack[0].Start, helloAckSeq)
 							continue
 						}
 

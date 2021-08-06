@@ -271,13 +271,13 @@ func (self *traceInstrumentInstance) decode(wm *wireMessage) (string, error) {
 	}
 }
 
-func (self *traceInstrumentInstance) decodeAcks(acks []ack) string {
+func (self *traceInstrumentInstance) decodeAcks(acks []Ack) string {
 	out := ""
 	for _, ack := range acks {
-		if ack.start == ack.end {
-			out += fmt.Sprintf(" @%d", ack.start)
+		if ack.Start == ack.End {
+			out += fmt.Sprintf(" @%d", ack.Start)
 		} else {
-			out += fmt.Sprintf(" @%d:%d", ack.start, ack.end)
+			out += fmt.Sprintf(" @%d:%d", ack.Start, ack.End)
 		}
 	}
 	return strings.TrimSpace(out)
