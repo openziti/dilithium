@@ -27,7 +27,7 @@ const ackSeriesMarker = uint8(1 << 7)
 const sequenceRangeMarker = uint32(1 << 31)
 const sequenceRangeInvert = 0xFFFFFFFF ^ sequenceRangeMarker
 
-func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
+func EncodeAcks(acks []ack, data []byte) (n uint32, err error) {
 	if len(acks) < 1 {
 		return 0, nil
 	}
@@ -78,7 +78,7 @@ func encodeAcks(acks []ack, data []byte) (n uint32, err error) {
 	return i, nil
 }
 
-func decodeAcks(data []byte) (acks []ack, sz uint32, err error) {
+func DecodeAcks(data []byte) (acks []ack, sz uint32, err error) {
 	dataSz := uint32(len(data))
 	if dataSz < 4 {
 		return nil, 0, errors.Errorf("short ack buffer [%d < 4]", dataSz)

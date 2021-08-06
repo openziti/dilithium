@@ -79,7 +79,7 @@ func newHello(seq int32, h hello, a *ack, p *pool) (wm *wireMessage, err error) 
 	var helloSz uint32
 	if a != nil {
 		wm.setFlag(INLINE_ACK)
-		acksSz, err = encodeAcks([]ack{*a}, wm.buffer.data[dataStart:])
+		acksSz, err = EncodeAcks([]ack{*a}, wm.buffer.data[dataStart:])
 		if err != nil {
 			return nil, errors.Wrap(err, "error encoding hello ack")
 		}
@@ -97,7 +97,7 @@ func (self *wireMessage) asHello() (h hello, a []ack, err error) {
 	}
 	i := uint32(0)
 	if self.hasFlag(INLINE_ACK) {
-		a, i, err = decodeAcks(self.buffer.data[dataStart:])
+		a, i, err = DecodeAcks(self.buffer.data[dataStart:])
 		if err != nil {
 			return hello{}, nil, errors.Wrap(err, "error decoding acks")
 		}
@@ -126,7 +126,7 @@ func newAck(acks []ack, rxPortalSz int32, rtt *uint16, p *pool) (wm *wireMessage
 	}
 	acksSz := uint32(0)
 	if len(acks) > 0 {
-		acksSz, err = encodeAcks(acks, wm.buffer.data[dataStart+rttSz:])
+		acksSz, err = EncodeAcks(acks, wm.buffer.data[dataStart+rttSz:])
 		if err != nil {
 			return nil, errors.Wrap(err, "error encoding acks")
 		}
@@ -152,7 +152,7 @@ func (self *wireMessage) asAck() (a []ack, rxPortalSz int32, rtt *uint16, err er
 		i += 2
 	}
 	var acksSz uint32
-	a, acksSz, err = decodeAcks(self.buffer.data[dataStart+i:])
+	a, acksSz, err = DecodeAcks(self.buffer.data[dataStart+i:])
 	if err != nil {
 		return nil, 0, nil, errors.Wrap(err, "error decoding acks")
 	}

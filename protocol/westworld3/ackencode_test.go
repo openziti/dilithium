@@ -30,14 +30,14 @@ func TestSingleEqualAck(t *testing.T) {
 	acksIn := []ack{{99, 99}}
 
 	data := make([]byte, 4)
-	sz, err := encodeAcks(acksIn, data)
+	sz, err := EncodeAcks(acksIn, data)
 	assert.NoError(t, err)
 	assert.Equal(t, uint32(4), sz)
 	assert.Zero(t, data[0]&ackSeriesMarker)
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, _, err := decodeAcks(data)
+	acksOut, _, err := DecodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, acksIn, acksOut)
 }
@@ -46,14 +46,14 @@ func TestSingleRangeAck(t *testing.T) {
 	acksIn := []ack{{1, 112}}
 
 	data := make([]byte, 1+8)
-	sz, err := encodeAcks(acksIn, data)
+	sz, err := EncodeAcks(acksIn, data)
 	assert.NoError(t, err)
 	assert.Equal(t, uint32(1+8), sz)
 	assert.Equal(t, ackSeriesMarker, data[0]&ackSeriesMarker)
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, _, err := decodeAcks(data)
+	acksOut, _, err := DecodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, acksIn, acksOut)
 }
@@ -62,34 +62,34 @@ func TestSingleRangeSingle(t *testing.T) {
 	acksIn := []ack{{66, 66}, {69, 99}, {111, 111}}
 
 	data := make([]byte, 1+4+8+4)
-	sz, err := encodeAcks(acksIn, data)
+	sz, err := EncodeAcks(acksIn, data)
 	assert.NoError(t, err)
 	assert.Equal(t, uint32(1+4+8+4), sz)
 	assert.Equal(t, ackSeriesMarker, data[0]&ackSeriesMarker)
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, _, err := decodeAcks(data)
+	acksOut, _, err := DecodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, acksIn, acksOut)
 }
 
 func TestFull127(t *testing.T) {
 	data := make([]byte, 1+(127*8)) // max, if all 127 acks in series are ranges
-	_, err := encodeAcks(sampleAcks, data)
+	_, err := EncodeAcks(sampleAcks, data)
 	assert.NoError(t, err)
 	assert.Equal(t, ackSeriesMarker, data[0]&ackSeriesMarker)
 
 	fmt.Println(hex.Dump(data))
 
-	acksOut, _, err := decodeAcks(data)
+	acksOut, _, err := DecodeAcks(data)
 	assert.NoError(t, err)
 	assert.EqualValues(t, sampleAcks, acksOut)
 }
 
 func benchmarkAckEncoder(sz int, b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := encodeAcks(sampleAcks[0:sz], benchmarkData)
+		_, err := EncodeAcks(sampleAcks[0:sz], benchmarkData)
 		if err != nil {
 			panic(err)
 		}
@@ -104,11 +104,11 @@ func BenchmarkAckEncoder127(b *testing.B) { benchmarkAckEncoder(127, b) }
 
 func benchmarkAckEncoderDecoder(sz int, b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := encodeAcks(sampleAcks[0:sz], benchmarkData)
+		_, err := EncodeAcks(sampleAcks[0:sz], benchmarkData)
 		if err != nil {
 			panic(err)
 		}
-		_, _, err = decodeAcks(benchmarkData)
+		_, _, err = DecodeAcks(benchmarkData)
 		if err != nil {
 			panic(err)
 		}
