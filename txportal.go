@@ -15,6 +15,7 @@ type TxPortal struct {
 	alg          TxAlgorithm
 	monitor      *TxMonitor
 	closer       *Closer
+	transport    Transport
 }
 
 type TxAlgorithm interface {
