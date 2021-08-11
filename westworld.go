@@ -1,24 +1,24 @@
 package dilithium
 
-func NewWestAlgorithm(pf *WestProfile, txPortal *TxPortal) TxAlgorithm {
-	return &WestAlgorithm{pf, txPortal}
+func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm {
+	return &WestworldAlgorithm{pf, txPortal}
 }
 
-type WestAlgorithm struct {
-	pf       *WestProfile
+type WestworldAlgorithm struct {
+	pf       *WestworldProfile
 	txPortal *TxPortal
 }
 
-func (self *WestAlgorithm) Success() {
+func (self *WestworldAlgorithm) Success() {
 }
 
-func (self *WestAlgorithm) DuplicateAck() {
+func (self *WestworldAlgorithm) DuplicateAck() {
 }
 
-func (self *WestAlgorithm) Retransmission() {
+func (self *WestworldAlgorithm) Retransmission() {
 }
 
-type WestProfile struct {
+type WestworldProfile struct {
 	StartSize           int
 	MinSize             int
 	MaxSize             int
@@ -33,8 +33,8 @@ type WestProfile struct {
 	RxSizePressureScale float64
 }
 
-func NewBaselineWestProfile() *WestProfile {
-	return &WestProfile{
+func NewBaselineWestworldProfile() *WestworldProfile {
+	return &WestworldProfile{
 		StartSize:           96 * 1024,
 		MinSize:             16 * 1024,
 		MaxSize:             4 * 1024 * 1024,
