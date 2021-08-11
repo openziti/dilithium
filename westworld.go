@@ -1,12 +1,14 @@
 package dilithium
 
-func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm {
-	return &WestworldAlgorithm{pf, txPortal}
-}
-
+// WestworldAlgorithm implements the latest iteration of "westworld"-style flow control.
+//
 type WestworldAlgorithm struct {
 	pf       *WestworldProfile
 	txPortal *TxPortal
+}
+
+func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm {
+	return &WestworldAlgorithm{pf, txPortal}
 }
 
 func (self *WestworldAlgorithm) Success() {
