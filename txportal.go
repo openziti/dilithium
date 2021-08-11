@@ -6,10 +6,15 @@ import (
 )
 
 type TxPortal struct {
-	lock     *sync.Mutex
-	tree     *btree.Tree
-	capacity int
-	ready    *sync.Cond
+	lock         *sync.Mutex
+	tree         *btree.Tree
+	capacity     int
+	ready        *sync.Cond
+	txPortalSize int
+	rxPortalSize int
+	alg          TxAlgorithm
+	monitor      *TxMonitor
+	closer       *Closer
 }
 
 type TxAlgorithm interface {
