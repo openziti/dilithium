@@ -51,6 +51,22 @@ func readWireMessage(t Transport, pool *Pool) (wm *WireMessage, err error) {
 	return
 }
 
+func writeWireMessage(wm *WireMessage, t Transport) error {
+	if wm.buf.Used < dataStart {
+		return errors.New("truncated buffer")
+	}
+
+	n, err := t.Write(wm.buf.Data[:wm.buf.Used])
+	if err != nil {
+		return errors.Wrap(err, "write")
+	}
+	if uint32(n) != wm.buf.Used {
+		return errors.Errorf("short write [%d != %d]", n, wm.buf.Used)
+	}
+
+	return nil
+}
+
 func (wm *WireMessage) encodeHeader(dataSize uint16) (*WireMessage, error) {
 	if wm.buf.Size < uint32(dataStart+dataSize) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", wm.buf.Size, dataStart+dataSize)
