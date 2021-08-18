@@ -145,3 +145,7 @@ func (wm *WireMessage) hasFlag(flag messageFlag) bool {
 	}
 	return false
 }
+
+func (wm *WireMessage) clearFlag(flag messageFlag) {
+	wm.Mt = messageType(uint8(wm.Mt) ^ uint8(flag))
+}
