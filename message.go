@@ -67,6 +67,46 @@ func writeWireMessage(wm *WireMessage, t Transport) error {
 	return nil
 }
 
+func newHello(seq int32, h hello, a *Ack, p *Pool) (wm *WireMessage, err error) {
+	wm = &WireMessage{
+		Seq: seq,
+		Mt:  HELLO,
+		buf: p.Get(),
+	}
+	var ackSize uint32
+	var helloSize uint32
+	if a != nil {
+		wm.setFlag(INLINE_ACK)
+		ackSize, err = EncodeAcks([]Ack{*a}, wm.buf.Data[dataStart:])
+		if err != nil {
+			return nil, errors.Wrap(err, "error encoding hello ack")
+		}
+	}
+	helloSize, err = encodeHello(h, wm.buf.Data[dataStart+ackSize:])
+	if err != nil {
+		return nil, errors.Wrap(err, "error encoding hello")
+	}
+	return wm.encodeHeader(uint16(ackSize + helloSize))
+}
+
+func (wm *WireMessage) asHello() (h hello, a []Ack, err error) {
+	if wm.messageType() != HELLO {
+		return hello{}, nil, errors.Errorf("unexpected message type [%d], expected HELLO", wm.messageType())
+	}
+	i := uint32(0)
+	if wm.hasFlag(INLINE_ACK) {
+		a, i, err = DecodeAcks(wm.buf.Data[dataStart:])
+		if err != nil {
+			return hello{}, nil, errors.Wrap(err, "error decoding acks")
+		}
+	}
+	h, _, err = decodeHello(wm.buf.Data[dataStart+i:])
+	if err != nil {
+		return hello{}, nil, errors.Wrap(err, "error decoding hello")
+	}
+	return
+}
+
 func (wm *WireMessage) encodeHeader(dataSize uint16) (*WireMessage, error) {
 	if wm.buf.Size < uint32(dataStart+dataSize) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", wm.buf.Size, dataStart+dataSize)
@@ -89,4 +129,19 @@ func decodeHeader(buf *Buffer) (*WireMessage, error) {
 		buf: buf,
 	}
 	return wm, nil
+}
+
+func (wm *WireMessage) messageType() messageType {
+	return messageType(byte(wm.Mt) & messageTypeMask)
+}
+
+func (wm *WireMessage) setFlag(flag messageFlag) {
+	wm.Mt = messageType(uint8(wm.Mt) | uint8(flag))
+}
+
+func (wm *WireMessage) hasFlag(flag messageFlag) bool {
+	if uint8(wm.Mt)&uint8(flag) > 0 {
+		return true
+	}
+	return false
 }
