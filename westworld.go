@@ -11,13 +11,19 @@ func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm
 	return &WestworldAlgorithm{pf, txPortal}
 }
 
-func (self *WestworldAlgorithm) Success() {
+func (self *WestworldAlgorithm) Ready() {
+}
+
+func (self *WestworldAlgorithm) Tx(size int) {
+}
+
+func (self *WestworldAlgorithm) Success(size int) {
 }
 
 func (self *WestworldAlgorithm) DuplicateAck() {
 }
 
-func (self *WestworldAlgorithm) Retransmission() {
+func (self *WestworldAlgorithm) Retransmission(size int) {
 }
 
 type WestworldProfile struct {
