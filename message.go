@@ -162,6 +162,56 @@ func (wm *WireMessage) asAck() (a []Ack, rxPortalSize int32, rtt *uint16, err er
 	return
 }
 
+func newData(seq int32, rtt *uint16, data []byte, pool *Pool) (wm *WireMessage, err error) {
+	dataSize := uint32(len(data))
+	wm = &WireMessage{
+		Seq: seq,
+		Mt:  DATA,
+		buf: pool.Get(),
+	}
+	rttSize := uint32(0)
+	if rtt != nil {
+		if wm.buf.Size < dataStart+2 {
+			return nil, errors.Errorf("short buffer for rtt [%d < %d]", wm.buf.Size, dataStart+2)
+		}
+		wm.setFlag(RTT)
+		util.WriteUint16(wm.buf.Data[dataStart:], *rtt)
+		rttSize = 2
+	}
+	if wm.buf.Size < dataStart+rttSize+dataSize {
+		return nil, errors.Errorf("short buffer for data [%d < %d]", wm.buf.Size, dataStart+rttSize+dataSize)
+	}
+	copy(wm.buf.Data[dataStart+rttSize:], data)
+	return wm.encodeHeader(uint16(rttSize + dataSize))
+}
+
+func (wm *WireMessage) asData() (data []byte, rtt *uint16, err error) {
+	if wm.messageType() != DATA {
+		return nil, nil, errors.Errorf("unexpected message type [%d], expected DATA", wm.messageType())
+	}
+	rttSize := uint32(0)
+	if wm.hasFlag(RTT) {
+		if wm.buf.Used < dataStart+2 {
+			return nil, nil, errors.Errorf("short buffer for data decode [%d < %d]", wm.buf.Used, dataStart+2)
+		}
+		rtt = new(uint16)
+		*rtt = util.ReadUint16(wm.buf.Data[dataStart:])
+		rttSize = 2
+	}
+	return wm.buf.Data[dataStart+rttSize : wm.buf.Used], rtt, nil
+}
+
+func (wm *WireMessage) asDataSize() (size uint32, err error) {
+	if wm.messageType() != DATA {
+		return 0, errors.Errorf("unexpected message type [%d], expected DATA", wm.messageType())
+	}
+	rttSize := uint32(0)
+	if wm.hasFlag(RTT) {
+		rttSize = 2
+	}
+	return wm.buf.Used - (dataStart + rttSize), nil
+}
+
 func (wm *WireMessage) encodeHeader(dataSize uint16) (*WireMessage, error) {
 	if wm.buf.Size < uint32(dataStart+dataSize) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", wm.buf.Size, dataStart+dataSize)

@@ -174,7 +174,7 @@ func newData(seq int32, rtt *uint16, data []byte, p *pool) (wm *wireMessage, err
 	rttSz := uint32(0)
 	if rtt != nil {
 		if wm.buffer.sz < dataStart+2 {
-			return nil, errors.Errorf("short buffer for rtt [%d < %d]", wm.buffer.sz, wm.buffer.sz+dataStart+2)
+			return nil, errors.Errorf("short buffer for rtt [%d < %d]", wm.buffer.sz, dataStart+2)
 		}
 		wm.setFlag(RTT)
 		util.WriteUint16(wm.buffer.data[dataStart:], *rtt)
