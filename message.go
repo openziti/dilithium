@@ -233,6 +233,10 @@ func newKeepalive(rxPortalSize int, pool *Pool) (wm *WireMessage, err error) {
 	return wm.encodeHeader(4)
 }
 
+func newClose(seq int32, pool *Pool) (wm *WireMessage, err error) {
+	return (&WireMessage{Seq: seq, Mt: CLOSE, buf: pool.Get()}).encodeHeader(0)
+}
+
 func (wm *WireMessage) asKeepalive() (rxPortalSize int, err error) {
 	if wm.messageType() != KEEPALIVE {
 		return 0, errors.Errorf("unexpected message type [%d], expected KEEPALIVE", wm.messageType())
