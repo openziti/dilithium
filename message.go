@@ -107,6 +107,61 @@ func (wm *WireMessage) asHello() (h hello, a []Ack, err error) {
 	return
 }
 
+func newAck(acks []Ack, rxPortalSize int32, rtt *uint16, pool *Pool) (wm *WireMessage, err error) {
+	wm = &WireMessage{
+		Seq: -1,
+		Mt:  ACK,
+		buf: pool.Get(),
+	}
+	rttSize := uint32(0)
+	if rtt != nil {
+		if wm.buf.Size < dataStart+2 {
+			return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buf.Size, dataStart+2)
+		}
+		wm.setFlag(RTT)
+		util.WriteUint16(wm.buf.Data[dataStart:], *rtt)
+		rttSize = 2
+	}
+	ackSize := uint32(0)
+	if len(acks) > 0 {
+		ackSize, err = EncodeAcks(acks, wm.buf.Data[dataStart+rttSize:])
+		if err != nil {
+			return nil, errors.Wrap(err, "error encoding acks")
+		}
+	}
+	if dataStart+rttSize+ackSize > wm.buf.Size {
+		return nil, errors.Errorf("short buffer for ack [%d < %d]", wm.buf.Size, dataStart+rttSize+ackSize)
+	}
+	util.WriteInt32(wm.buf.Data[dataStart+rttSize+ackSize:], rxPortalSize)
+	return wm.encodeHeader(uint16(rttSize + ackSize + 4))
+}
+
+func (wm *WireMessage) asAck() (a []Ack, rxPortalSize int32, rtt *uint16, err error) {
+	if wm.messageType() != ACK {
+		return nil, 0, nil, errors.Errorf("unexpected message type [%d], expected ACK", wm.messageType())
+	}
+	i := uint32(0)
+	if wm.hasFlag(RTT) {
+		if wm.buf.Used < dataStart+2 {
+			return nil, 0, nil, errors.Errorf("short buffer for ack decode [%d < %d]", wm.buf.Used, dataStart+2)
+		}
+		rtt = new(uint16)
+		*rtt = util.ReadUint16(wm.buf.Data[dataStart:])
+		i += 2
+	}
+	var ackSize uint32
+	a, ackSize, err = DecodeAcks(wm.buf.Data[dataStart+i:])
+	if err != nil {
+		return nil, 0, nil, errors.Wrap(err, "error decoding acks")
+	}
+	i += ackSize
+	if wm.buf.Used < i+4 {
+		return nil, 0, nil, errors.Errorf("short buffer for rxPortalSize decode [%d < %d]", wm.buf.Used, i+4)
+	}
+	rxPortalSize = util.ReadInt32(wm.buf.Data[dataStart+i:])
+	return
+}
+
 func (wm *WireMessage) encodeHeader(dataSize uint16) (*WireMessage, error) {
 	if wm.buf.Size < uint32(dataStart+dataSize) {
 		return nil, errors.Errorf("short buffer for encode [%d < %d]", wm.buf.Size, dataStart+dataSize)
