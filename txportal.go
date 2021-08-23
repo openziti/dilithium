@@ -13,6 +13,9 @@ type TxAlgorithm interface {
 	Success(int)
 	DuplicateAck()
 	Retransmission(int)
+	UpdateRTT(rttMs int)
+	RetxMs() int
+	RetxBatchMs() int
 }
 
 // TxPortal manages the outgoing data transmitted by a communication instance. It is one half of a TxPortal->RxPortal

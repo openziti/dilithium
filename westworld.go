@@ -26,6 +26,17 @@ func (self *WestworldAlgorithm) DuplicateAck() {
 func (self *WestworldAlgorithm) Retransmission(size int) {
 }
 
+func (self *WestworldAlgorithm) UpdateRTT(rttMs int) {
+}
+
+func (self *WestworldAlgorithm) RetxMs() int {
+	return 200
+}
+
+func (self *WestworldAlgorithm) RetxBatchMs() int {
+	return 2
+}
+
 type WestworldProfile struct {
 	StartSize           int
 	MinSize             int
