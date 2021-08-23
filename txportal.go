@@ -35,6 +35,6 @@ func newTxPortal(transport Transport, alg TxAlgorithm, closer *Closer, pool *Poo
 		alg:       alg,
 		closer:    closer,
 	}
-	// txp.monitor =
+	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.transport)
 	return txp
 }
