@@ -123,6 +123,7 @@ func (txp *TxPortal) ack(acks []Ack) error {
 			}
 		}
 	}
+	return nil
 }
 
 func (txp *TxPortal) keepaliveSender() {
