@@ -11,9 +11,6 @@ func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm
 	return &WestworldAlgorithm{pf, txPortal}
 }
 
-func (self *WestworldAlgorithm) Ready(size int) {
-}
-
 func (self *WestworldAlgorithm) Tx(size int) {
 }
 
@@ -24,6 +21,10 @@ func (self *WestworldAlgorithm) DuplicateAck() {
 }
 
 func (self *WestworldAlgorithm) Retransmission(size int) {
+}
+
+func (self *WestworldAlgorithm) ProbeRTT() bool {
+	return false
 }
 
 func (self *WestworldAlgorithm) UpdateRTT(rttMs int) {

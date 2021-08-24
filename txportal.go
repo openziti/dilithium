@@ -3,7 +3,11 @@ package dilithium
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
+	"github.com/openziti/dilithium/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io"
+	"math"
 	"sync"
 	"time"
 )
@@ -42,6 +46,49 @@ func (txp *TxPortal) start() {
 	if txp.alg.Profile().SendKeepalive {
 		go txp.keepaliveSender()
 	}
+}
+
+func (txp *TxPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
+	txp.lock.Lock()
+	defer txp.lock.Unlock()
+
+	if txp.closed {
+		return -1, io.EOF
+	}
+
+	remaining := len(p)
+	n = 0
+	for remaining > 0 {
+		segmentSize := int(math.Min(float64(remaining), float64(txp.alg.Profile().MaxSegmentSize)))
+
+		var rtt *uint16
+		if txp.alg.ProbeRTT() {
+			now := time.Now()
+			rtt = new(uint16)
+			*rtt = uint16(now.UnixNano() / int64(time.Millisecond))
+			segmentSize -= 2
+		}
+
+		txp.alg.Tx(segmentSize)
+
+		wm, err := newData(seq.Next(), rtt, p[n:n+segmentSize], txp.pool)
+		if err != nil {
+			return 0, errors.Wrap(err, "new data")
+		}
+		txp.tree.Put(wm.Seq, wm)
+
+		if err := writeWireMessage(wm, txp.transport); err != nil {
+			return 0, errors.Wrap(err, "tx")
+		}
+		txp.lastTx = time.Now()
+
+		txp.monitor.add(wm)
+
+		n += segmentSize
+		remaining -= segmentSize
+	}
+
+	return n, nil
 }
 
 func (txp *TxPortal) keepaliveSender() {
