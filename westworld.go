@@ -33,8 +33,12 @@ func (self *WestworldAlgorithm) RetxMs() int {
 	return 200
 }
 
-func (self *WestworldAlgorithm) RetxBatchMs() int {
-	return 2
+func (self *WestworldAlgorithm) RxPortalSize() int {
+	return 0
+}
+
+func (self *WestworldAlgorithm) Profile() *TxProfile {
+	return nil
 }
 
 type WestworldProfile struct {

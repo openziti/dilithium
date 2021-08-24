@@ -91,7 +91,7 @@ func (txm *TxMonitor) run() {
 				for ; i < x; i ++ {
 					_, t := txm.waitlist.Peek()
 					delta := t.Sub(headline).Milliseconds()
-					if delta <= int64(txm.alg.RetxBatchMs()) {
+					if delta <= int64(txm.alg.Profile().RetxBatchMs) {
 						wm, _ := txm.waitlist.Next()
 						if wm.hasFlag(RTT) {
 							util.WriteUint16(wm.buf.Data[dataStart:], uint16(time.Now().UnixNano()/int64(time.Millisecond)))
