@@ -11,7 +11,7 @@ func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm
 	return &WestworldAlgorithm{pf, txPortal}
 }
 
-func (self *WestworldAlgorithm) Ready() {
+func (self *WestworldAlgorithm) Ready(size int) {
 }
 
 func (self *WestworldAlgorithm) Tx(size int) {

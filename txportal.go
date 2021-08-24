@@ -1,6 +1,7 @@
 package dilithium
 
 import (
+	"github.com/emirpasic/gods/trees/btree"
 	"sync"
 )
 
@@ -8,7 +9,7 @@ import (
 // instance.
 //
 type TxAlgorithm interface {
-	Ready()
+	Ready(int)
 	Tx(int)
 	Success(int)
 	DuplicateAck()
@@ -24,6 +25,7 @@ type TxAlgorithm interface {
 //
 type TxPortal struct {
 	lock      *sync.Mutex
+	tree      *btree.Tree
 	transport Transport
 	alg       TxAlgorithm
 	monitor   *TxMonitor
