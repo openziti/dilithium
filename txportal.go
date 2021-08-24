@@ -91,6 +91,40 @@ func (txp *TxPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 	return n, nil
 }
 
+func (txp *TxPortal) ack(acks []Ack) error {
+	txp.lock.Lock()
+	defer txp.lock.Unlock()
+
+	for _, ack := range acks {
+		for seq := ack.Start; seq <= ack.End; seq++ {
+			if v, found := txp.tree.Get(seq); found {
+				wm := v.(*WireMessage)
+				txp.monitor.remove(wm)
+				txp.tree.Remove(seq)
+
+				switch wm.messageType() {
+				case DATA:
+					size, err := wm.asDataSize()
+					if err != nil {
+						return errors.Wrap(err, "internal tree error")
+					}
+					txp.alg.Success(int(size))
+
+				case CLOSE:
+					//
+
+				default:
+					logrus.Warnf("acked suspicious message type in tree [%d]", wm.messageType())
+				}
+				wm.buf.Unref()
+
+			} else {
+				txp.alg.DuplicateAck()
+			}
+		}
+	}
+}
+
 func (txp *TxPortal) keepaliveSender() {
 	logrus.Info("started")
 	defer logrus.Info("exited")
