@@ -59,3 +59,13 @@ type TxProfile struct {
 	ConnectionTimeout time.Duration
 	MaxTreeSize       int
 }
+
+func DefaultTxProfile() *TxProfile {
+	return &TxProfile{
+		MaxSegmentSize:    1450,
+		RetxBatchMs:       2,
+		SendKeepalive:     true,
+		ConnectionTimeout: 15000,
+		MaxTreeSize:       64 * 1024,
+	}
+}

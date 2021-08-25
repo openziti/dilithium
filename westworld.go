@@ -157,6 +157,7 @@ type WestworldProfile struct {
 	RxSizePressureScale float64
 	RttProbeMs          int
 	RttProbeAvg         int
+	Txpf                *TxProfile
 }
 
 func NewBaselineWestworldProfile() *WestworldProfile {
@@ -177,5 +178,6 @@ func NewBaselineWestworldProfile() *WestworldProfile {
 		RxSizePressureScale: 2.8911,
 		RttProbeMs:          50,
 		RttProbeAvg:         8,
+		Txpf:                DefaultTxProfile(),
 	}
 }
