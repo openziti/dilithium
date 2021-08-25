@@ -88,7 +88,7 @@ func (txm *TxMonitor) run() {
 			if txm.waitlist.Size() > 0 {
 				i := 0
 				x := txm.waitlist.Size()
-				for ; i < x; i ++ {
+				for ; i < x; i++ {
 					_, t := txm.waitlist.Peek()
 					delta := t.Sub(headline).Milliseconds()
 					if delta <= int64(txm.alg.Profile().RetxBatchMs) {
