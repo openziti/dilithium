@@ -1,48 +1,108 @@
 package dilithium
 
+import (
+	"math"
+	"sync"
+	"time"
+)
+
 // WestworldAlgorithm implements the latest iteration of "westworld"-style flow control.
 //
 type WestworldAlgorithm struct {
+	capacity           int
+	txPortalSize       int
+	rxPortalSize       int
+	successCount       int
+	successAccumulator int
+	dupAckCount        int
+	retxCount          int
+	lastRttProbe       time.Time
+
 	pf       *WestworldProfile
 	txPortal *TxPortal
+	lock     *sync.Mutex
+	ready    *sync.Cond
 }
 
 func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm {
-	return &WestworldAlgorithm{pf, txPortal}
+	wa := &WestworldAlgorithm{
+		capacity:           pf.StartSize,
+		txPortalSize:       0,
+		rxPortalSize:       0,
+		successCount:       0,
+		successAccumulator: 0,
+		dupAckCount:        0,
+		retxCount:          0,
+		lastRttProbe:       time.Time{},
+
+		pf:       pf,
+		txPortal: txPortal,
+		lock:     new(sync.Mutex),
+	}
+	wa.ready = sync.NewCond(wa.lock)
+	return wa
 }
 
-func (self *WestworldAlgorithm) Tx(size int) {
+func (wa *WestworldAlgorithm) Tx(segmentSize int) {
+	for !wa.availableCapacity(segmentSize) {
+		wa.ready.Wait()
+	}
+	wa.txPortalSize += segmentSize
 }
 
-func (self *WestworldAlgorithm) Success(size int) {
+func (wa *WestworldAlgorithm) Success(segmentSize int) {
+	wa.txPortalSize -= segmentSize
+	wa.successCount++
+	if wa.successCount == wa.pf.SuccessThresh {
+		wa.updateCapacity(wa.capacity + int(float64(wa.successAccumulator)*wa.pf.SuccessScale))
+		wa.successCount = 0
+		wa.successAccumulator = 0
+	}
+	wa.ready.Broadcast()
 }
 
-func (self *WestworldAlgorithm) DuplicateAck() {
+func (wa *WestworldAlgorithm) DuplicateAck() {
 }
 
-func (self *WestworldAlgorithm) Retransmission(size int) {
+func (wa *WestworldAlgorithm) Retransmission(segmentSize int) {
 }
 
-func (self *WestworldAlgorithm) ProbeRTT() bool {
+func (wa *WestworldAlgorithm) ProbeRTT() bool {
 	return false
 }
 
-func (self *WestworldAlgorithm) UpdateRTT(rttMs int) {
+func (wa *WestworldAlgorithm) UpdateRTT(rttMs int) {
 }
 
-func (self *WestworldAlgorithm) RetxMs() int {
+func (wa *WestworldAlgorithm) RetxMs() int {
 	return 200
 }
 
-func (self *WestworldAlgorithm) RxPortalSize() int {
+func (wa *WestworldAlgorithm) RxPortalSize() int {
 	return 0
 }
 
-func (self *WestworldAlgorithm) UpdateRxPortalSize(int) {
+func (wa *WestworldAlgorithm) UpdateRxPortalSize(int) {
 }
 
-func (self *WestworldAlgorithm) Profile() *TxProfile {
+func (wa *WestworldAlgorithm) Profile() *TxProfile {
 	return nil
+}
+
+func (wa *WestworldAlgorithm) availableCapacity(segmentSize int) bool {
+	txPortalCapacity := float64(wa.capacity - int(float64(wa.rxPortalSize)*wa.pf.RxSizePressureScale) - (wa.txPortalSize + segmentSize))
+	rxPortalCapacity := float64(wa.capacity - (wa.rxPortalSize + segmentSize))
+	return math.Min(txPortalCapacity, rxPortalCapacity) > 0
+}
+
+func (wa *WestworldAlgorithm) updateCapacity(capacity int) {
+	wa.capacity = capacity
+	if wa.capacity < wa.pf.MinSize {
+		wa.capacity = wa.pf.MinSize
+	}
+	if wa.capacity > wa.pf.MaxSize {
+		wa.capacity = wa.pf.MaxSize
+	}
 }
 
 type WestworldProfile struct {
