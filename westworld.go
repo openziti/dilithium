@@ -38,6 +38,9 @@ func (self *WestworldAlgorithm) RxPortalSize() int {
 	return 0
 }
 
+func (self *WestworldAlgorithm) UpdateRxPortalSize(int) {
+}
+
 func (self *WestworldAlgorithm) Profile() *TxProfile {
 	return nil
 }
