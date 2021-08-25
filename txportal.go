@@ -35,6 +35,7 @@ func newTxPortal(transport Transport, alg TxAlgorithm, closer *Closer, pool *Poo
 		transport: transport,
 		alg:       alg,
 		closer:    closer,
+		pool:      pool,
 	}
 	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.transport)
 	//txp.monitor.setRetxCallback()
