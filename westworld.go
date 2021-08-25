@@ -17,8 +17,11 @@ type WestworldAlgorithm struct {
 	dupAckCount        int
 	retxCount          int
 	lastRttProbe       time.Time
+	rttAvg             []uint16
+	retxMs             int
 
-	pf       *WestworldProfile
+	wpf      *WestworldProfile
+	pf       *TxProfile
 	txPortal *TxPortal
 	lock     *sync.Mutex
 	ready    *sync.Cond
@@ -34,8 +37,9 @@ func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm
 		dupAckCount:        0,
 		retxCount:          0,
 		lastRttProbe:       time.Time{},
+		retxMs:             pf.RetxStartMs,
 
-		pf:       pf,
+		wpf:      pf,
 		txPortal: txPortal,
 		lock:     new(sync.Mutex),
 	}
@@ -53,8 +57,8 @@ func (wa *WestworldAlgorithm) Tx(segmentSize int) {
 func (wa *WestworldAlgorithm) Success(segmentSize int) {
 	wa.txPortalSize -= segmentSize
 	wa.successCount++
-	if wa.successCount == wa.pf.SuccessThresh {
-		wa.updateCapacity(wa.capacity + int(float64(wa.successAccumulator)*wa.pf.SuccessScale))
+	if wa.successCount == wa.wpf.SuccessThresh {
+		wa.updateCapacity(wa.capacity + int(float64(wa.successAccumulator)*wa.wpf.SuccessScale))
 		wa.successCount = 0
 		wa.successAccumulator = 0
 	}
@@ -62,27 +66,58 @@ func (wa *WestworldAlgorithm) Success(segmentSize int) {
 }
 
 func (wa *WestworldAlgorithm) DuplicateAck() {
+	wa.dupAckCount++
+	wa.successCount = 0
+	if wa.dupAckCount >= wa.wpf.DupAckThresh {
+		wa.updateCapacity(int(float64(wa.capacity) * wa.wpf.DupAckCapacityScale))
+		wa.dupAckCount = 0
+		wa.successAccumulator = int(float64(wa.successAccumulator) * wa.wpf.DupAckSuccessScale)
+	}
 }
 
-func (wa *WestworldAlgorithm) Retransmission(segmentSize int) {
+func (wa *WestworldAlgorithm) Retransmission(_ int) {
+	wa.retxCount++
+	wa.successCount = 0
+	if wa.retxCount >= wa.wpf.RetxThresh {
+		wa.updateCapacity(int(float64(wa.capacity) * wa.wpf.RetxCapacityScale))
+		wa.retxCount = 0
+		wa.successAccumulator = int(float64(wa.successAccumulator) * wa.wpf.RetxSuccessScale)
+	}
 }
 
 func (wa *WestworldAlgorithm) ProbeRTT() bool {
+	if time.Since(wa.lastRttProbe).Milliseconds() >= int64(wa.wpf.RttProbeMs) {
+		wa.lastRttProbe = time.Now()
+		return true
+	}
 	return false
 }
 
 func (wa *WestworldAlgorithm) UpdateRTT(rttMs int) {
+	wa.rttAvg = append(wa.rttAvg, uint16(rttMs))
+	if len(wa.rttAvg) > wa.wpf.RttProbeAvg {
+		wa.rttAvg = wa.rttAvg[1:]
+	}
+	if len(wa.rttAvg) == wa.wpf.RttProbeAvg {
+		accum := 0
+		for _, rttMs := range wa.rttAvg {
+			accum += int(rttMs)
+		}
+		accum /= len(wa.rttAvg)
+		wa.retxMs = accum + wa.wpf.RetxAddMs
+	}
 }
 
 func (wa *WestworldAlgorithm) RetxMs() int {
-	return 200
+	return wa.retxMs
 }
 
 func (wa *WestworldAlgorithm) RxPortalSize() int {
-	return 0
+	return wa.rxPortalSize
 }
 
-func (wa *WestworldAlgorithm) UpdateRxPortalSize(int) {
+func (wa *WestworldAlgorithm) UpdateRxPortalSize(rxPortalSize int) {
+	wa.rxPortalSize = rxPortalSize
 }
 
 func (wa *WestworldAlgorithm) Profile() *TxProfile {
@@ -90,18 +125,18 @@ func (wa *WestworldAlgorithm) Profile() *TxProfile {
 }
 
 func (wa *WestworldAlgorithm) availableCapacity(segmentSize int) bool {
-	txPortalCapacity := float64(wa.capacity - int(float64(wa.rxPortalSize)*wa.pf.RxSizePressureScale) - (wa.txPortalSize + segmentSize))
+	txPortalCapacity := float64(wa.capacity - int(float64(wa.rxPortalSize)*wa.wpf.RxSizePressureScale) - (wa.txPortalSize + segmentSize))
 	rxPortalCapacity := float64(wa.capacity - (wa.rxPortalSize + segmentSize))
 	return math.Min(txPortalCapacity, rxPortalCapacity) > 0
 }
 
 func (wa *WestworldAlgorithm) updateCapacity(capacity int) {
 	wa.capacity = capacity
-	if wa.capacity < wa.pf.MinSize {
-		wa.capacity = wa.pf.MinSize
+	if wa.capacity < wa.wpf.MinSize {
+		wa.capacity = wa.wpf.MinSize
 	}
-	if wa.capacity > wa.pf.MaxSize {
-		wa.capacity = wa.pf.MaxSize
+	if wa.capacity > wa.wpf.MaxSize {
+		wa.capacity = wa.wpf.MaxSize
 	}
 }
 
@@ -114,10 +149,14 @@ type WestworldProfile struct {
 	DupAckThresh        int
 	DupAckCapacityScale float64
 	DupAckSuccessScale  float64
+	RetxStartMs         int
+	RetxAddMs           int
 	RetxThresh          int
 	RetxCapacityScale   float64
 	RetxSuccessScale    float64
 	RxSizePressureScale float64
+	RttProbeMs          int
+	RttProbeAvg         int
 }
 
 func NewBaselineWestworldProfile() *WestworldProfile {
@@ -130,9 +169,13 @@ func NewBaselineWestworldProfile() *WestworldProfile {
 		DupAckThresh:        64,
 		DupAckCapacityScale: 0.9,
 		DupAckSuccessScale:  0.75,
+		RetxStartMs:         200,
+		RetxAddMs:           0,
 		RetxThresh:          64,
 		RetxCapacityScale:   0.75,
 		RetxSuccessScale:    0.825,
 		RxSizePressureScale: 2.8911,
+		RttProbeMs:          50,
+		RttProbeAvg:         8,
 	}
 }
