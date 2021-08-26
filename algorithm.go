@@ -58,6 +58,8 @@ type TxProfile struct {
 	SendKeepalive     bool
 	ConnectionTimeout time.Duration
 	MaxTreeSize       int
+	ReadsQueueSize    int
+	PoolBufferSize    int
 }
 
 func DefaultTxProfile() *TxProfile {
@@ -67,5 +69,7 @@ func DefaultTxProfile() *TxProfile {
 		SendKeepalive:     true,
 		ConnectionTimeout: 15000,
 		MaxTreeSize:       64 * 1024,
+		ReadsQueueSize:    1024,
+		PoolBufferSize:    64 * 1024,
 	}
 }
