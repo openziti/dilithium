@@ -45,6 +45,10 @@ type TxAlgorithm interface {
 	//
 	UpdateRxPortalSize(int)
 
+	// RxPortalPacing determines whether or not the RxPortal should send a keepalive in response to portal size changes.
+	//
+	RxPortalPacing(oldSize, newSize int) bool
+
 	// Profile returns the requested tunables for this algorithm.
 	//
 	Profile() *TxProfile
@@ -53,23 +57,25 @@ type TxAlgorithm interface {
 // TxProfile defines all of the configurable values that are requested by a flow control algorithm.
 //
 type TxProfile struct {
-	MaxSegmentSize    int
-	RetxBatchMs       int
-	SendKeepalive     bool
-	ConnectionTimeout time.Duration
-	MaxTreeSize       int
-	ReadsQueueSize    int
-	PoolBufferSize    int
+	MaxSegmentSize          int
+	RetxBatchMs             int
+	SendKeepalive           bool
+	ConnectionTimeout       time.Duration
+	MaxTreeSize             int
+	ReadsQueueSize          int
+	PoolBufferSize          int
+	RxPortalPacingThreshold float64
 }
 
 func DefaultTxProfile() *TxProfile {
 	return &TxProfile{
-		MaxSegmentSize:    1450,
-		RetxBatchMs:       2,
-		SendKeepalive:     true,
-		ConnectionTimeout: 15000,
-		MaxTreeSize:       64 * 1024,
-		ReadsQueueSize:    1024,
-		PoolBufferSize:    64 * 1024,
+		MaxSegmentSize:          1450,
+		RetxBatchMs:             2,
+		SendKeepalive:           true,
+		ConnectionTimeout:       15000,
+		MaxTreeSize:             64 * 1024,
+		ReadsQueueSize:          1024,
+		PoolBufferSize:          64 * 1024,
+		RxPortalPacingThreshold: 0.5,
 	}
 }

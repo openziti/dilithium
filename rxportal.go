@@ -6,8 +6,11 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
+	"math"
 	"sync"
+	"time"
 )
 
 type RxPortal struct {
@@ -128,4 +131,123 @@ func (rxp *RxPortal) Close() {
 }
 
 func (rxp *RxPortal) run() {
+	logrus.Info("started")
+	defer logrus.Warn("exited")
+
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Errorf("recovered (%v)", r)
+		}
+	}()
+
+	for {
+		var wm *WireMessage
+		var ok bool
+		select {
+		case wm, ok = <-rxp.rxs:
+			if !ok {
+				return
+			}
+
+		case <-time.After(time.Duration(rxp.txp.alg.Profile().ConnectionTimeout) * time.Millisecond):
+			// rxp.closer.timeout()
+			return
+		}
+
+		switch wm.messageType() {
+		case DATA:
+			_, found := rxp.tree.Get(wm.Seq)
+			if !found && (wm.Seq > rxp.accepted || (wm.Seq == 0 && rxp.accepted == math.MaxInt32)) {
+				if size, err := wm.asDataSize(); err == nil {
+					rxp.tree.Put(wm.Seq, wm)
+					rxp.rxPortalSize += int(size)
+				} else {
+					logrus.Errorf("unexpected as data size (%v)", err)
+				}
+			}
+
+			var rtt *uint16
+			if wm.hasFlag(RTT) {
+				if _, rttIn, err := wm.asData(); err == nil {
+					rtt = rttIn
+				} else {
+					logrus.Errorf("unexpected as data (%v)", err)
+				}
+			}
+
+			if ack, err := newAck([]Ack{{wm.Seq, wm.Seq}}, int32(rxp.rxPortalSize), rtt, rxp.ackPool); err == nil {
+				if err := writeWireMessage(ack, rxp.transport); err != nil {
+					logrus.Errorf("error sending ack (%v)", err)
+				}
+				ack.buf.Unref()
+			}
+
+			if found {
+				wm.buf.Unref()
+			}
+
+			if rxp.tree.Size() > 0 {
+				startingRxPortalSize := rxp.rxPortalSize
+
+				var next int32
+				if rxp.accepted < math.MaxInt32 {
+					next = rxp.accepted + 1
+				} else {
+					next = 0
+				}
+
+				keys := rxp.tree.Keys()
+				for _, key := range keys {
+					if key.(int32) == next {
+						v, _ := rxp.tree.Get(key)
+						wm := v.(*WireMessage)
+						buf := rxp.readPool.Get().([]byte)
+						if data, _, err := wm.asData(); err == nil {
+							n := copy(buf, data)
+							rxp.reads <- &RxRead{buf, n, false}
+
+							rxp.tree.Remove(key)
+							rxp.rxPortalSize -= len(data)
+							wm.buf.Unref()
+							rxp.accepted = next
+							if next < math.MaxInt32 {
+								next++
+							} else {
+								next = 0
+							}
+						} else {
+							logrus.Errorf("unexpected mt [%d]", wm.Mt)
+						}
+					}
+				}
+
+				// Send "pacing" KEEPALIVE?
+				if rxp.txp.alg.RxPortalPacing(startingRxPortalSize, rxp.rxPortalSize) {
+					if keepalive, err := newKeepalive(rxp.rxPortalSize, rxp.ackPool); err == nil {
+						if err := writeWireMessage(keepalive, rxp.transport); err != nil {
+							logrus.Errorf("error sending pacing keepalive (%v)", err)
+						}
+						keepalive.buf.Unref()
+					}
+				}
+			}
+
+		case KEEPALIVE:
+			wm.buf.Unref()
+
+		case CLOSE:
+			if closeAck, err := newAck([]Ack{{wm.Seq, wm.Seq}}, int32(rxp.rxPortalSize), nil, rxp.ackPool); err == nil {
+				if err := writeWireMessage(closeAck, rxp.transport); err != nil {
+					logrus.Errorf("error writing close ack (%v)", err)
+				}
+			} else {
+				logrus.Errorf("error creating close ack (%v)", err)
+			}
+			wm.buf.Unref()
+
+		default:
+			logrus.Errorf("unexpected message type [%d]", wm.messageType())
+			wm.buf.Unref()
+		}
+	}
 }
