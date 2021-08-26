@@ -5,6 +5,8 @@ import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/openziti/dilithium/util"
+	"github.com/pkg/errors"
+	"io"
 	"sync"
 )
 
@@ -48,6 +50,68 @@ func NewRxPortal(transport Transport, txp *TxPortal, seq *util.Sequence, closer 
 	}
 	go rxp.run()
 	return rxp
+}
+
+func (rxp *RxPortal) Read(p []byte) (int, error) {
+preread:
+	for {
+		select {
+		case read, ok := <-rxp.reads:
+			if !ok {
+				return 0, io.EOF
+			}
+			if !read.Eof {
+				n, err := rxp.readBuffer.Write(read.Buf[:read.Size])
+				if err != nil {
+					return 0, errors.Wrap(err, "buffer")
+				}
+				if n != read.Size {
+					return 0, errors.New("short buffer")
+				}
+			} else {
+				close(rxp.reads)
+				return 0, io.EOF
+			}
+
+		default:
+			break preread
+		}
+	}
+	if rxp.readBuffer.Len() > 0 {
+		return rxp.readBuffer.Read(p)
+
+	} else {
+		read, ok := <-rxp.reads
+		if !ok {
+			return 0, io.EOF
+		}
+		if !read.Eof {
+			n, err := rxp.readBuffer.Write(read.Buf[:read.Size])
+			if err != nil {
+				return 0, errors.Wrap(err, "buffer")
+			}
+			if n != read.Size {
+				return 0, errors.Wrap(err, "short buffer")
+			}
+			rxp.readPool.Put(read.Buf)
+
+			return rxp.readBuffer.Read(p)
+
+		} else {
+			close(rxp.reads)
+			return 0, io.EOF
+		}
+	}
+}
+
+func (rxp *RxPortal) Rx(wm *WireMessage) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Wrap(err, "send on closed rxs")
+		}
+	}()
+	rxp.rxs <- wm
+	return err
 }
 
 func (rxp *RxPortal) run() {
