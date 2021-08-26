@@ -53,6 +53,10 @@ func NewRxPortal(transport Transport, txp *TxPortal, seq *util.Sequence, closer 
 	return rxp
 }
 
+func (rxp *RxPortal) SetAccepted(accepted int32) {
+	rxp.accepted = accepted
+}
+
 func (rxp *RxPortal) Read(p []byte) (int, error) {
 preread:
 	for {
