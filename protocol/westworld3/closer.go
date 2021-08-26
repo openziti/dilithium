@@ -10,7 +10,7 @@ const notClosed = int32(-33)
 
 type closer struct {
 	seq          *util.Sequence
-	closee       bool
+	close        bool
 	rxCloseSeq   int32
 	rxCloseSeqIn chan int32
 	txCloseSeq   int32
@@ -72,7 +72,7 @@ closeWait:
 			self.lastEvent = time.Now()
 			logrus.Infof("got rx close seq: %d", rxCloseSeq)
 			if self.txCloseSeq == notClosed {
-				self.closee = true
+				self.close = true
 				if err := self.txPortal.sendClose(self.seq); err != nil {
 					logrus.Errorf("error sending close (%v)", err)
 				}
