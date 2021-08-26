@@ -120,6 +120,10 @@ func (wa *WestworldAlgorithm) UpdateRxPortalSize(rxPortalSize int) {
 	wa.rxPortalSize = rxPortalSize
 }
 
+func (wa *WestworldAlgorithm) RxPortalPacing(newSize, oldSize int) bool {
+	return false
+}
+
 func (wa *WestworldAlgorithm) Profile() *TxProfile {
 	return nil
 }
