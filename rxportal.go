@@ -23,6 +23,7 @@ type RxPortal struct {
 	txp          *TxPortal
 	seq          *util.Sequence
 	closer       *Closer
+	closed       bool
 }
 
 type RxRead struct {
@@ -112,6 +113,14 @@ func (rxp *RxPortal) Rx(wm *WireMessage) (err error) {
 	}()
 	rxp.rxs <- wm
 	return err
+}
+
+func (rxp *RxPortal) Close() {
+	if !rxp.closed {
+		rxp.reads <- &RxRead{nil, 0, true}
+		rxp.closed = true
+		close(rxp.rxs)
+	}
 }
 
 func (rxp *RxPortal) run() {
