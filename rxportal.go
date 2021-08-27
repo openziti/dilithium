@@ -14,7 +14,7 @@ import (
 )
 
 type RxPortal struct {
-	transport    Transport
+	adapter      Adapter
 	tree         *btree.Tree
 	accepted     int32
 	rxs          chan *WireMessage
@@ -35,9 +35,9 @@ type RxRead struct {
 	Eof  bool
 }
 
-func NewRxPortal(transport Transport, txp *TxPortal, seq *util.Sequence, closer *closer) *RxPortal {
+func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *closer) *RxPortal {
 	rxp := &RxPortal{
-		transport:  transport,
+		adapter:    adapter,
 		tree:       btree.NewWith(txp.alg.Profile().MaxTreeSize, utils.Int32Comparator),
 		accepted:   -1,
 		rxs:        make(chan *WireMessage),
@@ -176,7 +176,7 @@ func (rxp *RxPortal) run() {
 			}
 
 			if ack, err := newAck([]Ack{{wm.Seq, wm.Seq}}, int32(rxp.rxPortalSize), rtt, rxp.ackPool); err == nil {
-				if err := writeWireMessage(ack, rxp.transport); err != nil {
+				if err := writeWireMessage(ack, rxp.adapter); err != nil {
 					logrus.Errorf("error sending ack (%v)", err)
 				}
 				ack.buf.Unref()
@@ -224,7 +224,7 @@ func (rxp *RxPortal) run() {
 				// Send "pacing" KEEPALIVE?
 				if rxp.txp.alg.RxPortalPacing(startingRxPortalSize, rxp.rxPortalSize) {
 					if keepalive, err := newKeepalive(rxp.rxPortalSize, rxp.ackPool); err == nil {
-						if err := writeWireMessage(keepalive, rxp.transport); err != nil {
+						if err := writeWireMessage(keepalive, rxp.adapter); err != nil {
 							logrus.Errorf("error sending pacing keepalive (%v)", err)
 						}
 						keepalive.buf.Unref()
@@ -237,7 +237,7 @@ func (rxp *RxPortal) run() {
 
 		case CLOSE:
 			if closeAck, err := newAck([]Ack{{wm.Seq, wm.Seq}}, int32(rxp.rxPortalSize), nil, rxp.ackPool); err == nil {
-				if err := writeWireMessage(closeAck, rxp.transport); err != nil {
+				if err := writeWireMessage(closeAck, rxp.adapter); err != nil {
 					logrus.Errorf("error writing close ack (%v)", err)
 				}
 			} else {

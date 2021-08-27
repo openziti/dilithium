@@ -34,10 +34,10 @@ const (
 
 const dataStart = 7
 
-func readWireMessage(t Transport, pool *Pool) (wm *WireMessage, err error) {
+func readWireMessage(adapter Adapter, pool *Pool) (wm *WireMessage, err error) {
 	buf := pool.Get()
 	var n int
-	n, err = t.Read(buf.Data)
+	n, err = adapter.Read(buf.Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "peer read")
 	}
@@ -51,12 +51,12 @@ func readWireMessage(t Transport, pool *Pool) (wm *WireMessage, err error) {
 	return
 }
 
-func writeWireMessage(wm *WireMessage, t Transport) error {
+func writeWireMessage(wm *WireMessage, adapter Adapter) error {
 	if wm.buf.Used < dataStart {
 		return errors.New("truncated buffer")
 	}
 
-	n, err := t.Write(wm.buf.Data[:wm.buf.Used])
+	n, err := adapter.Write(wm.buf.Data[:wm.buf.Used])
 	if err != nil {
 		return errors.Wrap(err, "write")
 	}

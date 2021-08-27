@@ -13,18 +13,18 @@ type TxMonitor struct {
 	lock         *sync.Mutex
 	ready        *sync.Cond
 	alg          TxAlgorithm
-	transport    Transport
+	adapter      Adapter
 	waitlist     waitlist
 	closed       bool
 	retxCallback func()
 }
 
-func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, transport Transport) *TxMonitor {
+func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, adapter Adapter) *TxMonitor {
 	return &TxMonitor{
-		lock:      lock,
-		ready:     sync.NewCond(lock),
-		alg:       alg,
-		transport: transport,
+		lock:    lock,
+		ready:   sync.NewCond(lock),
+		alg:     alg,
+		adapter: adapter,
 	}
 }
 
@@ -97,7 +97,7 @@ func (txm *TxMonitor) run() {
 							util.WriteUint16(wm.buf.Data[dataStart:], uint16(time.Now().UnixNano()/int64(time.Millisecond)))
 						}
 
-						if err := writeWireMessage(wm, txm.transport); err != nil {
+						if err := writeWireMessage(wm, txm.adapter); err != nil {
 							logrus.Errorf("retx (%v)", err)
 						}
 						if txm.retxCallback != nil {

@@ -13,14 +13,14 @@ import (
 )
 
 // TxPortal manages the outgoing data transmitted by a communication instance. It is one half of a TxPortal->RxPortal
-// communication pair. TxPortal is primarily concerned with optimizing the transmission rate over lossy Transport
+// communication pair. TxPortal is primarily concerned with optimizing the transmission rate over lossy Adapter
 // implementations, while ensuring reliability.
 //
 type TxPortal struct {
 	lock      *sync.Mutex
 	tree      *btree.Tree
 	lastTx    time.Time
-	transport Transport
+	adapter   Adapter
 	alg       TxAlgorithm
 	monitor   *TxMonitor
 	closer    *closer
@@ -29,16 +29,16 @@ type TxPortal struct {
 	pool      *Pool
 }
 
-func newTxPortal(transport Transport, alg TxAlgorithm, closer *closer, pool *Pool) *TxPortal {
+func newTxPortal(adapter Adapter, alg TxAlgorithm, closer *closer, pool *Pool) *TxPortal {
 	txp := &TxPortal{
-		lock:      new(sync.Mutex),
-		tree:      btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),
-		transport: transport,
-		alg:       alg,
-		closer:    closer,
-		pool:      pool,
+		lock:    new(sync.Mutex),
+		tree:    btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),
+		adapter: adapter,
+		alg:     alg,
+		closer:  closer,
+		pool:    pool,
 	}
-	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.transport)
+	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.adapter)
 	//txp.monitor.setRetxCallback()
 	return txp
 }
@@ -79,7 +79,7 @@ func (txp *TxPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
 		}
 		txp.tree.Put(wm.Seq, wm)
 
-		if err := writeWireMessage(wm, txp.transport); err != nil {
+		if err := writeWireMessage(wm, txp.adapter); err != nil {
 			return 0, errors.Wrap(err, "tx")
 		}
 		txp.lastTx = time.Now()
@@ -140,7 +140,7 @@ func (txp *TxPortal) sendClose(seq *util.Sequence) error {
 		txp.tree.Put(wm.Seq, wm)
 		txp.monitor.add(wm)
 
-		if err := writeWireMessage(wm, txp.transport); err != nil {
+		if err := writeWireMessage(wm, txp.adapter); err != nil {
 			return errors.Wrap(err, "tx close")
 		}
 		txp.closer.txCloseSeqIn <- wm.Seq
@@ -166,7 +166,7 @@ func (txp *TxPortal) keepaliveSender() {
 		}
 		if time.Since(txp.lastTx).Milliseconds() >= txp.alg.Profile().ConnectionTimeout.Milliseconds()/2 {
 			if keepalive, err := newKeepalive(txp.alg.RxPortalSize(), txp.pool); err == nil {
-				if err := writeWireMessage(keepalive, txp.transport); err == nil {
+				if err := writeWireMessage(keepalive, txp.adapter); err == nil {
 					txp.lastTx = time.Now()
 				} else {
 					logrus.Errorf("error sending keepalive (%v)", err)
