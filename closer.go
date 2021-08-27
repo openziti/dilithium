@@ -40,4 +40,22 @@ func (c *closer) emergencyStop() {
 	}
 }
 
+func (c *closer) timeout() {
+	logrus.Info("timeout")
+
+	c.txp.close()
+	c.rxp.Close()
+
+	if c.closeHook != nil {
+		c.closeHook()
+	}
+}
+
+func (c *closer) run() {
+}
+
+func (c *closer) readyToClose() bool {
+	return (c.txCloseSeq != notClosed && c.rxCloseSeq != notClosed) || time.Since(c.lastEvent).Milliseconds() > int64(c.txp.alg.Profile().ConnectionTimeout)
+}
+
 const notClosed = int32(-99)
