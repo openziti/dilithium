@@ -23,12 +23,12 @@ type TxPortal struct {
 	transport Transport
 	alg       TxAlgorithm
 	monitor   *TxMonitor
-	closer    *Closer
+	closer    *closer
 	closed    bool
 	pool      *Pool
 }
 
-func newTxPortal(transport Transport, alg TxAlgorithm, closer *Closer, pool *Pool) *TxPortal {
+func newTxPortal(transport Transport, alg TxAlgorithm, closer *closer, pool *Pool) *TxPortal {
 	txp := &TxPortal{
 		lock:      new(sync.Mutex),
 		tree:      btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),
@@ -125,6 +125,11 @@ func (txp *TxPortal) ack(acks []Ack) error {
 		}
 	}
 	return nil
+}
+
+func (txp *TxPortal) close() {
+	txp.closed = true
+	txp.monitor.close()
 }
 
 func (txp *TxPortal) keepaliveSender() {

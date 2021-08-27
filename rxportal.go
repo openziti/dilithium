@@ -25,7 +25,7 @@ type RxPortal struct {
 	ackPool      *Pool
 	txp          *TxPortal
 	seq          *util.Sequence
-	closer       *Closer
+	closer       *closer
 	closed       bool
 }
 
@@ -35,7 +35,7 @@ type RxRead struct {
 	Eof  bool
 }
 
-func NewRxPortal(transport Transport, txp *TxPortal, seq *util.Sequence, closer *Closer) *RxPortal {
+func NewRxPortal(transport Transport, txp *TxPortal, seq *util.Sequence, closer *closer) *RxPortal {
 	rxp := &RxPortal{
 		transport:  transport,
 		tree:       btree.NewWith(txp.alg.Profile().MaxTreeSize, utils.Int32Comparator),
