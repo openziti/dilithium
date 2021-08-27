@@ -24,6 +24,7 @@ type TxPortal struct {
 	alg       TxAlgorithm
 	monitor   *TxMonitor
 	closer    *closer
+	closeSent bool
 	closed    bool
 	pool      *Pool
 }
@@ -124,6 +125,28 @@ func (txp *TxPortal) ack(acks []Ack) error {
 			}
 		}
 	}
+	return nil
+}
+
+func (txp *TxPortal) sendClose(seq *util.Sequence) error {
+	txp.lock.Lock()
+	defer txp.lock.Unlock()
+
+	if !txp.closeSent {
+		wm, err := newClose(seq.Next(), txp.pool)
+		if err != nil {
+			return errors.Wrap(err, "close")
+		}
+		txp.tree.Put(wm.Seq, wm)
+		txp.monitor.add(wm)
+
+		if err := writeWireMessage(wm, txp.transport); err != nil {
+			return errors.Wrap(err, "tx close")
+		}
+		txp.closer.txCloseSeqIn <- wm.Seq
+		txp.closeSent = true
+	}
+
 	return nil
 }
 

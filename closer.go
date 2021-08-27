@@ -52,6 +52,57 @@ func (c *closer) timeout() {
 }
 
 func (c *closer) run() {
+	logrus.Info("started")
+	defer logrus.Info("exited")
+
+closeWait:
+	for {
+		select {
+		case rxCloseSeq, ok := <-c.rxCloseSeqIn:
+			if !ok {
+				logrus.Info("!rx close seq")
+				break closeWait
+			}
+			c.rxCloseSeq = rxCloseSeq
+			c.lastEvent = time.Now()
+			logrus.Infof("got rx close seq [%d]", rxCloseSeq)
+			if c.txCloseSeq == notClosed {
+				if err := c.txp.sendClose(c.seq); err != nil {
+					logrus.Errorf("error sending close (%v)", err)
+				}
+			}
+			if c.readyToClose() {
+				break closeWait
+			}
+
+		case txCloseSeq, ok := <-c.txCloseSeqIn:
+			if !ok {
+				logrus.Infof("!tx close seq")
+				break closeWait
+			}
+			c.txCloseSeq = txCloseSeq
+			c.lastEvent = time.Now()
+			logrus.Infof("got tx close seq [%d]", txCloseSeq)
+			if c.readyToClose() {
+				break closeWait
+			}
+
+		case <-time.After(time.Duration(c.txp.alg.Profile().CloseCheckMs) * time.Millisecond):
+			if c.readyToClose() {
+				break closeWait
+			}
+		}
+	}
+	logrus.Info("ready to close")
+
+	c.txp.close()
+	c.rxp.Close()
+
+	if c.closeHook != nil {
+		c.closeHook()
+	}
+
+	logrus.Info("close complete")
 }
 
 func (c *closer) readyToClose() bool {

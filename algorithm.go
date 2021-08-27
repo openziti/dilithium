@@ -65,6 +65,7 @@ type TxProfile struct {
 	ReadsQueueSize          int
 	PoolBufferSize          int
 	RxPortalPacingThreshold float64
+	CloseCheckMs            int
 }
 
 func DefaultTxProfile() *TxProfile {
@@ -77,5 +78,6 @@ func DefaultTxProfile() *TxProfile {
 		ReadsQueueSize:          1024,
 		PoolBufferSize:          64 * 1024,
 		RxPortalPacingThreshold: 0.5,
+		CloseCheckMs:            500,
 	}
 }
