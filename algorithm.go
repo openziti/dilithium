@@ -81,3 +81,7 @@ func DefaultTxProfile() *TxProfile {
 		CloseCheckMs:            500,
 	}
 }
+
+func (txp *TxProfile) NewPool(id string) *Pool {
+	return NewPool(id, uint32(txp.PoolBufferSize))
+}

@@ -29,14 +29,14 @@ type TxPortal struct {
 	pool      *Pool
 }
 
-func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer, pool *Pool) *TxPortal {
+func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer) *TxPortal {
 	txp := &TxPortal{
 		lock:    new(sync.Mutex),
 		tree:    btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),
 		adapter: adapter,
 		alg:     alg,
 		closer:  closer,
-		pool:    pool,
+		pool:    alg.Profile().NewPool("tx"),
 	}
 	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.adapter)
 	//txp.monitor.setRetxCallback()
