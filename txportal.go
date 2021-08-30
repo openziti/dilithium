@@ -23,13 +23,13 @@ type TxPortal struct {
 	adapter   Adapter
 	alg       TxAlgorithm
 	monitor   *TxMonitor
-	closer    *closer
+	closer    *Closer
 	closeSent bool
 	closed    bool
 	pool      *Pool
 }
 
-func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *closer, pool *Pool) *TxPortal {
+func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer, pool *Pool) *TxPortal {
 	txp := &TxPortal{
 		lock:    new(sync.Mutex),
 		tree:    btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),

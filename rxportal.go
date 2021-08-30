@@ -25,7 +25,7 @@ type RxPortal struct {
 	ackPool      *Pool
 	txp          *TxPortal
 	seq          *util.Sequence
-	closer       *closer
+	closer       *Closer
 	closed       bool
 }
 
@@ -35,7 +35,7 @@ type RxRead struct {
 	Eof  bool
 }
 
-func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *closer) *RxPortal {
+func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *Closer) *RxPortal {
 	rxp := &RxPortal{
 		adapter:    adapter,
 		tree:       btree.NewWith(txp.alg.Profile().MaxTreeSize, utils.Int32Comparator),
@@ -150,7 +150,7 @@ func (rxp *RxPortal) run() {
 			}
 
 		case <-time.After(time.Duration(rxp.txp.alg.Profile().ConnectionTimeout) * time.Millisecond):
-			// rxp.closer.timeout()
+			// rxp.Closer.timeout()
 			return
 		}
 

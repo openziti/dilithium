@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// closer manages the state machine for the shutdown of a TxPortal and RxPortal pair (one side of a communication).
+// Closer manages the state machine for the shutdown of a TxPortal and RxPortal pair (one side of a communication).
 //
-type closer struct {
+type Closer struct {
 	seq          *util.Sequence
 	rxCloseSeq   int32
 	rxCloseSeqIn chan int32
@@ -20,8 +20,8 @@ type closer struct {
 	closeHook    func()
 }
 
-func newCloser(seq *util.Sequence, closeHook func()) *closer {
-	return &closer{
+func NewCloser(seq *util.Sequence, closeHook func()) *Closer {
+	return &Closer{
 		seq:          seq,
 		rxCloseSeq:   notClosed,
 		rxCloseSeqIn: make(chan int32, 1),
@@ -31,7 +31,7 @@ func newCloser(seq *util.Sequence, closeHook func()) *closer {
 	}
 }
 
-func (c *closer) emergencyStop() {
+func (c *Closer) EmergencyStop() {
 	logrus.Info("broken glass")
 	c.txp.close()
 	c.rxp.Close()
@@ -40,7 +40,7 @@ func (c *closer) emergencyStop() {
 	}
 }
 
-func (c *closer) timeout() {
+func (c *Closer) timeout() {
 	logrus.Info("timeout")
 
 	c.txp.close()
@@ -51,7 +51,7 @@ func (c *closer) timeout() {
 	}
 }
 
-func (c *closer) run() {
+func (c *Closer) run() {
 	logrus.Info("started")
 	defer logrus.Info("exited")
 
@@ -105,7 +105,7 @@ closeWait:
 	logrus.Info("close complete")
 }
 
-func (c *closer) readyToClose() bool {
+func (c *Closer) readyToClose() bool {
 	return (c.txCloseSeq != notClosed && c.rxCloseSeq != notClosed) || time.Since(c.lastEvent).Milliseconds() > int64(c.txp.alg.Profile().ConnectionTimeout)
 }
 
