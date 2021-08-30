@@ -29,7 +29,7 @@ type TxPortal struct {
 	pool      *Pool
 }
 
-func newTxPortal(adapter Adapter, alg TxAlgorithm, closer *closer, pool *Pool) *TxPortal {
+func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *closer, pool *Pool) *TxPortal {
 	txp := &TxPortal{
 		lock:    new(sync.Mutex),
 		tree:    btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),
@@ -43,14 +43,14 @@ func newTxPortal(adapter Adapter, alg TxAlgorithm, closer *closer, pool *Pool) *
 	return txp
 }
 
-func (txp *TxPortal) start() {
+func (txp *TxPortal) Start() {
 	txp.monitor.start()
 	if txp.alg.Profile().SendKeepalive {
 		go txp.keepaliveSender()
 	}
 }
 
-func (txp *TxPortal) tx(p []byte, seq *util.Sequence) (n int, err error) {
+func (txp *TxPortal) Tx(p []byte, seq *util.Sequence) (n int, err error) {
 	txp.lock.Lock()
 	defer txp.lock.Unlock()
 

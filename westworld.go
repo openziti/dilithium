@@ -20,14 +20,13 @@ type WestworldAlgorithm struct {
 	rttAvg             []uint16
 	retxMs             int
 
-	wpf      *WestworldProfile
-	pf       *TxProfile
-	txPortal *TxPortal
-	lock     *sync.Mutex
-	ready    *sync.Cond
+	wpf   *WestworldProfile
+	pf    *TxProfile
+	lock  *sync.Mutex
+	ready *sync.Cond
 }
 
-func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm {
+func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
 	wa := &WestworldAlgorithm{
 		capacity:           pf.StartSize,
 		txPortalSize:       0,
@@ -39,9 +38,8 @@ func NewWestworldAlgorithm(pf *WestworldProfile, txPortal *TxPortal) TxAlgorithm
 		lastRttProbe:       time.Time{},
 		retxMs:             pf.RetxStartMs,
 
-		wpf:      pf,
-		txPortal: txPortal,
-		lock:     new(sync.Mutex),
+		wpf:  pf,
+		lock: new(sync.Mutex),
 	}
 	wa.ready = sync.NewCond(wa.lock)
 	return wa
