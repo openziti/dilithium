@@ -2,6 +2,10 @@ package dilithium
 
 import "time"
 
+type TxAlgorithmProfile interface {
+	Create() (TxAlgorithm, error)
+}
+
 // TxAlgorithm is an abstraction of an extensible flow-control implementation, which can be plugged into a TxPortal
 // instance.
 //

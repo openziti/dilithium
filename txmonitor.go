@@ -21,10 +21,11 @@ type TxMonitor struct {
 
 func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, adapter Adapter) *TxMonitor {
 	return &TxMonitor{
-		lock:    lock,
-		ready:   sync.NewCond(lock),
-		alg:     alg,
-		adapter: adapter,
+		lock:     lock,
+		ready:    sync.NewCond(lock),
+		alg:      alg,
+		adapter:  adapter,
+		waitlist: newArrayWaitlist(),
 	}
 }
 

@@ -39,6 +39,7 @@ func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
 		retxMs:             pf.RetxStartMs,
 
 		wpf:  pf,
+		pf:   pf.Txpf,
 		lock: new(sync.Mutex),
 	}
 	wa.ready = sync.NewCond(wa.lock)
@@ -123,7 +124,7 @@ func (wa *WestworldAlgorithm) RxPortalPacing(newSize, oldSize int) bool {
 }
 
 func (wa *WestworldAlgorithm) Profile() *TxProfile {
-	return nil
+	return wa.pf
 }
 
 func (wa *WestworldAlgorithm) availableCapacity(segmentSize int) bool {
@@ -182,4 +183,8 @@ func NewBaselineWestworldProfile() *WestworldProfile {
 		RttProbeAvg:         8,
 		Txpf:                DefaultTxProfile(),
 	}
+}
+
+func (wp *WestworldProfile) Create() (TxAlgorithm, error) {
+	return NewWestworldAlgorithm(wp), nil
 }
