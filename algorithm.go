@@ -76,7 +76,7 @@ func DefaultTxProfile() *TxProfile {
 	return &TxProfile{
 		MaxSegmentSize:          1450,
 		RetxBatchMs:             2,
-		SendKeepalive:           true,
+		SendKeepalive:           false,
 		ConnectionTimeout:       15000,
 		MaxTreeSize:             64 * 1024,
 		ReadsQueueSize:          1024,
