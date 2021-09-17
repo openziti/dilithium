@@ -16,7 +16,7 @@ type TxMonitor struct {
 	adapter      Adapter
 	waitlist     waitlist
 	closed       bool
-	retxCallback func()
+	retxCallback func(int)
 }
 
 func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, adapter Adapter) *TxMonitor {
@@ -29,7 +29,7 @@ func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, adapter Adapter) *TxMonitor
 	}
 }
 
-func (txm *TxMonitor) setRetxCallback(c func()) {
+func (txm *TxMonitor) setRetxCallback(c func(int)) {
 	txm.retxCallback = c
 }
 
@@ -102,7 +102,9 @@ func (txm *TxMonitor) run() {
 							logrus.Errorf("retx (%v)", err)
 						}
 						if txm.retxCallback != nil {
-							txm.retxCallback()
+							if sz, err := wm.asDataSize(); err == nil {
+								txm.retxCallback(int(sz))
+							}
 						}
 
 						retxMs, deadline := txm.retxDeadline()

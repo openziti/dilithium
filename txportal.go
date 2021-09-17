@@ -39,7 +39,9 @@ func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer) *TxPortal {
 		pool:    alg.Profile().NewPool("tx"),
 	}
 	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.adapter)
-	//txp.monitor.setRetxCallback()
+	txp.monitor.setRetxCallback(func(size int) {
+		txp.alg.Retransmission(size)
+	})
 	return txp
 }
 
@@ -63,6 +65,8 @@ func (txp *TxPortal) Tx(p []byte, seq *util.Sequence) (n int, err error) {
 	for remaining > 0 {
 		segmentSize := int(math.Min(float64(remaining), float64(txp.alg.Profile().MaxSegmentSize)))
 
+		txp.alg.Tx(segmentSize)
+
 		var rtt *uint16
 		if txp.alg.ProbeRTT() {
 			now := time.Now()
@@ -70,8 +74,6 @@ func (txp *TxPortal) Tx(p []byte, seq *util.Sequence) (n int, err error) {
 			*rtt = uint16(now.UnixNano() / int64(time.Millisecond))
 			segmentSize -= 2
 		}
-
-		txp.alg.Tx(segmentSize)
 
 		wm, err := newData(seq.Next(), rtt, p[n:n+segmentSize], txp.pool)
 		if err != nil {

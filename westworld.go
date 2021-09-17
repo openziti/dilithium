@@ -1,7 +1,6 @@
 package dilithium
 
 import (
-	"math"
 	"sync"
 	"time"
 )
@@ -108,6 +107,7 @@ func (wa *WestworldAlgorithm) UpdateRTT(rttMs int) {
 }
 
 func (wa *WestworldAlgorithm) RetxMs() int {
+	// TODO: This needs to consider RTT. This is just hard-coded for the sake of plumbing development.
 	return wa.retxMs
 }
 
@@ -120,6 +120,9 @@ func (wa *WestworldAlgorithm) UpdateRxPortalSize(rxPortalSize int) {
 }
 
 func (wa *WestworldAlgorithm) RxPortalPacing(newSize, oldSize int) bool {
+	// TODO: Hard-coded for the sake of plumbing development. RxPortalPacing should consider the delta
+	// change in rxPortalSize... if that delta change is greater than some threshold, then the rxPortal
+	// needs to send a "pacing" ack.
 	return false
 }
 
@@ -129,8 +132,7 @@ func (wa *WestworldAlgorithm) Profile() *TxProfile {
 
 func (wa *WestworldAlgorithm) availableCapacity(segmentSize int) bool {
 	txPortalCapacity := float64(wa.capacity - int(float64(wa.rxPortalSize)*wa.wpf.RxSizePressureScale) - (wa.txPortalSize + segmentSize))
-	rxPortalCapacity := float64(wa.capacity - (wa.rxPortalSize + segmentSize))
-	return math.Min(txPortalCapacity, rxPortalCapacity) > 0
+	return txPortalCapacity > 0
 }
 
 func (wa *WestworldAlgorithm) updateCapacity(capacity int) {
