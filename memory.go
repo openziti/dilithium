@@ -30,7 +30,7 @@ func (buf *Buffer) Ref() {
 func (buf *Buffer) Unref() {
 	if atomic.AddInt32(&buf.refs, -1) < 1 {
 		buf.Used = 0
-		//buf.pool.put(buf)
+		//buf.pool.Put(buf)
 	}
 }
 
