@@ -47,6 +47,7 @@ func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
 func (wa *WestworldAlgorithm) SetLock(lock *sync.Mutex) {
 	wa.lock = lock
 	wa.ready = sync.NewCond(wa.lock)
+	go wa.debug()
 }
 
 func (wa *WestworldAlgorithm) Tx(segmentSize int) {
@@ -150,7 +151,15 @@ func (wa *WestworldAlgorithm) updateCapacity(capacity int) {
 }
 
 func (wa *WestworldAlgorithm) debug() {
-	logrus.WithField("capacity", wa.capacity).WithField("txPortalSize", wa.txPortalSize).WithField("rxPortalSize", wa.rxPortalSize).Info("state")
+	logrus.Info("started")
+	defer logrus.Info("exited")
+
+	for {
+		time.Sleep(1 * time.Second)
+		wa.lock.Lock()
+		logrus.Infof("WestworldAlgorithm = {\n\tcapacity: %d\n\ttxPortalSize: %d\n\trxPortalSize: %d\n}", wa.capacity, wa.txPortalSize, wa.rxPortalSize)
+		wa.lock.Unlock()
+	}
 }
 
 type WestworldProfile struct {
