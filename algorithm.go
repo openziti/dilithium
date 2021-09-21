@@ -1,6 +1,9 @@
 package dilithium
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type TxAlgorithmProfile interface {
 	Create() (TxAlgorithm, error)
@@ -10,6 +13,10 @@ type TxAlgorithmProfile interface {
 // instance.
 //
 type TxAlgorithm interface {
+	// SetLock will receive the shared lock from TxPortal.
+	//
+	SetLock(lock *sync.Mutex)
+
 	// Tx will block the caller until there is sufficient space on the wire to enqueue the message.
 	//
 	Tx(int)

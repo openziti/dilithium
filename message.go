@@ -209,7 +209,8 @@ func (wm *WireMessage) asDataSize() (size uint32, err error) {
 	if wm.hasFlag(RTT) {
 		rttSize = 2
 	}
-	return wm.buf.Used - (dataStart + rttSize), nil
+	size = wm.buf.Used - (dataStart + rttSize)
+	return
 }
 
 func (wm *WireMessage) encodeHeader(dataSize uint16) (*WireMessage, error) {

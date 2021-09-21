@@ -1,6 +1,7 @@
 package dilithium
 
 import (
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
@@ -39,10 +40,13 @@ func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
 
 		wpf:  pf,
 		pf:   pf.Txpf,
-		lock: new(sync.Mutex),
 	}
-	wa.ready = sync.NewCond(wa.lock)
 	return wa
+}
+
+func (wa *WestworldAlgorithm) SetLock(lock *sync.Mutex) {
+	wa.lock = lock
+	wa.ready = sync.NewCond(wa.lock)
 }
 
 func (wa *WestworldAlgorithm) Tx(segmentSize int) {
@@ -131,7 +135,7 @@ func (wa *WestworldAlgorithm) Profile() *TxProfile {
 }
 
 func (wa *WestworldAlgorithm) availableCapacity(segmentSize int) bool {
-	txPortalCapacity := float64(wa.capacity - int(float64(wa.rxPortalSize)*wa.wpf.RxSizePressureScale) - (wa.txPortalSize + segmentSize))
+	txPortalCapacity := wa.capacity - int(float64(wa.rxPortalSize)*wa.wpf.RxSizePressureScale) - (wa.txPortalSize + segmentSize)
 	return txPortalCapacity > 0
 }
 
@@ -143,6 +147,10 @@ func (wa *WestworldAlgorithm) updateCapacity(capacity int) {
 	if wa.capacity > wa.wpf.MaxSize {
 		wa.capacity = wa.wpf.MaxSize
 	}
+}
+
+func (wa *WestworldAlgorithm) debug() {
+	logrus.WithField("capacity", wa.capacity).WithField("txPortalSize", wa.txPortalSize).WithField("rxPortalSize", wa.rxPortalSize).Info("state")
 }
 
 type WestworldProfile struct {

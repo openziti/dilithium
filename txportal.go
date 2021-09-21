@@ -38,6 +38,7 @@ func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer) *TxPortal {
 		closer:  closer,
 		pool:    alg.Profile().NewPool("tx"),
 	}
+	txp.alg.SetLock(txp.lock)
 	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.adapter)
 	txp.monitor.setRetxCallback(func(size int) {
 		txp.alg.Retransmission(size)
