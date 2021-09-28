@@ -120,7 +120,11 @@ func (rxp *RxPortal) Rx(wm *WireMessage) (err error) {
 			err = errors.Wrap(err, "send on closed rxs")
 		}
 	}()
-	rxp.rxs <- wm
+	select {
+	case rxp.rxs <- wm:
+	default:
+		logrus.Info("dropped")
+	}
 	return err
 }
 

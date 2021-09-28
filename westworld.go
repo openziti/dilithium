@@ -38,8 +38,8 @@ func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
 		lastRttProbe:       time.Time{},
 		retxMs:             pf.RetxStartMs,
 
-		wpf:  pf,
-		pf:   pf.Txpf,
+		wpf: pf,
+		pf:  pf.Txpf,
 	}
 	return wa
 }
@@ -60,6 +60,7 @@ func (wa *WestworldAlgorithm) Tx(segmentSize int) {
 func (wa *WestworldAlgorithm) Success(segmentSize int) {
 	wa.txPortalSize -= segmentSize
 	wa.successCount++
+	wa.successAccumulator += segmentSize
 	if wa.successCount == wa.wpf.SuccessThresh {
 		wa.updateCapacity(wa.capacity + int(float64(wa.successAccumulator)*wa.wpf.SuccessScale))
 		wa.successCount = 0
@@ -124,11 +125,9 @@ func (wa *WestworldAlgorithm) UpdateRxPortalSize(rxPortalSize int) {
 	wa.rxPortalSize = rxPortalSize
 }
 
-func (wa *WestworldAlgorithm) RxPortalPacing(newSize, oldSize int) bool {
-	// TODO: Hard-coded for the sake of plumbing development. RxPortalPacing should consider the delta
-	// change in rxPortalSize... if that delta change is greater than some threshold, then the rxPortal
-	// needs to send a "pacing" ack.
-	return false
+func (wa *WestworldAlgorithm) RxPortalPacing(oldSize, newSize int) bool {
+	sendKeepalive := oldSize > 64*1024 && newSize < oldSize/2
+	return sendKeepalive
 }
 
 func (wa *WestworldAlgorithm) Profile() *TxProfile {

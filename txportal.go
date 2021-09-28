@@ -66,14 +66,21 @@ func (txp *TxPortal) Tx(p []byte, seq *util.Sequence) (n int, err error) {
 	for remaining > 0 {
 		segmentSize := int(math.Min(float64(remaining), float64(txp.alg.Profile().MaxSegmentSize)))
 
+		var rtt *uint16
+		sendRtt := false
+		if txp.alg.ProbeRTT() {
+			sendRtt = true
+			if segmentSize > txp.alg.Profile().MaxSegmentSize-2 {
+				segmentSize -= 2
+			}
+		}
+
 		txp.alg.Tx(segmentSize)
 
-		var rtt *uint16
-		if txp.alg.ProbeRTT() {
+		if sendRtt {
 			now := time.Now()
 			rtt = new(uint16)
 			*rtt = uint16(now.UnixNano() / int64(time.Millisecond))
-			segmentSize -= 2
 		}
 
 		wm, err := newData(seq.Next(), rtt, p[n:n+segmentSize], txp.pool)
