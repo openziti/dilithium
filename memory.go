@@ -38,13 +38,15 @@ type Pool struct {
 	id      string
 	bufSize uint32
 	store   *sync.Pool
+	ii      InstrumentInstance
 }
 
-func NewPool(id string, bufSize uint32) *Pool {
+func NewPool(id string, bufSize uint32, ii InstrumentInstance) *Pool {
 	pool := &Pool{
 		id:      id,
 		bufSize: bufSize,
 		store:   new(sync.Pool),
+		ii:      ii,
 	}
 	pool.store.New = pool.allocate
 	return pool
@@ -61,5 +63,6 @@ func (pool *Pool) Put(buf *Buffer) {
 }
 
 func (pool *Pool) allocate() interface{} {
+	pool.ii.Allocate(pool.id)
 	return NewBuffer(pool)
 }

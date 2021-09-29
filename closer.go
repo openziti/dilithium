@@ -35,6 +35,7 @@ func (c *Closer) EmergencyStop() {
 	logrus.Info("broken glass")
 	c.txp.close()
 	c.rxp.Close()
+	c.txp.ii.Closed(c.txp.adapter)
 	if c.closeHook != nil {
 		c.closeHook()
 	}

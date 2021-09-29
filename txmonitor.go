@@ -17,15 +17,17 @@ type TxMonitor struct {
 	waitlist     waitlist
 	closed       bool
 	retxCallback func(int)
+	ii           InstrumentInstance
 }
 
-func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, adapter Adapter) *TxMonitor {
+func newTxMonitor(lock *sync.Mutex, alg TxAlgorithm, adapter Adapter, ii InstrumentInstance) *TxMonitor {
 	return &TxMonitor{
 		lock:     lock,
 		ready:    sync.NewCond(lock),
 		alg:      alg,
 		adapter:  adapter,
 		waitlist: newArrayWaitlist(),
+		ii:       ii,
 	}
 }
 
@@ -100,7 +102,11 @@ func (txm *TxMonitor) run() {
 
 						if err := writeWireMessage(wm, txm.adapter); err != nil {
 							logrus.Errorf("retx (%v)", err)
+							txm.ii.WriteError(err)
+						} else {
+							txm.ii.WireMessageRetx(wm)
 						}
+
 						if txm.retxCallback != nil {
 							if sz, err := wm.asDataSize(); err == nil {
 								txm.retxCallback(int(sz))

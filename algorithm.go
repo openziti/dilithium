@@ -6,7 +6,7 @@ import (
 )
 
 type TxAlgorithmProfile interface {
-	Create() (TxAlgorithm, error)
+	Create(ii InstrumentInstance) (TxAlgorithm, error)
 }
 
 // TxAlgorithm is an abstraction of an extensible flow-control implementation, which can be plugged into a TxPortal
@@ -83,7 +83,7 @@ func DefaultTxProfile() *TxProfile {
 	return &TxProfile{
 		MaxSegmentSize:          1450,
 		RetxBatchMs:             2,
-		SendKeepalive:           false,
+		SendKeepalive:           true,
 		ConnectionTimeout:       15000,
 		MaxTreeSize:             64 * 1024,
 		ReadsQueueSize:          1024,
@@ -93,6 +93,6 @@ func DefaultTxProfile() *TxProfile {
 	}
 }
 
-func (txp *TxProfile) NewPool(id string) *Pool {
-	return NewPool(id, uint32(txp.PoolBufferSize))
+func (txp *TxProfile) NewPool(id string, ii InstrumentInstance) *Pool {
+	return NewPool(id, uint32(txp.PoolBufferSize), ii)
 }

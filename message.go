@@ -3,6 +3,7 @@ package dilithium
 import (
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 type WireMessage struct {
@@ -34,6 +35,34 @@ const (
 
 const dataStart = 7
 
+func (mt messageType) String() string {
+	switch mt {
+	case HELLO:
+		return "HELLO"
+	case ACK:
+		return "ACK"
+	case DATA:
+		return "DATA"
+	case KEEPALIVE:
+		return "KEEPALIVE"
+	case CLOSE:
+		return "CLOSE"
+	default:
+		return "???"
+	}
+}
+
+func (mt messageType) FlagsString() string {
+	flags := ""
+	if messageFlag(mt)&INLINE_ACK == INLINE_ACK {
+		flags += " INLINE_ACK"
+	}
+	if messageFlag(mt)&RTT == RTT {
+		flags += " RTT"
+	}
+	return strings.TrimSpace(flags)
+}
+
 func readWireMessage(adapter Adapter, pool *Pool) (wm *WireMessage, err error) {
 	buf := pool.Get()
 	var n int
@@ -63,7 +92,6 @@ func writeWireMessage(wm *WireMessage, adapter Adapter) error {
 	if uint32(n) != wm.buf.Used {
 		return errors.Errorf("short write [%d != %d]", n, wm.buf.Used)
 	}
-
 	return nil
 }
 

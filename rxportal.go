@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"sync"
+	"time"
 )
 
 type RxPortal struct {
@@ -27,6 +28,7 @@ type RxPortal struct {
 	seq          *util.Sequence
 	closer       *Closer
 	closed       bool
+	ii           InstrumentInstance
 }
 
 type RxRead struct {
@@ -35,20 +37,21 @@ type RxRead struct {
 	Eof  bool
 }
 
-func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *Closer) *RxPortal {
+func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *Closer, ii InstrumentInstance) *RxPortal {
 	rxp := &RxPortal{
 		adapter:     adapter,
 		tree:        btree.NewWith(txp.alg.Profile().MaxTreeSize, utils.Int32Comparator),
 		accepted:    -1,
-		rxs:         make(chan *WireMessage),
+		rxs:         make(chan *WireMessage, 4),
 		reads:       make(chan *RxRead, txp.alg.Profile().ReadsQueueSize),
 		readBuffer:  new(bytes.Buffer),
 		rawReadPool: new(sync.Pool),
-		readPool:    NewPool("readPool", uint32(txp.alg.Profile().PoolBufferSize)),
-		ackPool:     NewPool("ackPool", uint32(txp.alg.Profile().PoolBufferSize)),
+		readPool:    NewPool("readPool", uint32(txp.alg.Profile().PoolBufferSize), ii),
+		ackPool:     NewPool("ackPool", uint32(txp.alg.Profile().PoolBufferSize), ii),
 		txp:         txp,
 		seq:         seq,
 		closer:      closer,
+		ii:          ii,
 	}
 	rxp.rawReadPool.New = func() interface{} {
 		return make([]byte, txp.alg.Profile().PoolBufferSize)
@@ -167,6 +170,7 @@ func (rxp *RxPortal) run() {
 				if size, err := wm.asDataSize(); err == nil {
 					rxp.tree.Put(wm.Seq, wm)
 					rxp.rxPortalSize += int(size)
+					rxp.ii.RxPortalSzChanged(rxp.rxPortalSize)
 				} else {
 					logrus.Errorf("unexpected as data size (%v)", err)
 				}
@@ -184,6 +188,10 @@ func (rxp *RxPortal) run() {
 			if ack, err := newAck([]Ack{{wm.Seq, wm.Seq}}, int32(rxp.rxPortalSize), rtt, rxp.ackPool); err == nil {
 				if err := writeWireMessage(ack, rxp.adapter); err != nil {
 					logrus.Errorf("error sending ack (%v)", err)
+					rxp.ii.WriteError(err)
+				} else {
+					rxp.ii.WireMessageTx(ack)
+					rxp.ii.TxAck(ack)
 				}
 				ack.buf.Unref()
 			}
@@ -214,6 +222,7 @@ func (rxp *RxPortal) run() {
 
 							rxp.tree.Remove(key)
 							rxp.rxPortalSize -= len(data)
+							rxp.ii.RxPortalSzChanged(rxp.rxPortalSize)
 							wm.buf.Unref()
 							rxp.accepted = next
 							if next < math.MaxInt32 {
@@ -232,6 +241,10 @@ func (rxp *RxPortal) run() {
 					if keepalive, err := newKeepalive(rxp.rxPortalSize, rxp.ackPool); err == nil {
 						if err := writeWireMessage(keepalive, rxp.adapter); err != nil {
 							logrus.Errorf("error sending pacing keepalive (%v)", err)
+							rxp.ii.WriteError(err)
+						} else {
+							rxp.ii.WireMessageTx(keepalive)
+							rxp.ii.TxKeepalive(keepalive)
 						}
 						keepalive.buf.Unref()
 					}
@@ -245,6 +258,10 @@ func (rxp *RxPortal) run() {
 			if closeAck, err := newAck([]Ack{{wm.Seq, wm.Seq}}, int32(rxp.rxPortalSize), nil, rxp.ackPool); err == nil {
 				if err := writeWireMessage(closeAck, rxp.adapter); err != nil {
 					logrus.Errorf("error writing close ack (%v)", err)
+					rxp.ii.WriteError(err)
+				} else {
+					rxp.ii.WireMessageTx(closeAck)
+					rxp.ii.TxAck(closeAck)
 				}
 			} else {
 				logrus.Errorf("error creating close ack (%v)", err)
@@ -265,21 +282,15 @@ func (rxp *RxPortal) rxer() {
 	for {
 		wm, err := readWireMessage(rxp.adapter, rxp.readPool)
 		if err != nil {
+			rxp.ii.ReadError(err)
 			logrus.Errorf("error reading (%v)", err)
 			rxp.closer.EmergencyStop()
 			return
 		}
+		rxp.ii.WireMessageRx(wm)
 
 		switch wm.messageType() {
 		case DATA:
-			_, rttTs, err := wm.asData()
-			if err != nil {
-				logrus.Errorf("as data error (%v)", err)
-				continue
-			}
-			if rttTs != nil {
-				// self.txPortal.rtt(*rttTs)
-			}
 			if err := rxp.Rx(wm); err != nil {
 				logrus.Errorf("error rx-ing (%v)", err)
 				continue
@@ -292,13 +303,17 @@ func (rxp *RxPortal) rxer() {
 				continue
 			}
 			if rttTs != nil {
-				//self.txPortal.rtt(*rttTs)
+				now := time.Now().UnixNano()
+				clockTs := uint16(now / int64(time.Millisecond))
+				rttMs := clockTs - *rttTs
+				rxp.txp.alg.UpdateRTT(int(rttMs))
 			}
 			rxp.txp.alg.UpdateRxPortalSize(int(rxPortalSz))
 			if err := rxp.txp.ack(acks); err != nil {
 				logrus.Errorf("error acking (%v)", err)
 				continue
 			}
+			rxp.ii.RxAck(wm)
 			wm.buf.Unref()
 
 		case KEEPALIVE:
@@ -312,6 +327,7 @@ func (rxp *RxPortal) rxer() {
 				logrus.Errorf("error forwarding keepalive to rxPortal (%v)", err)
 				continue
 			}
+			rxp.ii.RxKeepalive(wm)
 			wm.buf.Unref()
 
 		case CLOSE:
@@ -322,6 +338,7 @@ func (rxp *RxPortal) rxer() {
 		default:
 			logrus.Errorf("unexpected message type: %d", wm.messageType())
 			wm.buf.Unref()
+			rxp.ii.UnexpectedMessageType(wm.messageType())
 		}
 	}
 }

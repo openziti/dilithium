@@ -19,6 +19,7 @@ type WestworldAlgorithm struct {
 	lastRttProbe       time.Time
 	rttAvg             []uint16
 	retxMs             int
+	ii                 InstrumentInstance
 
 	wpf   *WestworldProfile
 	pf    *TxProfile
@@ -26,7 +27,7 @@ type WestworldAlgorithm struct {
 	ready *sync.Cond
 }
 
-func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
+func NewWestworldAlgorithm(pf *WestworldProfile, ii InstrumentInstance) TxAlgorithm {
 	wa := &WestworldAlgorithm{
 		capacity:           pf.StartSize,
 		txPortalSize:       0,
@@ -40,7 +41,10 @@ func NewWestworldAlgorithm(pf *WestworldProfile) TxAlgorithm {
 
 		wpf: pf,
 		pf:  pf.Txpf,
+		ii:  ii,
 	}
+	wa.ii.TxPortalCapacityChanged(wa.capacity)
+	wa.ii.NewRetxMs(wa.retxMs)
 	return wa
 }
 
@@ -55,6 +59,7 @@ func (wa *WestworldAlgorithm) Tx(segmentSize int) {
 		wa.ready.Wait()
 	}
 	wa.txPortalSize += segmentSize
+	wa.ii.TxPortalSzChanged(wa.txPortalSize)
 }
 
 func (wa *WestworldAlgorithm) Success(segmentSize int) {
@@ -67,6 +72,7 @@ func (wa *WestworldAlgorithm) Success(segmentSize int) {
 		wa.successAccumulator = 0
 	}
 	wa.ready.Broadcast()
+	wa.ii.TxPortalSzChanged(wa.txPortalSize)
 }
 
 func (wa *WestworldAlgorithm) DuplicateAck() {
@@ -109,6 +115,7 @@ func (wa *WestworldAlgorithm) UpdateRTT(rttMs int) {
 		}
 		accum /= len(wa.rttAvg)
 		wa.retxMs = accum + wa.wpf.RetxAddMs
+		wa.ii.NewRetxMs(wa.retxMs)
 	}
 }
 
@@ -123,10 +130,12 @@ func (wa *WestworldAlgorithm) RxPortalSize() int {
 
 func (wa *WestworldAlgorithm) UpdateRxPortalSize(rxPortalSize int) {
 	wa.rxPortalSize = rxPortalSize
+	wa.ii.TxPortalRxSzChanged(rxPortalSize)
+	wa.ready.Broadcast()
 }
 
 func (wa *WestworldAlgorithm) RxPortalPacing(oldSize, newSize int) bool {
-	sendKeepalive := oldSize > 64*1024 && newSize < oldSize/2
+	sendKeepalive := oldSize > 4*1024 && newSize < oldSize/2
 	return sendKeepalive
 }
 
@@ -147,6 +156,7 @@ func (wa *WestworldAlgorithm) updateCapacity(capacity int) {
 	if wa.capacity > wa.wpf.MaxSize {
 		wa.capacity = wa.wpf.MaxSize
 	}
+	wa.ii.TxPortalCapacityChanged(wa.capacity)
 }
 
 func (wa *WestworldAlgorithm) debug() {
@@ -186,14 +196,14 @@ func NewBaselineWestworldProfile() *WestworldProfile {
 		StartSize:           96 * 1024,
 		MinSize:             16 * 1024,
 		MaxSize:             4 * 1024 * 1024,
-		SuccessThresh:       224,
+		SuccessThresh:       16,
 		SuccessScale:        1.0,
 		DupAckThresh:        64,
 		DupAckCapacityScale: 0.9,
 		DupAckSuccessScale:  0.75,
 		RetxStartMs:         200,
-		RetxAddMs:           0,
-		RetxThresh:          64,
+		RetxAddMs:           50,
+		RetxThresh:          24,
 		RetxCapacityScale:   0.75,
 		RetxSuccessScale:    0.825,
 		RxSizePressureScale: 2.8911,
@@ -203,6 +213,6 @@ func NewBaselineWestworldProfile() *WestworldProfile {
 	}
 }
 
-func (wp *WestworldProfile) Create() (TxAlgorithm, error) {
-	return NewWestworldAlgorithm(wp), nil
+func (wp *WestworldProfile) Create(ii InstrumentInstance) (TxAlgorithm, error) {
+	return NewWestworldAlgorithm(wp, ii), nil
 }

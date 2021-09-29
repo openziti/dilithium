@@ -27,19 +27,21 @@ type TxPortal struct {
 	closeSent bool
 	closed    bool
 	pool      *Pool
+	ii        InstrumentInstance
 }
 
-func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer) *TxPortal {
+func NewTxPortal(adapter Adapter, alg TxAlgorithm, closer *Closer, ii InstrumentInstance) *TxPortal {
 	txp := &TxPortal{
 		lock:    new(sync.Mutex),
 		tree:    btree.NewWith(alg.Profile().MaxTreeSize, utils.Int32Comparator),
 		adapter: adapter,
 		alg:     alg,
 		closer:  closer,
-		pool:    alg.Profile().NewPool("tx"),
+		pool:    alg.Profile().NewPool("tx", ii),
+		ii:      ii,
 	}
 	txp.alg.SetLock(txp.lock)
-	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.adapter)
+	txp.monitor = newTxMonitor(txp.lock, txp.alg, txp.adapter, ii)
 	txp.monitor.setRetxCallback(func(size int) {
 		txp.alg.Retransmission(size)
 	})
@@ -90,8 +92,10 @@ func (txp *TxPortal) Tx(p []byte, seq *util.Sequence) (n int, err error) {
 		txp.tree.Put(wm.Seq, wm)
 
 		if err := writeWireMessage(wm, txp.adapter); err != nil {
+			txp.ii.WriteError(err)
 			return 0, errors.Wrap(err, "tx")
 		}
+		txp.ii.WireMessageTx(wm)
 		txp.lastTx = time.Now()
 
 		txp.monitor.add(wm)
@@ -132,6 +136,7 @@ func (txp *TxPortal) ack(acks []Ack) error {
 
 			} else {
 				txp.alg.DuplicateAck()
+				txp.ii.DuplicateAck(seq)
 			}
 		}
 	}
@@ -151,8 +156,10 @@ func (txp *TxPortal) sendClose(seq *util.Sequence) error {
 		txp.monitor.add(wm)
 
 		if err := writeWireMessage(wm, txp.adapter); err != nil {
+			txp.ii.WriteError(err)
 			return errors.Wrap(err, "tx close")
 		}
+		txp.ii.WireMessageTx(wm)
 		txp.closer.txCloseSeqIn <- wm.Seq
 		txp.closeSent = true
 	}
@@ -178,8 +185,11 @@ func (txp *TxPortal) keepaliveSender() {
 			if keepalive, err := newKeepalive(txp.alg.RxPortalSize(), txp.pool); err == nil {
 				if err := writeWireMessage(keepalive, txp.adapter); err == nil {
 					txp.lastTx = time.Now()
+					txp.ii.WireMessageTx(keepalive)
+					txp.ii.TxKeepalive(keepalive)
 				} else {
 					logrus.Errorf("error sending keepalive (%v)", err)
+					txp.ii.WriteError(err)
 				}
 			}
 		}
