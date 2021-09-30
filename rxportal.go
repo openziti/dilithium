@@ -61,6 +61,7 @@ func (rxp *RxPortal) Rx(wm *WireMessage) (err error) {
 			err = errors.Wrap(err, "send on closed rxs")
 		}
 	}()
+
 	select {
 	case rxp.rxs <- wm:
 	default:

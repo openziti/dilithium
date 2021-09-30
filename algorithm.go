@@ -81,7 +81,7 @@ type TxProfile struct {
 
 func DefaultTxProfile() *TxProfile {
 	return &TxProfile{
-		MaxSegmentSize:          1450,
+		MaxSegmentSize:          64000,
 		RetxBatchMs:             2,
 		SendKeepalive:           true,
 		ConnectionTimeout:       15000,
