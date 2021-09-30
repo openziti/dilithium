@@ -1,27 +1,22 @@
 package dilithium
 
 import (
-	"bytes"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/openziti/dilithium/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
 	"math"
-	"sync"
 	"time"
 )
 
 type RxPortal struct {
 	adapter      Adapter
+	sink         Sink
 	tree         *btree.Tree
 	accepted     int32
 	rxs          chan *WireMessage
-	reads        chan *RxRead
-	readBuffer   *bytes.Buffer
 	rxPortalSize int
-	rawReadPool  *sync.Pool
 	readPool     *Pool
 	ackPool      *Pool
 	txp          *TxPortal
@@ -37,24 +32,19 @@ type RxRead struct {
 	Eof  bool
 }
 
-func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *Closer, ii InstrumentInstance) *RxPortal {
+func NewRxPortal(adapter Adapter, sink Sink, txp *TxPortal, seq *util.Sequence, closer *Closer, ii InstrumentInstance) *RxPortal {
 	rxp := &RxPortal{
-		adapter:     adapter,
-		tree:        btree.NewWith(txp.alg.Profile().MaxTreeSize, utils.Int32Comparator),
-		accepted:    -1,
-		rxs:         make(chan *WireMessage, 4),
-		reads:       make(chan *RxRead, txp.alg.Profile().ReadsQueueSize),
-		readBuffer:  new(bytes.Buffer),
-		rawReadPool: new(sync.Pool),
-		readPool:    NewPool("readPool", uint32(txp.alg.Profile().PoolBufferSize), ii),
-		ackPool:     NewPool("ackPool", uint32(txp.alg.Profile().PoolBufferSize), ii),
-		txp:         txp,
-		seq:         seq,
-		closer:      closer,
-		ii:          ii,
-	}
-	rxp.rawReadPool.New = func() interface{} {
-		return make([]byte, txp.alg.Profile().PoolBufferSize)
+		adapter:  adapter,
+		sink:     sink,
+		tree:     btree.NewWith(txp.alg.Profile().MaxTreeSize, utils.Int32Comparator),
+		accepted: -1,
+		rxs:      make(chan *WireMessage, 4),
+		readPool: NewPool("readPool", uint32(txp.alg.Profile().PoolBufferSize), ii),
+		ackPool:  NewPool("ackPool", uint32(txp.alg.Profile().PoolBufferSize), ii),
+		txp:      txp,
+		seq:      seq,
+		closer:   closer,
+		ii:       ii,
 	}
 	go rxp.run()
 	go rxp.rxer()
@@ -63,58 +53,6 @@ func NewRxPortal(adapter Adapter, txp *TxPortal, seq *util.Sequence, closer *Clo
 
 func (rxp *RxPortal) SetAccepted(accepted int32) {
 	rxp.accepted = accepted
-}
-
-func (rxp *RxPortal) Read(p []byte) (int, error) {
-preread:
-	for {
-		select {
-		case read, ok := <-rxp.reads:
-			if !ok {
-				return 0, io.EOF
-			}
-			if !read.Eof {
-				n, err := rxp.readBuffer.Write(read.Buf[:read.Size])
-				if err != nil {
-					return 0, errors.Wrap(err, "buffer")
-				}
-				if n != read.Size {
-					return 0, errors.New("short buffer")
-				}
-			} else {
-				close(rxp.reads)
-				return 0, io.EOF
-			}
-
-		default:
-			break preread
-		}
-	}
-	if rxp.readBuffer.Len() > 0 {
-		return rxp.readBuffer.Read(p)
-
-	} else {
-		read, ok := <-rxp.reads
-		if !ok {
-			return 0, io.EOF
-		}
-		if !read.Eof {
-			n, err := rxp.readBuffer.Write(read.Buf[:read.Size])
-			if err != nil {
-				return 0, errors.Wrap(err, "buffer")
-			}
-			if n != read.Size {
-				return 0, errors.Wrap(err, "short buffer")
-			}
-			rxp.rawReadPool.Put(read.Buf)
-
-			return rxp.readBuffer.Read(p)
-
-		} else {
-			close(rxp.reads)
-			return 0, io.EOF
-		}
-	}
 }
 
 func (rxp *RxPortal) Rx(wm *WireMessage) (err error) {
@@ -133,7 +71,7 @@ func (rxp *RxPortal) Rx(wm *WireMessage) (err error) {
 
 func (rxp *RxPortal) Close() {
 	if !rxp.closed {
-		rxp.reads <- &RxRead{nil, 0, true}
+		rxp.sink.Close()
 		rxp.closed = true
 		close(rxp.rxs)
 	}
@@ -215,10 +153,11 @@ func (rxp *RxPortal) run() {
 					if key.(int32) == next {
 						v, _ := rxp.tree.Get(key)
 						wm := v.(*WireMessage)
-						buf := rxp.rawReadPool.Get().([]byte)
 						if data, _, err := wm.asData(); err == nil {
-							n := copy(buf, data)
-							rxp.reads <- &RxRead{buf, n, false}
+							if err := rxp.sink.Accept(data); err != nil {
+								logrus.WithError(err).Error("write to data sink failed, exiting rx loop")
+								return
+							}
 
 							rxp.tree.Remove(key)
 							rxp.rxPortalSize -= len(data)
